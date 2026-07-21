@@ -68,6 +68,7 @@ export default async function ProductsPage() {
           Œuvres
         </h1>
         <div className="flex items-center gap-3">
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- téléchargement de fichier, pas une navigation */}
           <a
             href="/admin/products/export"
             className="border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-50"

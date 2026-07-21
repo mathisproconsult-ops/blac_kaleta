@@ -9,6 +9,7 @@ import {
   updateTextBlock,
   uploadImageBlock,
 } from "./actions";
+import { deletePage, updatePageMeta } from "../actions";
 
 const BLOCK_LABELS: Record<BlockType, string> = {
   titre: "Titre",
@@ -35,7 +36,7 @@ export default async function PageEditorPage({
 
   const { data: page } = await supabase
     .from("pages")
-    .select("id, title")
+    .select("id, title, show_in_menu")
     .eq("slug", slug)
     .maybeSingle();
 
@@ -52,9 +53,47 @@ export default async function PageEditorPage({
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold uppercase tracking-wide">
-        Contenu — {page.title}
-      </h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold uppercase tracking-wide">
+          Contenu — {page.title}
+        </h1>
+        <form action={deletePage.bind(null, page.id, slug)}>
+          <button type="submit" className="text-sm text-red-600 hover:underline">
+            Supprimer la page
+          </button>
+        </form>
+      </div>
+
+      <form
+        action={updatePageMeta.bind(null, page.id, slug)}
+        className="mt-6 flex flex-wrap items-end gap-3 border border-zinc-200 bg-white p-4"
+      >
+        <div className="flex flex-col gap-1">
+          <label className="text-xs uppercase tracking-wide text-zinc-500">
+            Titre
+          </label>
+          <input
+            name="title"
+            defaultValue={page.title}
+            required
+            className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+          />
+        </div>
+        <label className="flex items-center gap-2 pb-2 text-sm">
+          <input
+            type="checkbox"
+            name="show_in_menu"
+            defaultChecked={page.show_in_menu}
+          />
+          Ajouter au menu
+        </label>
+        <button
+          type="submit"
+          className="bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
+        >
+          Enregistrer
+        </button>
+      </form>
 
       <div className="mt-6 flex gap-2">
         {(["titre", "texte", "image"] as BlockType[]).map((type) => (

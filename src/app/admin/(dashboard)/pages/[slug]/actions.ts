@@ -4,14 +4,9 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { BlockType } from "@/lib/page-blocks";
 
-const PUBLIC_PATHS: Record<string, string> = {
-  home: "/",
-  "a-propos": "/a-propos",
-};
-
 function revalidatePageSlug(slug: string) {
   revalidatePath(`/admin/pages/${slug}`);
-  revalidatePath(PUBLIC_PATHS[slug] ?? "/");
+  revalidatePath(`/${slug}`);
 }
 
 const DEFAULT_CONTENT: Record<BlockType, Record<string, string>> = {

@@ -1,5 +1,43 @@
 import { createClient } from "@/lib/supabase/server";
 
+export const RESERVED_SLUGS = [
+  "home",
+  "boutique",
+  "contact",
+  "oeuvres-recentes",
+  "panier",
+  "admin",
+  "api",
+];
+
+const ACCENTS: Record<string, string> = {
+  a: "àáâãäå",
+  e: "éèêë",
+  i: "ìíîï",
+  o: "òóôõö",
+  u: "ùúûü",
+  c: "ç",
+  n: "ñ",
+  y: "ýÿ",
+};
+
+function removeAccents(value: string): string {
+  let result = value.toLowerCase();
+  for (const [plain, accented] of Object.entries(ACCENTS)) {
+    for (const char of accented) {
+      result = result.split(char).join(plain);
+    }
+  }
+  return result;
+}
+
+export function slugify(value: string): string {
+  return removeAccents(value)
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 export type BlockType = "titre" | "texte" | "image";
 
 export type PageBlock = {
