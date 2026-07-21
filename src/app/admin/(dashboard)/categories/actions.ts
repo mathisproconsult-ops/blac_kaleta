@@ -41,6 +41,58 @@ export async function deleteCategory(id: number) {
   revalidatePath("/admin/categories");
 }
 
+export async function updateCategoryCover(id: number, formData: FormData) {
+  const supabase = await createClient();
+  const file = formData.get("cover_file");
+  const mediaId = formData.get("mediaId");
+  const removeCover = formData.get("remove_cover") === "on";
+
+  if (file instanceof File && file.size > 0) {
+    const path = `categories/${id}/${crypto.randomUUID()}-${file.name}`;
+    const { error: uploadError } = await supabase.storage
+      .from("media")
+      .upload(path, file, { contentType: file.type });
+
+    if (!uploadError) {
+      const { data: publicUrlData } = supabase.storage.from("media").getPublicUrl(path);
+
+      await supabase.from("media").insert({
+        filename: file.name,
+        path,
+        url: publicUrlData.publicUrl,
+        mime_type: file.type,
+        kind: file.type === "image/gif" ? "gif" : "image",
+      });
+
+      await supabase
+        .from("categories")
+        .update({ cover_image_url: publicUrlData.publicUrl, cover_image_path: path })
+        .eq("id", id);
+    }
+  } else if (typeof mediaId === "string" && mediaId) {
+    const { data: media } = await supabase
+      .from("media")
+      .select("url, path")
+      .eq("id", Number(mediaId))
+      .maybeSingle();
+
+    if (media) {
+      await supabase
+        .from("categories")
+        .update({ cover_image_url: media.url, cover_image_path: media.path })
+        .eq("id", id);
+    }
+  } else if (removeCover) {
+    await supabase
+      .from("categories")
+      .update({ cover_image_url: null, cover_image_path: null })
+      .eq("id", id);
+  }
+
+  revalidatePath("/admin/categories");
+  revalidatePath("/boutique");
+}
+
 export async function moveCategory(id: number, direction: "up" | "down") {
   const supabase = await createClient();
   const { data: categories } = await supabase

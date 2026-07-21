@@ -8,7 +8,13 @@ const sortOptions = [
   { value: "prix-desc", label: "Prix décroissant" },
 ];
 
-export function SortSelect({ value }: { value: string }) {
+export function SortSelect({
+  value,
+  basePath = "/boutique",
+}: {
+  value: string;
+  basePath?: string;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -22,7 +28,7 @@ export function SortSelect({ value }: { value: string }) {
         } else {
           params.set("tri", event.target.value);
         }
-        router.push(`/boutique?${params.toString()}`);
+        router.push(`${basePath}?${params.toString()}`);
       }}
       className="border border-zinc-300 px-2 py-1 text-sm"
     >
