@@ -21,6 +21,7 @@ export default async function AdminDashboardLayout({
     { label: "Commandes", href: "/admin/orders", badge: unreadOrders ?? 0 },
     { label: "Produits", href: "/admin/products" },
     { label: "Catégories", href: "/admin/categories" },
+    { label: "Messages", href: "/admin/messages" },
   ];
 
   return (
