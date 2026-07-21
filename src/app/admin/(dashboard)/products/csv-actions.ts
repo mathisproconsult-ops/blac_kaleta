@@ -185,6 +185,7 @@ export async function importProductsCsv(
         stock: validStock,
         status: validStock <= 0 ? "out_of_stock" : "available",
         description,
+        is_for_sale: true,
       })
       .select("id")
       .single();

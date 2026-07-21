@@ -30,7 +30,7 @@ export function ProductFields({
           <input
             type="checkbox"
             name="is_for_sale"
-            defaultChecked={defaultValues?.is_for_sale ?? false}
+            defaultChecked={defaultValues ? defaultValues.is_for_sale : true}
           />
           En vente (apparaît dans la Boutique, avec prix et stock)
         </label>
