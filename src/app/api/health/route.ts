@@ -15,11 +15,15 @@ export async function GET() {
     const response = await fetch(`${url}/rest/v1/`, {
       headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}` },
     });
+    const body = await response.text();
 
     return NextResponse.json({
       ok: response.ok,
       status: response.status,
       supabaseUrl: url,
+      anonKeyPrefix: anonKey.slice(0, 20),
+      anonKeyLength: anonKey.length,
+      body,
     });
   } catch (error) {
     return NextResponse.json(
