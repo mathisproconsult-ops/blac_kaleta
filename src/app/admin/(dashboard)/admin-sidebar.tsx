@@ -2,20 +2,126 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { SubmitButton } from "@/components/submit-button";
 
-type NavItem = { label: string; href: string; badge?: number };
+type LeafItem = { type: "link"; label: string; href: string; badge?: number };
+type GroupItem = {
+  type: "group";
+  label: string;
+  children: { label: string; href: string }[];
+};
+export type NavEntry = LeafItem | GroupItem;
+
+function isActive(pathname: string, href: string) {
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function NavLinks({
+  navItems,
+  pathname,
+  onNavigate,
+}: {
+  navItems: NavEntry[];
+  pathname: string;
+  onNavigate: () => void;
+}) {
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    for (const item of navItems) {
+      if (item.type === "group") {
+        initial[item.label] = item.children.some((child) =>
+          isActive(pathname, child.href),
+        );
+      }
+    }
+    return initial;
+  });
+
+  return (
+    <nav className="flex flex-1 flex-col gap-1 overflow-y-auto">
+      {navItems.map((item) => {
+        if (item.type === "link") {
+          const active = isActive(pathname, item.href);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={onNavigate}
+              className={
+                active
+                  ? "flex items-center justify-between rounded bg-white/10 px-3 py-2 text-sm font-medium text-white"
+                  : "flex items-center justify-between rounded px-3 py-2 text-sm text-zinc-200 hover:bg-white/10"
+              }
+            >
+              {item.label}
+              {item.badge ? (
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-white px-1 text-xs font-medium text-black">
+                  {item.badge}
+                </span>
+              ) : null}
+            </Link>
+          );
+        }
+
+        const isOpen = openGroups[item.label] ?? false;
+        return (
+          <div key={item.label}>
+            <button
+              type="button"
+              onClick={() =>
+                setOpenGroups((state) => ({
+                  ...state,
+                  [item.label]: !state[item.label],
+                }))
+              }
+              aria-expanded={isOpen}
+              className="flex w-full items-center justify-between rounded px-3 py-2 text-sm text-zinc-200 hover:bg-white/10"
+            >
+              {item.label}
+              <span className={isOpen ? "rotate-90 transition-transform" : "transition-transform"}>
+                ›
+              </span>
+            </button>
+            {isOpen ? (
+              <div className="ml-3 flex flex-col gap-1 border-l border-white/10 pl-3">
+                {item.children.map((child) => {
+                  const active = isActive(pathname, child.href);
+                  return (
+                    <Link
+                      key={child.href}
+                      href={child.href}
+                      onClick={onNavigate}
+                      className={
+                        active
+                          ? "rounded bg-white/10 px-3 py-2 text-sm font-medium text-white"
+                          : "rounded px-3 py-2 text-sm text-zinc-300 hover:bg-white/10"
+                      }
+                    >
+                      {child.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            ) : null}
+          </div>
+        );
+      })}
+    </nav>
+  );
+}
 
 export function AdminSidebar({
   navItems,
   email,
   logoutAction,
 }: {
-  navItems: NavItem[];
+  navItems: NavEntry[];
   email: string | undefined;
   logoutAction: () => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
 
   const content = (
     <>
@@ -25,23 +131,11 @@ export function AdminSidebar({
           Admin dashboard
         </p>
       </div>
-      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto">
-        {navItems.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            onClick={() => setOpen(false)}
-            className="flex items-center justify-between rounded px-3 py-2 text-sm text-zinc-200 hover:bg-white/10"
-          >
-            {item.label}
-            {item.badge ? (
-              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-white px-1 text-xs font-medium text-black">
-                {item.badge}
-              </span>
-            ) : null}
-          </Link>
-        ))}
-      </nav>
+      <NavLinks
+        navItems={navItems}
+        pathname={pathname}
+        onNavigate={() => setOpen(false)}
+      />
       <div className="flex flex-col gap-3 border-t border-white/10 pt-4">
         {email ? (
           <p className="truncate text-xs text-zinc-400">{email}</p>
