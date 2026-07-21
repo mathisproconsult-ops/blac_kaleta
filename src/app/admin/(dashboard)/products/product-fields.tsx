@@ -1,9 +1,11 @@
 type Category = { id: number; name: string };
+type AvailableMedia = { id: number; filename: string; url: string };
 
 export function ProductFields({
   categories,
   defaultValues,
   selectedCategoryIds,
+  availableMedia,
 }: {
   categories: Category[];
   defaultValues?: {
@@ -19,6 +21,7 @@ export function ProductFields({
     featured_home: boolean;
   };
   selectedCategoryIds?: number[];
+  availableMedia?: AvailableMedia[];
 }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2">
@@ -124,7 +127,7 @@ export function ProductFields({
       </div>
       <div className="flex flex-col gap-1">
         <label className="text-xs uppercase tracking-wide text-zinc-500">
-          Photos
+          Nouvelle photo (rejoint aussi la Médiathèque)
         </label>
         <input
           name="images"
@@ -134,6 +137,26 @@ export function ProductFields({
           className="text-sm"
         />
       </div>
+      {availableMedia && availableMedia.length > 0 ? (
+        <fieldset className="flex flex-col gap-1 sm:col-span-2">
+          <legend className="text-xs uppercase tracking-wide text-zinc-500">
+            Ou choisir depuis la Médiathèque
+          </legend>
+          <div className="flex flex-wrap gap-3">
+            {availableMedia.map((media) => (
+              <label key={media.id} className="flex flex-col items-center gap-1 text-xs">
+                <input type="checkbox" name="mediaIds" value={media.id} className="self-start" />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={media.url}
+                  alt={media.filename}
+                  className="h-16 w-16 object-cover"
+                />
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      ) : null}
       <div className="flex flex-col gap-1 sm:col-span-2">
         <label className="text-xs uppercase tracking-wide text-zinc-500">
           Description (optionnelle)

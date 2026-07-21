@@ -20,6 +20,7 @@ export default async function AdminDashboardLayout({
     { label: "Overview", href: "/admin" },
     { label: "Commandes", href: "/admin/orders", badge: unreadOrders ?? 0 },
     { label: "Œuvres", href: "/admin/products" },
+    { label: "Médias", href: "/admin/media" },
     { label: "Catégories", href: "/admin/categories" },
     { label: "Clients", href: "/admin/customers" },
     { label: "Messages", href: "/admin/messages" },

@@ -47,19 +47,27 @@ type ProductRow = {
 export default async function ProductsPage() {
   const supabase = await createClient();
 
-  const [{ data: categories }, { data: products, error }] = await Promise.all([
-    supabase.from("categories").select("id, name").order("position", { ascending: true }),
-    supabase
-      .from("products")
-      .select(
-        "id, title, price, stock, status, description, year, series, technique, is_for_sale, show_in_recent_works, featured_home, is_visible, product_images(id, path, url, position), product_categories(categories(id, name))",
-      )
-      .order("created_at", { ascending: false })
-      .returns<ProductRow[]>(),
-  ]);
+  const [{ data: categories }, { data: products, error }, { data: unclaimedMedia }] =
+    await Promise.all([
+      supabase.from("categories").select("id, name").order("position", { ascending: true }),
+      supabase
+        .from("products")
+        .select(
+          "id, title, price, stock, status, description, year, series, technique, is_for_sale, show_in_recent_works, featured_home, is_visible, product_images(id, path, url, position), product_categories(categories(id, name))",
+        )
+        .order("created_at", { ascending: false })
+        .returns<ProductRow[]>(),
+      supabase
+        .from("media")
+        .select("id, filename, url")
+        .is("product_id", null)
+        .in("kind", ["image", "gif"])
+        .order("created_at", { ascending: false }),
+    ]);
 
   const categoryList = categories ?? [];
   const productList = products ?? [];
+  const availableMedia = unclaimedMedia ?? [];
 
   return (
     <div>
@@ -83,7 +91,7 @@ export default async function ProductsPage() {
               action={createProduct}
               className="flex flex-col gap-4 border border-zinc-200 bg-white p-6"
             >
-              <ProductFields categories={categoryList} />
+              <ProductFields categories={categoryList} availableMedia={availableMedia} />
               <button
                 type="submit"
                 className="self-start bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
@@ -223,6 +231,7 @@ export default async function ProductsPage() {
                         featured_home: product.featured_home,
                       }}
                       selectedCategoryIds={selectedCategoryIds}
+                      availableMedia={availableMedia}
                     />
                     <button
                       type="submit"

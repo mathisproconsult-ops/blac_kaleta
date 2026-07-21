@@ -54,14 +54,14 @@ async function uploadImages(
   for (const file of files) {
     if (!file || file.size === 0) continue;
 
-    const path = `${productId}/${crypto.randomUUID()}-${file.name}`;
+    const path = `products/${productId}/${crypto.randomUUID()}-${file.name}`;
     const { error: uploadError } = await supabase.storage
-      .from("products")
+      .from("media")
       .upload(path, file, { contentType: file.type });
     if (uploadError) continue;
 
     const { data: publicUrlData } = supabase.storage
-      .from("products")
+      .from("media")
       .getPublicUrl(path);
 
     await supabase.from("product_images").insert({
@@ -71,7 +71,54 @@ async function uploadImages(
       position,
     });
     position += 1;
+
+    // Toute nouvelle photo uploadée depuis le formulaire produit
+    // rejoint automatiquement la Médiathèque, déjà associée à l'œuvre.
+    await supabase.from("media").insert({
+      filename: file.name,
+      path,
+      url: publicUrlData.publicUrl,
+      mime_type: file.type,
+      kind: file.type === "image/gif" ? "gif" : "image",
+      product_id: productId,
+    });
   }
+}
+
+async function attachLibraryMedia(
+  supabase: SupabaseClient,
+  productId: number,
+  mediaIds: number[],
+  startPosition: number,
+) {
+  if (mediaIds.length === 0) return;
+
+  const { data: mediaRows } = await supabase
+    .from("media")
+    .select("id, path, url")
+    .in("id", mediaIds);
+
+  if (!mediaRows) return;
+
+  let position = startPosition;
+  for (const media of mediaRows) {
+    await supabase.from("product_images").insert({
+      product_id: productId,
+      path: media.path,
+      url: media.url,
+      position,
+    });
+    position += 1;
+
+    await supabase.from("media").update({ product_id: productId }).eq("id", media.id);
+  }
+}
+
+function parseMediaIds(formData: FormData): number[] {
+  return formData
+    .getAll("mediaIds")
+    .map((value) => Number(value))
+    .filter((value) => Number.isInteger(value));
 }
 
 async function syncCategories(
@@ -109,8 +156,10 @@ export async function createProduct(formData: FormData) {
     .getAll("images")
     .filter((value): value is File => value instanceof File);
   await uploadImages(supabase, product.id, files, 0);
+  await attachLibraryMedia(supabase, product.id, parseMediaIds(formData), files.length);
 
   revalidatePath("/admin/products");
+  revalidatePath("/admin/media");
   revalidatePath("/");
   revalidatePath("/boutique");
   revalidatePath("/oeuvres-recentes");
@@ -134,8 +183,15 @@ export async function updateProduct(id: number, formData: FormData) {
     .getAll("images")
     .filter((value): value is File => value instanceof File);
   await uploadImages(supabase, id, files, count ?? 0);
+  await attachLibraryMedia(
+    supabase,
+    id,
+    parseMediaIds(formData),
+    (count ?? 0) + files.length,
+  );
 
   revalidatePath("/admin/products");
+  revalidatePath("/admin/media");
   revalidatePath("/");
   revalidatePath("/boutique");
   revalidatePath("/oeuvres-recentes");
