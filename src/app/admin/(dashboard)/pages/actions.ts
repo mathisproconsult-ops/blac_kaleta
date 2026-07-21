@@ -88,7 +88,7 @@ export async function createPage(
       error:
         error?.code === "23505"
           ? "Cette URL est déjà utilisée par une autre page."
-          : "Impossible de créer la page.",
+          : `Impossible de créer la page${error ? ` : ${error.message}` : ""}.`,
     };
   }
 
