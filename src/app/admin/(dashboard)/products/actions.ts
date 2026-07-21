@@ -73,7 +73,7 @@ async function uploadImages(
     position += 1;
 
     // Toute nouvelle photo uploadée depuis le formulaire produit
-    // rejoint automatiquement la Médiathèque, déjà associée à l'œuvre.
+    // rejoint automatiquement la Médiathèque, déjà associée au produit.
     await supabase.from("media").insert({
       filename: file.name,
       path,

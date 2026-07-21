@@ -16,7 +16,7 @@ import {
 import { STATUS_LABELS, STATUS_STYLES, type ProductStatus } from "./status";
 
 export const metadata: Metadata = {
-  title: "Œuvres — Admin Blac_Kaleta",
+  title: "Produits — Admin Blac_Kaleta",
 };
 
 export const maxDuration = 60;
@@ -74,7 +74,7 @@ export default async function ProductsPage() {
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold uppercase tracking-wide">
-          Œuvres
+          Produits
         </h1>
         <div className="flex flex-wrap items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- téléchargement de fichier, pas une navigation */}

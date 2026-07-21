@@ -36,7 +36,7 @@ export default async function MediaPage() {
       </h1>
       <p className="mt-2 text-sm text-zinc-600">
         Tous les fichiers uploadés (images, gifs, pdf), réutilisables pour
-        n&apos;importe quelle œuvre.
+        n&apos;importe quel produit.
       </p>
 
       <form
@@ -99,7 +99,7 @@ export default async function MediaPage() {
                 title={
                   media.product_id
                     ? undefined
-                    : "Associe ce fichier à une œuvre pour l'afficher dans Œuvres récentes"
+                    : "Associe ce fichier à un produit pour l'afficher dans Œuvres récentes"
                 }
               >
                 {media.product_id && media.products ? (
