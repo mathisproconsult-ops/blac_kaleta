@@ -2,12 +2,6 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { logout } from "./actions";
 
-const navItems = [
-  { label: "Overview", href: "/admin" },
-  { label: "Produits", href: "/admin/products" },
-  { label: "Catégories", href: "/admin/categories" },
-];
-
 export default async function AdminDashboardLayout({
   children,
 }: {
@@ -16,6 +10,18 @@ export default async function AdminDashboardLayout({
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
   const email = (data?.claims as { email?: string } | undefined)?.email;
+
+  const { count: unreadOrders } = await supabase
+    .from("orders")
+    .select("id", { count: "exact", head: true })
+    .eq("read", false);
+
+  const navItems = [
+    { label: "Overview", href: "/admin" },
+    { label: "Commandes", href: "/admin/orders", badge: unreadOrders ?? 0 },
+    { label: "Produits", href: "/admin/products" },
+    { label: "Catégories", href: "/admin/categories" },
+  ];
 
   return (
     <div className="flex min-h-screen">
@@ -31,9 +37,14 @@ export default async function AdminDashboardLayout({
             <Link
               key={item.href}
               href={item.href}
-              className="rounded px-3 py-2 text-sm text-zinc-200 hover:bg-white/10"
+              className="flex items-center justify-between rounded px-3 py-2 text-sm text-zinc-200 hover:bg-white/10"
             >
               {item.label}
+              {item.badge ? (
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-white px-1 text-xs font-medium text-black">
+                  {item.badge}
+                </span>
+              ) : null}
             </Link>
           ))}
         </nav>

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { STATUS_LABELS, type ProductStatus } from "@/app/admin/(dashboard)/products/status";
 import { ProductGallery } from "./product-gallery";
+import { OrderForm } from "./order-form";
 
 const priceFormatter = new Intl.NumberFormat("fr-FR", {
   style: "currency",
@@ -84,18 +85,11 @@ export default async function ProductPage({
 
         <div className="mt-6">
           {product.status === "available" ? (
-            <div>
-              <button
-                type="button"
-                disabled
-                className="cursor-not-allowed bg-black px-6 py-3 text-sm font-medium text-white opacity-50"
-              >
-                Acheter maintenant
-              </button>
-              <p className="mt-2 text-xs text-zinc-500">
-                Paiement en ligne bientôt disponible.
-              </p>
-            </div>
+            <OrderForm
+              productId={product.id}
+              productTitle={product.title}
+              unitPrice={product.price}
+            />
           ) : null}
         </div>
 
