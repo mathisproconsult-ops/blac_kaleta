@@ -2,7 +2,10 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { logout } from "./actions";
 
-const navItems = [{ label: "Overview", href: "/admin" }];
+const navItems = [
+  { label: "Overview", href: "/admin" },
+  { label: "Catégories", href: "/admin/categories" },
+];
 
 export default async function AdminDashboardLayout({
   children,
