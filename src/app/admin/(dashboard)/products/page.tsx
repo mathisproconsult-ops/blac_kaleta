@@ -71,11 +71,11 @@ export default async function ProductsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold uppercase tracking-wide">
           Œuvres
         </h1>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- téléchargement de fichier, pas une navigation */}
           <a
             href="/admin/products/export"
@@ -129,7 +129,7 @@ export default async function ProductsPage() {
                 key={product.id}
                 className={product.is_visible ? "py-4" : "py-4 opacity-50"}
               >
-                <div className="flex items-center gap-4">
+                <div className="flex flex-wrap items-center gap-3">
                   {images[0] ? (
                     <Image
                       src={images[0].url}
@@ -141,16 +141,16 @@ export default async function ProductsPage() {
                   ) : (
                     <div className="h-12 w-12 flex-none bg-zinc-100" />
                   )}
-                  <div className="flex-1">
+                  <div className="min-w-[140px] flex-1">
                     <p className="text-sm font-medium">{product.title}</p>
                     <p className="text-xs text-zinc-500">
                       {categoryNames.length > 0 ? categoryNames.join(", ") : "Sans catégorie"}
                     </p>
                   </div>
-                  <p className="w-20 text-sm">
+                  <p className="text-sm">
                     {product.price !== null ? priceFormatter.format(product.price) : "—"}
                   </p>
-                  <p className="w-16 text-sm text-zinc-600">Stock : {product.stock}</p>
+                  <p className="text-sm text-zinc-600">Stock : {product.stock}</p>
                   <form action={cycleProductStatus.bind(null, product.id, product.status)}>
                     <button
                       type="submit"

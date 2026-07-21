@@ -72,7 +72,7 @@ export default async function BoutiquePage({
   }
 
   return (
-    <div className="px-10 py-12">
+    <div className="px-4 py-8 sm:px-6 sm:py-10 lg:px-10 lg:py-12">
       <h1 className="text-2xl font-semibold uppercase tracking-wide">Boutique</h1>
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-4">

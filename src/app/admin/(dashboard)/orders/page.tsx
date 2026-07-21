@@ -46,7 +46,7 @@ export default async function OrdersPage() {
   return (
     <div>
       {unreadCount > 0 ? (
-        <div className="mb-6 flex items-center justify-between bg-black px-4 py-3 text-sm text-white">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-2 bg-black px-4 py-3 text-sm text-white">
           <p>
             ● {unreadCount} nouvelle{unreadCount > 1 ? "s" : ""} commande
             {unreadCount > 1 ? "s" : ""} reçue{unreadCount > 1 ? "s" : ""}
@@ -83,18 +83,18 @@ export default async function OrdersPage() {
               .join(", ");
 
             return (
-              <li key={order.id} className="flex items-center gap-4 py-3">
-                <p className="w-16 text-sm text-zinc-500">#{order.id}</p>
-                <div className="flex-1">
+              <li key={order.id} className="flex flex-wrap items-center gap-3 py-3">
+                <p className="text-sm text-zinc-500">#{order.id}</p>
+                <div className="min-w-[160px] flex-1">
                   <p className="text-sm font-medium">{order.customer_name}</p>
                   <p className="text-xs text-zinc-500">
                     {order.customer_email} — {items}
                   </p>
                 </div>
-                <p className="w-24 text-sm text-zinc-600">
+                <p className="text-sm text-zinc-600">
                   {dateFormatter.format(new Date(order.created_at))}
                 </p>
-                <p className="w-20 text-sm">{priceFormatter.format(total)}</p>
+                <p className="text-sm">{priceFormatter.format(total)}</p>
                 <form action={cycleOrderStatus.bind(null, order.id, order.status)}>
                   <button
                     type="submit"

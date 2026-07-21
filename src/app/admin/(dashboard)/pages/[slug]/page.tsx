@@ -53,7 +53,7 @@ export default async function PageEditorPage({
 
   return (
     <div>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold uppercase tracking-wide">
           Contenu — {page.title}
         </h1>
@@ -114,7 +114,7 @@ export default async function PageEditorPage({
         <ul className="mt-8 flex flex-col gap-4">
           {blockList.map((block, index) => (
             <li key={block.id} className="border border-zinc-200 bg-white p-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-xs uppercase tracking-wide text-zinc-500">
                   {BLOCK_LABELS[block.type]}
                 </p>

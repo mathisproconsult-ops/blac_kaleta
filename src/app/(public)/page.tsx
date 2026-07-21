@@ -51,7 +51,7 @@ export default async function HomePage() {
   const socialLinks = SOCIAL_ICONS.filter(({ key }) => settings[key]);
 
   return (
-    <div className="flex flex-col items-center gap-8 px-6 py-16">
+    <div className="flex flex-col items-center gap-8 px-4 py-10 sm:px-6 sm:py-16">
       {featuredWorks.length > 0 ? (
         <div className="flex w-full max-w-3xl flex-wrap justify-center gap-6">
           {featuredWorks.map((work) => {

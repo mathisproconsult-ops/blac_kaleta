@@ -97,10 +97,10 @@ export default async function FooterPage() {
       ) : (
         <ul className="mt-8 divide-y divide-zinc-100 border-t border-zinc-100">
           {footerLinks.map((link, index) => (
-            <li key={link.id} className="flex items-center gap-3 py-3">
+            <li key={link.id} className="flex flex-wrap items-center gap-3 py-3">
               <form
                 action={updateFooterLink.bind(null, link.id)}
-                className="flex flex-1 items-center gap-3"
+                className="flex flex-1 flex-wrap items-center gap-3"
               >
                 <div className="flex flex-col">
                   <button

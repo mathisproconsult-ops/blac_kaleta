@@ -47,10 +47,10 @@ export default async function CategoriesPage() {
       ) : (
         <ul className="mt-8 divide-y divide-zinc-100 border-t border-zinc-100">
           {list.map((category, index) => (
-            <li key={category.id} className="flex items-center gap-3 py-3">
+            <li key={category.id} className="flex flex-wrap items-center gap-3 py-3">
               <form
                 action={renameCategory.bind(null, category.id)}
-                className="flex flex-1 items-center gap-3"
+                className="flex flex-1 flex-wrap items-center gap-3"
               >
                 <div className="flex flex-col">
                   <button

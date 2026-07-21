@@ -10,7 +10,7 @@ export default async function ContactPage() {
   const { contact_email: contactEmail } = await getSettings();
 
   return (
-    <div className="px-10 py-12">
+    <div className="px-4 py-8 sm:px-6 sm:py-10 lg:px-10 lg:py-12">
       <h1 className="text-2xl font-semibold uppercase tracking-wide">Contact</h1>
       <a href={`mailto:${contactEmail}`} className="mt-4 block text-sm text-zinc-600 hover:underline">
         {contactEmail}

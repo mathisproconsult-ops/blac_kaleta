@@ -37,7 +37,7 @@ export default async function CustomPage({
   const blocks = await getPageBlocks(slug);
 
   return (
-    <div className="px-10 py-12">
+    <div className="px-4 py-8 sm:px-6 sm:py-10 lg:px-10 lg:py-12">
       <PageBlocks blocks={blocks} />
     </div>
   );

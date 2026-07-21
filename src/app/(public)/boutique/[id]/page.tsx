@@ -61,7 +61,7 @@ export default async function ProductPage({
     .filter((name): name is string => Boolean(name));
 
   return (
-    <div className="grid gap-10 px-10 py-12 lg:grid-cols-2">
+    <div className="grid gap-8 px-4 py-8 sm:px-6 sm:py-10 lg:grid-cols-2 lg:gap-10 lg:px-10 lg:py-12">
       <ProductGallery images={images} alt={product.title} />
       <div>
         <h1 className="flex items-center gap-3 text-2xl font-semibold">

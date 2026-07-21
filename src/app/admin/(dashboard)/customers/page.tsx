@@ -73,26 +73,28 @@ export default async function CustomersPage() {
       {customers.length === 0 ? (
         <p className="mt-8 text-sm text-zinc-500">Aucun client pour l&apos;instant.</p>
       ) : (
-        <table className="mt-8 w-full text-left text-sm">
-          <thead>
-            <tr className="border-b border-zinc-200 text-xs uppercase tracking-wide text-zinc-500">
-              <th className="py-2">Nom</th>
-              <th className="py-2">Email</th>
-              <th className="py-2">Commandes</th>
-              <th className="py-2">Total dépensé</th>
-            </tr>
-          </thead>
-          <tbody>
-            {customers.map((customer) => (
-              <tr key={customer.email} className="border-b border-zinc-100">
-                <td className="py-3">{customer.name}</td>
-                <td className="py-3 text-zinc-600">{customer.email}</td>
-                <td className="py-3">{customer.orderCount}</td>
-                <td className="py-3">{priceFormatter.format(customer.totalSpent)}</td>
+        <div className="mt-8 overflow-x-auto">
+          <table className="w-full min-w-[480px] text-left text-sm">
+            <thead>
+              <tr className="border-b border-zinc-200 text-xs uppercase tracking-wide text-zinc-500">
+                <th className="py-2 pr-4">Nom</th>
+                <th className="py-2 pr-4">Email</th>
+                <th className="py-2 pr-4">Commandes</th>
+                <th className="py-2">Total dépensé</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {customers.map((customer) => (
+                <tr key={customer.email} className="border-b border-zinc-100">
+                  <td className="py-3 pr-4">{customer.name}</td>
+                  <td className="py-3 pr-4 text-zinc-600">{customer.email}</td>
+                  <td className="py-3 pr-4">{customer.orderCount}</td>
+                  <td className="py-3">{priceFormatter.format(customer.totalSpent)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );

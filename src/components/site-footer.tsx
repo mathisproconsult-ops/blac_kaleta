@@ -10,9 +10,9 @@ export function SiteFooter({
   links: FooterLink[];
 }) {
   return (
-    <footer className="flex items-center justify-between border-t border-zinc-100 px-10 py-6 text-sm text-zinc-500">
+    <footer className="flex flex-col items-center gap-3 border-t border-zinc-100 px-4 py-6 text-center text-sm text-zinc-500 sm:flex-row sm:justify-between sm:px-6 sm:text-left lg:px-10">
       <p>{copyrightText}</p>
-      <div className="flex items-center gap-6">
+      <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
         {links.map((link) => (
           <Link key={link.id} href={link.href} className="hover:underline">
             {link.label}

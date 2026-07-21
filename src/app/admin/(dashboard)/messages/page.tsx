@@ -48,8 +48,8 @@ export default async function MessagesPage() {
       ) : (
         <ul className="mt-8 divide-y divide-zinc-100 border-t border-zinc-100">
           {messages.map((message) => (
-            <li key={message.id} className="flex items-start gap-4 py-4">
-              <div className="flex-1">
+            <li key={message.id} className="flex flex-wrap items-start gap-3 py-4">
+              <div className="min-w-[200px] flex-1">
                 <p className="text-sm font-medium">
                   {message.name}{" "}
                   <span className="font-normal text-zinc-500">— {message.email}</span>
@@ -58,7 +58,7 @@ export default async function MessagesPage() {
                   {message.message}
                 </p>
               </div>
-              <p className="w-28 text-right text-xs text-zinc-500">
+              <p className="text-xs text-zinc-500">
                 {dateFormatter.format(new Date(message.created_at))}
               </p>
               <form action={deleteContactMessage.bind(null, message.id)}>

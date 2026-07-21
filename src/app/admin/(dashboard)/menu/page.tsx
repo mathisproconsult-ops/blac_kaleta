@@ -60,10 +60,10 @@ export default async function MenuPage() {
       ) : (
         <ul className="mt-8 divide-y divide-zinc-100 border-t border-zinc-100">
           {menuItems.map((item, index) => (
-            <li key={item.id} className="flex items-center gap-3 py-3">
+            <li key={item.id} className="flex flex-wrap items-center gap-3 py-3">
               <form
                 action={updateMenuItem.bind(null, item.id)}
-                className="flex flex-1 items-center gap-3"
+                className="flex flex-1 flex-wrap items-center gap-3"
               >
                 <div className="flex flex-col">
                   <button

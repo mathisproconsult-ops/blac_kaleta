@@ -35,7 +35,7 @@ export default async function PagesIndex() {
       ) : (
         <ul className="mt-8 divide-y divide-zinc-100 border-t border-zinc-100">
           {pageList.map((page) => (
-            <li key={page.slug} className="flex items-center justify-between py-3">
+            <li key={page.slug} className="flex flex-wrap items-center justify-between gap-2 py-3">
               <Link
                 href={`/admin/pages/${page.slug}`}
                 className="text-sm font-medium hover:underline"

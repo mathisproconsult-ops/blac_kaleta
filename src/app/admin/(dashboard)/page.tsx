@@ -93,13 +93,13 @@ export default async function AdminOverviewPage() {
       ) : (
         <ul className="mt-4 divide-y divide-zinc-100 border-t border-zinc-100">
           {recentOrders.map((order) => (
-            <li key={order.id} className="flex items-center gap-4 py-3">
-              <p className="w-16 text-sm text-zinc-500">#{order.id}</p>
-              <p className="flex-1 text-sm font-medium">{order.customer_name}</p>
-              <p className="w-24 text-sm text-zinc-600">
+            <li key={order.id} className="flex flex-wrap items-center gap-3 py-3">
+              <p className="text-sm text-zinc-500">#{order.id}</p>
+              <p className="min-w-[120px] flex-1 text-sm font-medium">{order.customer_name}</p>
+              <p className="text-sm text-zinc-600">
                 {dateFormatter.format(new Date(order.created_at))}
               </p>
-              <p className="w-20 text-sm">{priceFormatter.format(orderTotal(order))}</p>
+              <p className="text-sm">{priceFormatter.format(orderTotal(order))}</p>
               <span
                 className={`px-2 py-1 text-xs font-medium ${ORDER_STATUS_STYLES[order.status]}`}
               >

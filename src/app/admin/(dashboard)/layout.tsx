@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { logout } from "./actions";
+import { AdminSidebar } from "./admin-sidebar";
 
 export default async function AdminDashboardLayout({
   children,
@@ -31,48 +31,11 @@ export default async function AdminDashboardLayout({
   ];
 
   return (
-    <div className="flex min-h-screen">
-      <aside className="flex w-60 flex-none flex-col bg-[#111111] px-6 py-8 text-white">
-        <div className="mb-10">
-          <p className="text-base font-bold tracking-wide">BLAC_KALETA</p>
-          <p className="text-xs uppercase tracking-widest text-zinc-400">
-            Admin dashboard
-          </p>
-        </div>
-        <nav className="flex flex-1 flex-col gap-1">
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="flex items-center justify-between rounded px-3 py-2 text-sm text-zinc-200 hover:bg-white/10"
-            >
-              {item.label}
-              {item.badge ? (
-                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-white px-1 text-xs font-medium text-black">
-                  {item.badge}
-                </span>
-              ) : null}
-            </Link>
-          ))}
-        </nav>
-        <div className="flex flex-col gap-3 border-t border-white/10 pt-4">
-          {email ? (
-            <p className="truncate text-xs text-zinc-400">{email}</p>
-          ) : null}
-          <form action={logout}>
-            <button
-              type="submit"
-              className="text-sm text-zinc-300 hover:text-white"
-            >
-              Déconnexion
-            </button>
-          </form>
-          <Link href="/" className="text-sm text-zinc-300 hover:text-white">
-            ← Retour au site
-          </Link>
-        </div>
-      </aside>
-      <main className="flex-1 bg-[#fafaf9] p-10">{children}</main>
+    <div className="flex min-h-screen flex-col lg:flex-row">
+      <AdminSidebar navItems={navItems} email={email} logoutAction={logout} />
+      <main className="flex-1 overflow-x-hidden bg-[#fafaf9] p-4 sm:p-6 lg:p-10">
+        {children}
+      </main>
     </div>
   );
 }
