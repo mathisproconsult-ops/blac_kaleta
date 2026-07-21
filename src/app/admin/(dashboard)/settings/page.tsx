@@ -9,6 +9,7 @@ export const metadata: Metadata = {
 type Settings = {
   shop_name: string;
   contact_email: string;
+  header_logo_url: string | null;
   payment_kkiapay: boolean;
   payment_fedapay: boolean;
   notify_email_per_order: boolean;
@@ -24,6 +25,7 @@ type Settings = {
 const defaultSettings: Settings = {
   shop_name: "Blac_Kaleta",
   contact_email: "contact@blac-kaleta.com",
+  header_logo_url: null,
   payment_kkiapay: false,
   payment_fedapay: false,
   notify_email_per_order: true,
@@ -41,7 +43,7 @@ export default async function SettingsPage() {
   const { data } = await supabase
     .from("settings")
     .select(
-      "shop_name, contact_email, payment_kkiapay, payment_fedapay, notify_email_per_order, notify_realtime_popup, social_instagram, social_facebook, social_whatsapp, social_youtube, social_tiktok, social_patreon",
+      "shop_name, contact_email, header_logo_url, payment_kkiapay, payment_fedapay, notify_email_per_order, notify_realtime_popup, social_instagram, social_facebook, social_whatsapp, social_youtube, social_tiktok, social_patreon",
     )
     .eq("id", true)
     .maybeSingle();
@@ -57,11 +59,11 @@ export default async function SettingsPage() {
       <form action={updateSettings} className="mt-8 flex max-w-lg flex-col gap-10">
         <fieldset className="flex flex-col gap-3">
           <legend className="text-sm font-semibold uppercase tracking-wide">
-            Infos boutique
+            Header
           </legend>
           <div className="flex flex-col gap-1">
             <label className="text-xs uppercase tracking-wide text-zinc-500">
-              Nom de la boutique
+              Nom du site
             </label>
             <input
               name="shop_name"
@@ -81,6 +83,26 @@ export default async function SettingsPage() {
               required
               className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
             />
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className="text-xs uppercase tracking-wide text-zinc-500">
+              Logo (remplace le nom du site s&apos;il est renseigné)
+            </label>
+            {settings.header_logo_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={settings.header_logo_url}
+                alt="Logo actuel"
+                className="h-12 w-auto object-contain"
+              />
+            ) : null}
+            <input type="file" name="logo" accept="image/*" className="text-sm" />
+            {settings.header_logo_url ? (
+              <label className="flex items-center gap-2 text-sm text-red-600">
+                <input type="checkbox" name="remove_logo" />
+                Supprimer le logo actuel
+              </label>
+            ) : null}
           </div>
         </fieldset>
 
