@@ -1,5 +1,7 @@
 import { SiInstagram, SiTiktok, SiWhatsapp, SiYoutube } from "react-icons/si";
 import { getSettings } from "@/lib/settings";
+import { getPageBlocks } from "@/lib/page-blocks";
+import { PageBlocks } from "@/components/page-blocks";
 
 const socialLinks = [
   { label: "WhatsApp", href: "#", Icon: SiWhatsapp },
@@ -9,19 +11,14 @@ const socialLinks = [
 ];
 
 export default async function HomePage() {
-  const { contact_email: contactEmail } = await getSettings();
+  const [{ contact_email: contactEmail }, blocks] = await Promise.all([
+    getSettings(),
+    getPageBlocks("home"),
+  ]);
 
   return (
     <div className="flex flex-col items-center gap-8 px-6 py-16">
-      <div
-        className="flex aspect-square w-full max-w-[560px] items-center justify-center text-xs uppercase tracking-widest text-zinc-400"
-        style={{
-          backgroundImage:
-            "repeating-linear-gradient(45deg, #f0f0ee 0, #f0f0ee 2px, #ffffff 2px, #ffffff 12px)",
-        }}
-      >
-        Œuvre vedette
-      </div>
+      <PageBlocks blocks={blocks} />
       <div className="flex items-center gap-4">
         {socialLinks.map(({ label, href, Icon }) => (
           <a
