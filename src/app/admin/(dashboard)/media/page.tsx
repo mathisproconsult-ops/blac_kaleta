@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { SubmitButton } from "@/components/submit-button";
 import { deleteMedia, toggleMediaRecentWorks, uploadMedia } from "./actions";
 
 export const metadata: Metadata = {
@@ -49,12 +50,12 @@ export default async function MediaPage() {
           multiple
           className="text-sm"
         />
-        <button
-          type="submit"
+        <SubmitButton
+          pendingText="Envoi…"
           className="bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
         >
           Uploader
-        </button>
+        </SubmitButton>
       </form>
 
       {error ? (
@@ -109,8 +110,8 @@ export default async function MediaPage() {
                       media.products.show_in_recent_works,
                     )}
                   >
-                    <button
-                      type="submit"
+                    <SubmitButton
+                      pendingText="…"
                       className={
                         media.products.show_in_recent_works
                           ? "rounded bg-[#eef4ec] px-2 py-1 text-xs font-medium text-[#3a6b3a]"
@@ -120,7 +121,7 @@ export default async function MediaPage() {
                       {media.products.show_in_recent_works
                         ? "Dans Œuvres récentes"
                         : "Ajouter à Œuvres récentes"}
-                    </button>
+                    </SubmitButton>
                   </form>
                 ) : (
                   <span className="rounded bg-zinc-100 px-2 py-1 text-xs text-zinc-400">
@@ -129,9 +130,9 @@ export default async function MediaPage() {
                 )}
               </label>
               <form action={deleteMedia.bind(null, media.id, media.path)} className="mt-2">
-                <button type="submit" className="text-xs text-red-600 hover:underline">
+                <SubmitButton pendingText="Suppression…" className="text-xs text-red-600 hover:underline">
                   Supprimer
-                </button>
+                </SubmitButton>
               </form>
             </div>
           ))}

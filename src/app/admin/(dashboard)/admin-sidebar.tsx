@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { SubmitButton } from "@/components/submit-button";
 
 type NavItem = { label: string; href: string; badge?: number };
 
@@ -46,12 +47,9 @@ export function AdminSidebar({
           <p className="truncate text-xs text-zinc-400">{email}</p>
         ) : null}
         <form action={logoutAction}>
-          <button
-            type="submit"
-            className="text-sm text-zinc-300 hover:text-white"
-          >
+          <SubmitButton pendingText="…" className="text-sm text-zinc-300 hover:text-white">
             Déconnexion
-          </button>
+          </SubmitButton>
         </form>
         <Link href="/" className="text-sm text-zinc-300 hover:text-white">
           ← Retour au site

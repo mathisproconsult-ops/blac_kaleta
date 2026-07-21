@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { SubmitButton } from "@/components/submit-button";
 import { createCategory, deleteCategory, moveCategory, renameCategory } from "./actions";
 
 export const metadata: Metadata = {
@@ -34,12 +35,12 @@ export default async function CategoriesPage() {
           required
           className="flex-1 max-w-sm border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
         />
-        <button
-          type="submit"
+        <SubmitButton
+          pendingText="Ajout…"
           className="bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
         >
           + Ajouter
-        </button>
+        </SubmitButton>
       </form>
 
       {list.length === 0 ? (
@@ -53,43 +54,41 @@ export default async function CategoriesPage() {
                 className="flex flex-1 flex-wrap items-center gap-3"
               >
                 <div className="flex flex-col">
-                  <button
-                    type="submit"
+                  <SubmitButton
                     formAction={moveCategory.bind(null, category.id, "up")}
                     disabled={index === 0}
                     aria-label="Monter"
                     className="text-xs text-zinc-500 hover:text-black disabled:opacity-20"
                   >
                     ▲
-                  </button>
-                  <button
-                    type="submit"
+                  </SubmitButton>
+                  <SubmitButton
                     formAction={moveCategory.bind(null, category.id, "down")}
                     disabled={index === list.length - 1}
                     aria-label="Descendre"
                     className="text-xs text-zinc-500 hover:text-black disabled:opacity-20"
                   >
                     ▼
-                  </button>
+                  </SubmitButton>
                 </div>
                 <input
                   name="name"
                   defaultValue={category.name}
                   className="flex-1 max-w-sm border border-transparent px-2 py-1 text-sm hover:border-zinc-300 focus:border-black focus:outline-none"
                 />
-                <button
-                  type="submit"
+                <SubmitButton
+                  pendingText="Enregistrement…"
                   className="text-sm text-zinc-600 hover:underline"
                 >
                   Enregistrer
-                </button>
-                <button
-                  type="submit"
+                </SubmitButton>
+                <SubmitButton
                   formAction={deleteCategory.bind(null, category.id)}
+                  pendingText="Suppression…"
                   className="text-sm text-red-600 hover:underline"
                 >
                   Supprimer
-                </button>
+                </SubmitButton>
               </form>
             </li>
           ))}

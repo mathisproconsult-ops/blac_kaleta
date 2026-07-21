@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 import { Disclosure } from "@/components/disclosure";
+import { SubmitButton } from "@/components/submit-button";
 import { ProductFields } from "./product-fields";
 import { ImportCsvForm } from "./import-csv-form";
 import {
@@ -92,12 +93,12 @@ export default async function ProductsPage() {
               className="flex flex-col gap-4 border border-zinc-200 bg-white p-6"
             >
               <ProductFields categories={categoryList} availableMedia={availableMedia} />
-              <button
-                type="submit"
+              <SubmitButton
+                pendingText="Ajout…"
                 className="self-start bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
               >
                 Ajouter le produit
-              </button>
+              </SubmitButton>
             </form>
           </Disclosure>
         </div>
@@ -152,12 +153,12 @@ export default async function ProductsPage() {
                   </p>
                   <p className="text-sm text-zinc-600">Stock : {product.stock}</p>
                   <form action={cycleProductStatus.bind(null, product.id, product.status)}>
-                    <button
-                      type="submit"
+                    <SubmitButton
+                      pendingText="…"
                       className={`px-2 py-1 text-xs font-medium ${STATUS_STYLES[product.status]}`}
                     >
                       {STATUS_LABELS[product.status]}
-                    </button>
+                    </SubmitButton>
                   </form>
                   <form
                     action={toggleProductVisibility.bind(
@@ -166,8 +167,8 @@ export default async function ProductsPage() {
                       product.is_visible,
                     )}
                   >
-                    <button
-                      type="submit"
+                    <SubmitButton
+                      pendingText="…"
                       className={
                         product.is_visible
                           ? "px-2 py-1 text-xs font-medium bg-[#eef4ec] text-[#3a6b3a]"
@@ -175,12 +176,12 @@ export default async function ProductsPage() {
                       }
                     >
                       {product.is_visible ? "Visible" : "Masqué"}
-                    </button>
+                    </SubmitButton>
                   </form>
                   <form action={deleteProduct.bind(null, product.id)}>
-                    <button type="submit" className="text-sm text-red-600 hover:underline">
+                    <SubmitButton pendingText="Suppression…" className="text-sm text-red-600 hover:underline">
                       Supprimer
-                    </button>
+                    </SubmitButton>
                   </form>
                 </div>
 
@@ -200,13 +201,13 @@ export default async function ProductsPage() {
                             action={deleteProductImage.bind(null, image.id, image.path)}
                             className="absolute -right-2 -top-2"
                           >
-                            <button
-                              type="submit"
+                            <SubmitButton
+                              pendingText="…"
                               aria-label="Supprimer la photo"
                               className="flex h-5 w-5 items-center justify-center bg-black text-xs text-white"
                             >
                               ×
-                            </button>
+                            </SubmitButton>
                           </form>
                         </div>
                       ))}
@@ -233,12 +234,12 @@ export default async function ProductsPage() {
                       selectedCategoryIds={selectedCategoryIds}
                       availableMedia={availableMedia}
                     />
-                    <button
-                      type="submit"
+                    <SubmitButton
+                      pendingText="Enregistrement…"
                       className="self-start bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
                     >
                       Enregistrer les modifications
-                    </button>
+                    </SubmitButton>
                   </form>
                 </Disclosure>
               </li>

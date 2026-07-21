@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { SubmitButton } from "@/components/submit-button";
 import type { BlockType, PageBlock } from "@/lib/page-blocks";
 import {
   addBlock,
@@ -58,9 +59,9 @@ export default async function PageEditorPage({
           Contenu — {page.title}
         </h1>
         <form action={deletePage.bind(null, page.id, slug)}>
-          <button type="submit" className="text-sm text-red-600 hover:underline">
+          <SubmitButton pendingText="Suppression…" className="text-sm text-red-600 hover:underline">
             Supprimer la page
-          </button>
+          </SubmitButton>
         </form>
       </div>
 
@@ -87,23 +88,23 @@ export default async function PageEditorPage({
           />
           Ajouter au menu
         </label>
-        <button
-          type="submit"
+        <SubmitButton
+          pendingText="Enregistrement…"
           className="bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
         >
           Enregistrer
-        </button>
+        </SubmitButton>
       </form>
 
       <div className="mt-6 flex gap-2">
         {(["titre", "texte", "image"] as BlockType[]).map((type) => (
           <form key={type} action={addBlock.bind(null, slug, type)}>
-            <button
-              type="submit"
+            <SubmitButton
+              pendingText="Ajout…"
               className="border border-zinc-300 px-3 py-2 text-sm hover:bg-zinc-50"
             >
               + {BLOCK_LABELS[type]}
-            </button>
+            </SubmitButton>
           </form>
         ))}
       </div>
@@ -120,24 +121,22 @@ export default async function PageEditorPage({
                 </p>
                 <div className="flex items-center gap-3">
                   <form action={moveBlock.bind(null, block.id, slug, "up")}>
-                    <button
-                      type="submit"
+                    <SubmitButton
                       disabled={index === 0}
                       aria-label="Monter"
                       className="text-xs text-zinc-500 hover:text-black disabled:opacity-20"
                     >
                       ▲
-                    </button>
+                    </SubmitButton>
                   </form>
                   <form action={moveBlock.bind(null, block.id, slug, "down")}>
-                    <button
-                      type="submit"
+                    <SubmitButton
                       disabled={index === blockList.length - 1}
                       aria-label="Descendre"
                       className="text-xs text-zinc-500 hover:text-black disabled:opacity-20"
                     >
                       ▼
-                    </button>
+                    </SubmitButton>
                   </form>
                   <form
                     action={deleteBlock.bind(
@@ -147,9 +146,9 @@ export default async function PageEditorPage({
                       block.type === "image" ? block.content.path ?? null : null,
                     )}
                   >
-                    <button type="submit" className="text-sm text-red-600 hover:underline">
+                    <SubmitButton pendingText="Suppression…" className="text-sm text-red-600 hover:underline">
                       Supprimer
-                    </button>
+                    </SubmitButton>
                   </form>
                 </div>
               </div>
@@ -181,12 +180,12 @@ export default async function PageEditorPage({
                     defaultValue={block.content.alt ?? ""}
                     className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
                   />
-                  <button
-                    type="submit"
+                  <SubmitButton
+                    pendingText="Enregistrement…"
                     className="self-start bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
                   >
                     Enregistrer
-                  </button>
+                  </SubmitButton>
                 </form>
               ) : (
                 <form
@@ -199,12 +198,12 @@ export default async function PageEditorPage({
                     defaultValue={block.content.text ?? ""}
                     className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
                   />
-                  <button
-                    type="submit"
+                  <SubmitButton
+                    pendingText="Enregistrement…"
                     className="self-start bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
                   >
                     Enregistrer
-                  </button>
+                  </SubmitButton>
                 </form>
               )}
             </li>

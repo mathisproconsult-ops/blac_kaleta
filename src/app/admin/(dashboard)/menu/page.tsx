@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { SubmitButton } from "@/components/submit-button";
 import {
   createMenuItem,
   deleteMenuItem,
@@ -47,12 +48,12 @@ export default async function MenuPage() {
           required
           className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
         />
-        <button
-          type="submit"
+        <SubmitButton
+          pendingText="Ajout…"
           className="bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
         >
           + Ajouter
-        </button>
+        </SubmitButton>
       </form>
 
       {menuItems.length === 0 ? (
@@ -66,24 +67,22 @@ export default async function MenuPage() {
                 className="flex flex-1 flex-wrap items-center gap-3"
               >
                 <div className="flex flex-col">
-                  <button
-                    type="submit"
+                  <SubmitButton
                     formAction={moveMenuItem.bind(null, item.id, "up")}
                     disabled={index === 0}
                     aria-label="Monter"
                     className="text-xs text-zinc-500 hover:text-black disabled:opacity-20"
                   >
                     ▲
-                  </button>
-                  <button
-                    type="submit"
+                  </SubmitButton>
+                  <SubmitButton
                     formAction={moveMenuItem.bind(null, item.id, "down")}
                     disabled={index === menuItems.length - 1}
                     aria-label="Descendre"
                     className="text-xs text-zinc-500 hover:text-black disabled:opacity-20"
                   >
                     ▼
-                  </button>
+                  </SubmitButton>
                 </div>
                 <input
                   name="label"
@@ -95,16 +94,19 @@ export default async function MenuPage() {
                   defaultValue={item.href}
                   className="flex-1 max-w-[220px] border border-transparent px-2 py-1 text-sm text-zinc-600 hover:border-zinc-300 focus:border-black focus:outline-none"
                 />
-                <button type="submit" className="text-sm text-zinc-600 hover:underline">
+                <SubmitButton
+                  pendingText="Enregistrement…"
+                  className="text-sm text-zinc-600 hover:underline"
+                >
                   Enregistrer
-                </button>
-                <button
-                  type="submit"
+                </SubmitButton>
+                <SubmitButton
                   formAction={deleteMenuItem.bind(null, item.id)}
+                  pendingText="Suppression…"
                   className="text-sm text-red-600 hover:underline"
                 >
                   Supprimer
-                </button>
+                </SubmitButton>
               </form>
             </li>
           ))}

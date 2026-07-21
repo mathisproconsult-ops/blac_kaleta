@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { SubmitButton } from "@/components/submit-button";
 import { updateSettings } from "./actions";
 
 export const metadata: Metadata = {
@@ -230,12 +231,12 @@ export default async function SettingsPage() {
           </label>
         </fieldset>
 
-        <button
-          type="submit"
+        <SubmitButton
+          pendingText="Enregistrement…"
           className="self-start bg-black px-6 py-3 text-sm font-medium text-white hover:bg-zinc-800"
         >
           Enregistrer
-        </button>
+        </SubmitButton>
       </form>
     </div>
   );

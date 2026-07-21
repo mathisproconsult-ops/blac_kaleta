@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { SubmitButton } from "@/components/submit-button";
 import { cycleOrderStatus, markOrdersAsRead } from "./actions";
 import {
   ORDER_STATUS_LABELS,
@@ -52,9 +53,9 @@ export default async function OrdersPage() {
             {unreadCount > 1 ? "s" : ""} reçue{unreadCount > 1 ? "s" : ""}
           </p>
           <form action={markOrdersAsRead}>
-            <button type="submit" className="underline">
+            <SubmitButton pendingText="…" className="underline">
               Marquer comme lu
-            </button>
+            </SubmitButton>
           </form>
         </div>
       ) : null}
@@ -96,12 +97,12 @@ export default async function OrdersPage() {
                 </p>
                 <p className="text-sm">{priceFormatter.format(total)}</p>
                 <form action={cycleOrderStatus.bind(null, order.id, order.status)}>
-                  <button
-                    type="submit"
+                  <SubmitButton
+                    pendingText="…"
                     className={`px-2 py-1 text-xs font-medium ${ORDER_STATUS_STYLES[order.status]}`}
                   >
                     {ORDER_STATUS_LABELS[order.status]}
-                  </button>
+                  </SubmitButton>
                 </form>
               </li>
             );

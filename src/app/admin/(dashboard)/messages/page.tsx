@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { SubmitButton } from "@/components/submit-button";
 import { deleteContactMessage } from "./actions";
 
 export const metadata: Metadata = {
@@ -62,9 +63,9 @@ export default async function MessagesPage() {
                 {dateFormatter.format(new Date(message.created_at))}
               </p>
               <form action={deleteContactMessage.bind(null, message.id)}>
-                <button type="submit" className="text-sm text-red-600 hover:underline">
+                <SubmitButton pendingText="Suppression…" className="text-sm text-red-600 hover:underline">
                   Supprimer
-                </button>
+                </SubmitButton>
               </form>
             </li>
           ))}
