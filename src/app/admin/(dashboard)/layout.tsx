@@ -19,7 +19,7 @@ export default async function AdminDashboardLayout({
   const navItems = [
     { label: "Overview", href: "/admin" },
     { label: "Commandes", href: "/admin/orders", badge: unreadOrders ?? 0 },
-    { label: "Produits", href: "/admin/products" },
+    { label: "Œuvres", href: "/admin/products" },
     { label: "Catégories", href: "/admin/categories" },
     { label: "Clients", href: "/admin/customers" },
     { label: "Messages", href: "/admin/messages" },

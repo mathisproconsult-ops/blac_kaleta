@@ -14,7 +14,7 @@ import {
 import { STATUS_LABELS, STATUS_STYLES, type ProductStatus } from "./status";
 
 export const metadata: Metadata = {
-  title: "Produits — Admin Blac_Kaleta",
+  title: "Œuvres — Admin Blac_Kaleta",
 };
 
 export const maxDuration = 60;
@@ -35,6 +35,9 @@ type ProductRow = {
   year: number | null;
   series: string | null;
   technique: string | null;
+  is_for_sale: boolean;
+  show_in_recent_works: boolean;
+  featured_home: boolean;
   product_images: ProductImage[];
   product_categories: { categories: { id: number; name: string } | null }[];
 };
@@ -47,7 +50,7 @@ export default async function ProductsPage() {
     supabase
       .from("products")
       .select(
-        "id, title, price, stock, status, description, year, series, technique, product_images(id, path, url, position), product_categories(categories(id, name))",
+        "id, title, price, stock, status, description, year, series, technique, is_for_sale, show_in_recent_works, featured_home, product_images(id, path, url, position), product_categories(categories(id, name))",
       )
       .order("created_at", { ascending: false })
       .returns<ProductRow[]>(),
@@ -60,7 +63,7 @@ export default async function ProductsPage() {
     <div>
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold uppercase tracking-wide">
-          Produits
+          Œuvres
         </h1>
         <div className="flex items-center gap-3">
           <a
@@ -191,6 +194,9 @@ export default async function ProductsPage() {
                         year: product.year,
                         series: product.series,
                         technique: product.technique,
+                        is_for_sale: product.is_for_sale,
+                        show_in_recent_works: product.show_in_recent_works,
+                        featured_home: product.featured_home,
                       }}
                       selectedCategoryIds={selectedCategoryIds}
                     />

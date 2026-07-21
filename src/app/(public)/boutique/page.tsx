@@ -44,6 +44,7 @@ export default async function BoutiquePage({
       .select(
         "id, title, price, status, product_images(url, position), product_categories(category_id)",
       )
+      .eq("is_for_sale", true)
       .order("created_at", { ascending: false })
       .returns<ProductCard[]>(),
   ]);

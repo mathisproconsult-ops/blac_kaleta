@@ -27,7 +27,7 @@ export default async function RecentWorksPage({
   const { data } = await supabase
     .from("products")
     .select("id, title, year, series, technique, product_images(url, position)")
-    .not("year", "is", null)
+    .eq("show_in_recent_works", true)
     .order("year", { ascending: false })
     .returns<Work[]>();
 

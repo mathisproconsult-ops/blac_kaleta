@@ -38,6 +38,9 @@ function productFieldsFromFormData(formData: FormData) {
       typeof technique === "string" && technique.trim()
         ? technique.trim()
         : null,
+    is_for_sale: formData.get("is_for_sale") === "on",
+    show_in_recent_works: formData.get("show_in_recent_works") === "on",
+    featured_home: formData.get("featured_home") === "on",
   };
 }
 
@@ -108,6 +111,9 @@ export async function createProduct(formData: FormData) {
   await uploadImages(supabase, product.id, files, 0);
 
   revalidatePath("/admin/products");
+  revalidatePath("/");
+  revalidatePath("/boutique");
+  revalidatePath("/oeuvres-recentes");
 }
 
 export async function updateProduct(id: number, formData: FormData) {
@@ -130,6 +136,9 @@ export async function updateProduct(id: number, formData: FormData) {
   await uploadImages(supabase, id, files, count ?? 0);
 
   revalidatePath("/admin/products");
+  revalidatePath("/");
+  revalidatePath("/boutique");
+  revalidatePath("/oeuvres-recentes");
 }
 
 export async function deleteProduct(id: number) {
@@ -144,6 +153,9 @@ export async function deleteProduct(id: number) {
 
   await supabase.from("products").delete().eq("id", id);
   revalidatePath("/admin/products");
+  revalidatePath("/");
+  revalidatePath("/boutique");
+  revalidatePath("/oeuvres-recentes");
 }
 
 export async function deleteProductImage(imageId: number, path: string) {
@@ -151,6 +163,7 @@ export async function deleteProductImage(imageId: number, path: string) {
   await supabase.storage.from("products").remove([path]);
   await supabase.from("product_images").delete().eq("id", imageId);
   revalidatePath("/admin/products");
+  revalidatePath("/");
 }
 
 export async function cycleProductStatus(
@@ -162,4 +175,6 @@ export async function cycleProductStatus(
   const nextStatus = STATUS_ORDER[(currentIndex + 1) % STATUS_ORDER.length];
   await supabase.from("products").update({ status: nextStatus }).eq("id", id);
   revalidatePath("/admin/products");
+  revalidatePath("/");
+  revalidatePath("/boutique");
 }

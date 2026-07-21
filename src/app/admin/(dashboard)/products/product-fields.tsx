@@ -14,11 +14,43 @@ export function ProductFields({
     year: number | null;
     series: string | null;
     technique: string | null;
+    is_for_sale: boolean;
+    show_in_recent_works: boolean;
+    featured_home: boolean;
   };
   selectedCategoryIds?: number[];
 }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2">
+      <fieldset className="flex flex-col gap-2 sm:col-span-2">
+        <legend className="text-xs uppercase tracking-wide text-zinc-500">
+          Visibilité
+        </legend>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            name="is_for_sale"
+            defaultChecked={defaultValues?.is_for_sale ?? false}
+          />
+          En vente (apparaît dans la Boutique, avec prix et stock)
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            name="show_in_recent_works"
+            defaultChecked={defaultValues?.show_in_recent_works ?? false}
+          />
+          Afficher dans Œuvres récentes
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            name="featured_home"
+            defaultChecked={defaultValues?.featured_home ?? false}
+          />
+          Mettre en avant sur l&apos;accueil
+        </label>
+      </fieldset>
       <div className="flex flex-col gap-1">
         <label className="text-xs uppercase tracking-wide text-zinc-500">
           Titre
@@ -32,7 +64,7 @@ export function ProductFields({
       </div>
       <div className="flex flex-col gap-1">
         <label className="text-xs uppercase tracking-wide text-zinc-500">
-          Prix (€) — laisser vide si non destiné à la vente
+          Prix (€)
         </label>
         <input
           name="price"
