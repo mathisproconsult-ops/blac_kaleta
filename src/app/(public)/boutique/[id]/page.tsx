@@ -29,6 +29,7 @@ async function getProduct(id: string) {
       "id, title, price, status, stock, description, product_images(url, position), product_categories(categories(name))",
     )
     .eq("id", id)
+    .eq("is_visible", true)
     .maybeSingle();
 
   return data as ProductDetail | null;

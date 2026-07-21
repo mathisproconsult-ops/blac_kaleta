@@ -35,6 +35,7 @@ async function getFeaturedWorks() {
     .from("products")
     .select("id, title, product_images(url, position)")
     .eq("featured_home", true)
+    .eq("is_visible", true)
     .order("created_at", { ascending: false })
     .returns<FeaturedWork[]>();
 

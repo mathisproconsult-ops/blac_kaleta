@@ -9,6 +9,7 @@ import {
   cycleProductStatus,
   deleteProduct,
   deleteProductImage,
+  toggleProductVisibility,
   updateProduct,
 } from "./actions";
 import { STATUS_LABELS, STATUS_STYLES, type ProductStatus } from "./status";
@@ -38,6 +39,7 @@ type ProductRow = {
   is_for_sale: boolean;
   show_in_recent_works: boolean;
   featured_home: boolean;
+  is_visible: boolean;
   product_images: ProductImage[];
   product_categories: { categories: { id: number; name: string } | null }[];
 };
@@ -50,7 +52,7 @@ export default async function ProductsPage() {
     supabase
       .from("products")
       .select(
-        "id, title, price, stock, status, description, year, series, technique, is_for_sale, show_in_recent_works, featured_home, product_images(id, path, url, position), product_categories(categories(id, name))",
+        "id, title, price, stock, status, description, year, series, technique, is_for_sale, show_in_recent_works, featured_home, is_visible, product_images(id, path, url, position), product_categories(categories(id, name))",
       )
       .order("created_at", { ascending: false })
       .returns<ProductRow[]>(),
@@ -114,7 +116,10 @@ export default async function ProductsPage() {
               .filter((id): id is number => typeof id === "number");
 
             return (
-              <li key={product.id} className="py-4">
+              <li
+                key={product.id}
+                className={product.is_visible ? "py-4" : "py-4 opacity-50"}
+              >
                 <div className="flex items-center gap-4">
                   {images[0] ? (
                     <Image
@@ -143,6 +148,24 @@ export default async function ProductsPage() {
                       className={`px-2 py-1 text-xs font-medium ${STATUS_STYLES[product.status]}`}
                     >
                       {STATUS_LABELS[product.status]}
+                    </button>
+                  </form>
+                  <form
+                    action={toggleProductVisibility.bind(
+                      null,
+                      product.id,
+                      product.is_visible,
+                    )}
+                  >
+                    <button
+                      type="submit"
+                      className={
+                        product.is_visible
+                          ? "px-2 py-1 text-xs font-medium bg-[#eef4ec] text-[#3a6b3a]"
+                          : "px-2 py-1 text-xs font-medium bg-zinc-100 text-zinc-500"
+                      }
+                    >
+                      {product.is_visible ? "Visible" : "Masqué"}
                     </button>
                   </form>
                   <form action={deleteProduct.bind(null, product.id)}>

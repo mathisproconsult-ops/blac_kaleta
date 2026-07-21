@@ -178,3 +178,19 @@ export async function cycleProductStatus(
   revalidatePath("/");
   revalidatePath("/boutique");
 }
+
+export async function toggleProductVisibility(
+  id: number,
+  currentlyVisible: boolean,
+) {
+  const supabase = await createClient();
+  await supabase
+    .from("products")
+    .update({ is_visible: !currentlyVisible })
+    .eq("id", id);
+
+  revalidatePath("/admin/products");
+  revalidatePath("/");
+  revalidatePath("/boutique");
+  revalidatePath("/oeuvres-recentes");
+}
