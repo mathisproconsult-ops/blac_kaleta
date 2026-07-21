@@ -9,9 +9,13 @@ export default async function PublicLayout({
   children: React.ReactNode;
 }) {
   const supabase = await createClient();
-  const [{ data: menuItems }, settings] = await Promise.all([
+  const [{ data: menuItems }, { data: footerLinks }, settings] = await Promise.all([
     supabase
       .from("menu_items")
+      .select("id, label, href")
+      .order("position", { ascending: true }),
+    supabase
+      .from("footer_links")
       .select("id, label, href")
       .order("position", { ascending: true }),
     getSettings(),
@@ -25,7 +29,10 @@ export default async function PublicLayout({
         logoUrl={settings.header_logo_url}
       />
       <main className="flex-1">{children}</main>
-      <SiteFooter />
+      <SiteFooter
+        copyrightText={settings.footer_copyright_text}
+        links={footerLinks ?? []}
+      />
     </div>
   );
 }
