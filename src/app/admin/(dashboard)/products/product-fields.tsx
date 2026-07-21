@@ -8,7 +8,7 @@ export function ProductFields({
   categories: Category[];
   defaultValues?: {
     title: string;
-    price: number;
+    price: number | null;
     stock: number;
     description: string | null;
     year: number | null;
@@ -32,15 +32,14 @@ export function ProductFields({
       </div>
       <div className="flex flex-col gap-1">
         <label className="text-xs uppercase tracking-wide text-zinc-500">
-          Prix (€)
+          Prix (€) — laisser vide si non destiné à la vente
         </label>
         <input
           name="price"
           type="number"
           min="0"
           step="0.01"
-          required
-          defaultValue={defaultValues?.price}
+          defaultValue={defaultValues?.price ?? undefined}
           className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
         />
       </div>

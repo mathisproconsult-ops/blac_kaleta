@@ -6,6 +6,14 @@ import { createClient } from "@/lib/supabase/server";
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
 
+function getField(row: Record<string, string>, keys: string[]): string | undefined {
+  for (const key of keys) {
+    const value = row[key];
+    if (value !== undefined && value !== "") return value;
+  }
+  return undefined;
+}
+
 function stripHtml(value: string): string {
   return value
     .replace(/<\s*br\s*\/?>/gi, "\n")
@@ -153,18 +161,21 @@ export async function importProductsCsv(
   let skipped = 0;
 
   for (const row of parsed.data) {
-    const title = row["Name"]?.trim();
-    const price = parsePrice(row["Regular price"] || row["Sale price"]);
+    const title = getField(row, ["Name", "Nom"])?.trim();
 
-    if (!title || price === null) {
+    if (!title) {
       skipped += 1;
       continue;
     }
 
-    const stockRaw = row["Stock"]?.trim();
+    const price = parsePrice(
+      getField(row, ["Regular price", "Tarif régulier", "Sale price", "Tarif promo"]),
+    );
+    const stockRaw = getField(row, ["Stock"])?.trim();
     const stock = stockRaw ? Number(stockRaw) : 0;
     const validStock = Number.isFinite(stock) ? stock : 0;
-    const description = row["Description"] ? stripHtml(row["Description"]) : null;
+    const descriptionRaw = getField(row, ["Description"]);
+    const description = descriptionRaw ? stripHtml(descriptionRaw) : null;
 
     const { data: product, error } = await supabase
       .from("products")
@@ -184,7 +195,7 @@ export async function importProductsCsv(
     }
 
     const categoryIds: number[] = [];
-    for (const name of parseCategoryNames(row["Categories"])) {
+    for (const name of parseCategoryNames(getField(row, ["Categories", "Catégories"]))) {
       try {
         categoryIds.push(await getOrCreateCategoryId(supabase, categoryCache, name));
       } catch {
@@ -201,7 +212,7 @@ export async function importProductsCsv(
     }
 
     let position = 0;
-    for (const imageUrl of parseImageUrls(row["Images"])) {
+    for (const imageUrl of parseImageUrls(getField(row, ["Images"]))) {
       await importProductImage(supabase, product.id, imageUrl, position);
       position += 1;
     }
@@ -213,7 +224,7 @@ export async function importProductsCsv(
 
   return {
     message: `${created} produit(s) importé(s)${
-      skipped > 0 ? `, ${skipped} ligne(s) ignorée(s) (titre ou prix manquant)` : ""
+      skipped > 0 ? `, ${skipped} ligne(s) ignorée(s) (titre manquant)` : ""
     }.`,
     error: null,
   };

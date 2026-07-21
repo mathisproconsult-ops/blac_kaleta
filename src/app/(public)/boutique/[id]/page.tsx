@@ -13,7 +13,7 @@ const priceFormatter = new Intl.NumberFormat("fr-FR", {
 type ProductDetail = {
   id: number;
   title: string;
-  price: number;
+  price: number | null;
   status: ProductStatus;
   stock: number;
   description: string | null;
@@ -71,7 +71,11 @@ export default async function ProductPage({
             </span>
           ) : null}
         </h1>
-        <p className="mt-2 text-lg">{priceFormatter.format(product.price)}</p>
+        {product.price !== null ? (
+          <p className="mt-2 text-lg">{priceFormatter.format(product.price)}</p>
+        ) : (
+          <p className="mt-2 text-sm text-zinc-500">Pièce non destinée à la vente</p>
+        )}
 
         <p className="mt-4 inline-block border border-zinc-300 px-3 py-1 text-sm">
           {STATUS_LABELS[product.status]}
@@ -84,7 +88,7 @@ export default async function ProductPage({
         ) : null}
 
         <div className="mt-6">
-          {product.status === "available" ? (
+          {product.status === "available" && product.price !== null ? (
             <OrderForm
               productId={product.id}
               productTitle={product.title}

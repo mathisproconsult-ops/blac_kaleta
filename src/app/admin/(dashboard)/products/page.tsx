@@ -28,7 +28,7 @@ type ProductImage = { id: number; path: string; url: string; position: number };
 type ProductRow = {
   id: number;
   title: string;
-  price: number;
+  price: number | null;
   stock: number;
   status: ProductStatus;
   description: string | null;
@@ -130,7 +130,9 @@ export default async function ProductsPage() {
                       {categoryNames.length > 0 ? categoryNames.join(", ") : "Sans catégorie"}
                     </p>
                   </div>
-                  <p className="w-20 text-sm">{priceFormatter.format(product.price)}</p>
+                  <p className="w-20 text-sm">
+                    {product.price !== null ? priceFormatter.format(product.price) : "—"}
+                  </p>
                   <p className="w-16 text-sm text-zinc-600">Stock : {product.stock}</p>
                   <form action={cycleProductStatus.bind(null, product.id, product.status)}>
                     <button

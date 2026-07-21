@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 type ExportRow = {
   title: string;
-  price: number;
+  price: number | null;
   stock: number;
   status: string;
   description: string | null;
@@ -36,7 +36,7 @@ export async function GET() {
 
     return {
       Name: product.title,
-      "Regular price": product.price,
+      "Regular price": product.price ?? "",
       Stock: product.stock,
       Status: product.status,
       Description: product.description ?? "",

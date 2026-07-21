@@ -16,7 +16,7 @@ const priceFormatter = new Intl.NumberFormat("fr-FR", {
 type ProductCard = {
   id: number;
   title: string;
-  price: number;
+  price: number | null;
   status: ProductStatus;
   product_images: { url: string; position: number }[];
   product_categories: { category_id: number }[];
@@ -49,7 +49,11 @@ export default async function BoutiquePage({
   ]);
 
   const categoryList = categories ?? [];
-  let productList = products ?? [];
+
+  // La boutique ne montre que les œuvres destinées à la vente (avec un prix).
+  let productList = (products ?? []).filter(
+    (product): product is ProductCard & { price: number } => product.price !== null,
+  );
 
   const selectedCategoryId = categorie ? Number(categorie) : null;
   if (selectedCategoryId) {

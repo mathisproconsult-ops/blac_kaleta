@@ -23,11 +23,10 @@ function productFieldsFromFormData(formData: FormData) {
   const technique = formData.get("technique");
 
   if (typeof title !== "string" || !title.trim()) return null;
-  if (typeof price !== "string" || !price) return null;
 
   return {
     title: title.trim(),
-    price: Number(price),
+    price: typeof price === "string" && price ? Number(price) : null,
     stock: typeof stock === "string" && stock ? Number(stock) : 0,
     description:
       typeof description === "string" && description.trim()
