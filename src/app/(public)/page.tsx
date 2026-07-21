@@ -1,4 +1,5 @@
 import { SiInstagram, SiTiktok, SiWhatsapp, SiYoutube } from "react-icons/si";
+import { getSettings } from "@/lib/settings";
 
 const socialLinks = [
   { label: "WhatsApp", href: "#", Icon: SiWhatsapp },
@@ -7,9 +8,9 @@ const socialLinks = [
   { label: "TikTok", href: "#", Icon: SiTiktok },
 ];
 
-const contactEmail = "contact@blac-kaleta.com";
+export default async function HomePage() {
+  const { contact_email: contactEmail } = await getSettings();
 
-export default function HomePage() {
   return (
     <div className="flex flex-col items-center gap-8 px-6 py-16">
       <div

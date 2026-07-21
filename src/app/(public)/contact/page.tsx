@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import { ContactForm } from "./contact-form";
+import { getSettings } from "@/lib/settings";
 
 export const metadata: Metadata = {
   title: "Contact — Blac_Kaleta",
 };
 
-const contactEmail = "contact@blac-kaleta.com";
+export default async function ContactPage() {
+  const { contact_email: contactEmail } = await getSettings();
 
-export default function ContactPage() {
   return (
     <div className="px-10 py-12">
       <h1 className="text-2xl font-semibold uppercase tracking-wide">Contact</h1>
