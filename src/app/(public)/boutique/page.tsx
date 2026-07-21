@@ -49,11 +49,7 @@ export default async function BoutiquePage({
   ]);
 
   const categoryList = categories ?? [];
-
-  // La boutique ne montre que les œuvres destinées à la vente (avec un prix).
-  let productList = (products ?? []).filter(
-    (product): product is ProductCard & { price: number } => product.price !== null,
-  );
+  let productList = products ?? [];
 
   const selectedCategoryId = categorie ? Number(categorie) : null;
   if (selectedCategoryId) {
@@ -62,10 +58,15 @@ export default async function BoutiquePage({
     );
   }
 
+  // Les pièces sans prix sont affichées mais reléguées en fin de tri par prix.
   if (tri === "prix-asc") {
-    productList = [...productList].sort((a, b) => a.price - b.price);
+    productList = [...productList].sort(
+      (a, b) => (a.price ?? Infinity) - (b.price ?? Infinity),
+    );
   } else if (tri === "prix-desc") {
-    productList = [...productList].sort((a, b) => b.price - a.price);
+    productList = [...productList].sort(
+      (a, b) => (b.price ?? -Infinity) - (a.price ?? -Infinity),
+    );
   }
 
   return (
@@ -138,9 +139,11 @@ export default async function BoutiquePage({
                 </div>
                 <p className="mt-3 text-sm font-medium">{product.title}</p>
                 <div className="mt-1 flex items-center justify-between">
-                  <p className="text-sm text-zinc-600">{priceFormatter.format(product.price)}</p>
+                  <p className="text-sm text-zinc-600">
+                    {product.price !== null ? priceFormatter.format(product.price) : "Sur demande"}
+                  </p>
                   <span className="text-xs uppercase tracking-wide text-zinc-500 group-hover:underline">
-                    {statusButtonLabel[product.status]}
+                    {product.price !== null ? statusButtonLabel[product.status] : "Voir"}
                   </span>
                 </div>
               </Link>
