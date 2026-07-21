@@ -1,17 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrency } from "@/lib/settings";
+import { formatPrice } from "@/lib/currency";
 import type { ProductStatus } from "@/app/admin/(dashboard)/products/status";
 import { SortSelect } from "./sort-select";
 
 export const metadata: Metadata = {
   title: "Boutique — Blac_Kaleta",
 };
-
-const priceFormatter = new Intl.NumberFormat("fr-FR", {
-  style: "currency",
-  currency: "EUR",
-});
 
 type ProductCard = {
   id: number;
@@ -37,7 +34,7 @@ export default async function BoutiquePage({
   const { categorie, tri = "default" } = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: categories }, { data: products }] = await Promise.all([
+  const [{ data: categories }, { data: products }, currency] = await Promise.all([
     supabase.from("categories").select("id, name").order("position", { ascending: true }),
     supabase
       .from("products")
@@ -48,6 +45,7 @@ export default async function BoutiquePage({
       .eq("is_visible", true)
       .order("created_at", { ascending: false })
       .returns<ProductCard[]>(),
+    getCurrency(),
   ]);
 
   const categoryList = categories ?? [];
@@ -142,7 +140,7 @@ export default async function BoutiquePage({
                 <p className="mt-3 text-sm font-medium">{product.title}</p>
                 <div className="mt-1 flex items-center justify-between">
                   <p className="text-sm text-zinc-600">
-                    {product.price !== null ? priceFormatter.format(product.price) : "Sur demande"}
+                    {product.price !== null ? formatPrice(product.price, currency) : "Sur demande"}
                   </p>
                   <span className="text-xs uppercase tracking-wide text-zinc-500 group-hover:underline">
                     {product.price !== null ? statusButtonLabel[product.status] : "Voir"}

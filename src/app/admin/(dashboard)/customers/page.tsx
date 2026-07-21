@@ -1,14 +1,11 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrency } from "@/lib/settings";
+import { formatPrice } from "@/lib/currency";
 
 export const metadata: Metadata = {
   title: "Clients — Admin Blac_Kaleta",
 };
-
-const priceFormatter = new Intl.NumberFormat("fr-FR", {
-  style: "currency",
-  currency: "EUR",
-});
 
 type OrderRow = {
   customer_name: string;
@@ -25,11 +22,14 @@ type Customer = {
 
 export default async function CustomersPage() {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("orders")
-    .select("customer_name, customer_email, order_items(unit_price, quantity)")
-    .order("created_at", { ascending: false })
-    .returns<OrderRow[]>();
+  const [{ data, error }, currency] = await Promise.all([
+    supabase
+      .from("orders")
+      .select("customer_name, customer_email, order_items(unit_price, quantity)")
+      .order("created_at", { ascending: false })
+      .returns<OrderRow[]>(),
+    getCurrency(),
+  ]);
 
   const orders = data ?? [];
 
@@ -89,7 +89,7 @@ export default async function CustomersPage() {
                   <td className="py-3 pr-4">{customer.name}</td>
                   <td className="py-3 pr-4 text-zinc-600">{customer.email}</td>
                   <td className="py-3 pr-4">{customer.orderCount}</td>
-                  <td className="py-3">{priceFormatter.format(customer.totalSpent)}</td>
+                  <td className="py-3">{formatPrice(customer.totalSpent, currency)}</td>
                 </tr>
               ))}
             </tbody>

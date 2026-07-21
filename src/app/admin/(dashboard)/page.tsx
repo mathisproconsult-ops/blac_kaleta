@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrency } from "@/lib/settings";
+import { formatPrice } from "@/lib/currency";
 import {
   ORDER_STATUS_LABELS,
   ORDER_STATUS_STYLES,
@@ -9,11 +11,6 @@ import {
 export const metadata: Metadata = {
   title: "Overview — Admin Blac_Kaleta",
 };
-
-const priceFormatter = new Intl.NumberFormat("fr-FR", {
-  style: "currency",
-  currency: "EUR",
-});
 const dateFormatter = new Intl.DateTimeFormat("fr-FR", {
   day: "2-digit",
   month: "short",
@@ -42,7 +39,7 @@ export default async function AdminOverviewPage() {
   const sevenDaysAgo = new Date(startOfToday);
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-  const [{ data: orders }, { data: products }] = await Promise.all([
+  const [{ data: orders }, { data: products }, currency] = await Promise.all([
     supabase
       .from("orders")
       .select(
@@ -51,6 +48,7 @@ export default async function AdminOverviewPage() {
       .order("created_at", { ascending: false })
       .returns<OrderRow[]>(),
     supabase.from("products").select("id, stock"),
+    getCurrency(),
   ]);
 
   const allOrders = orders ?? [];
@@ -78,7 +76,7 @@ export default async function AdminOverviewPage() {
       </h1>
 
       <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Ventes du jour" value={priceFormatter.format(salesToday)} />
+        <StatCard label="Ventes du jour" value={formatPrice(salesToday, currency)} />
         <StatCard label="Commandes cette semaine" value={String(ordersThisWeek)} />
         <StatCard label="Produits en stock" value={String(productsInStock)} />
         <StatCard label="Stock faible" value={String(lowStock)} />
@@ -99,7 +97,7 @@ export default async function AdminOverviewPage() {
               <p className="text-sm text-zinc-600">
                 {dateFormatter.format(new Date(order.created_at))}
               </p>
-              <p className="text-sm">{priceFormatter.format(orderTotal(order))}</p>
+              <p className="text-sm">{formatPrice(orderTotal(order), currency)}</p>
               <span
                 className={`px-2 py-1 text-xs font-medium ${ORDER_STATUS_STYLES[order.status]}`}
               >

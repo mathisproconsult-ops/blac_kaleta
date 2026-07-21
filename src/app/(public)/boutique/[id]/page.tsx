@@ -1,14 +1,11 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrency } from "@/lib/settings";
+import { formatPrice } from "@/lib/currency";
 import { STATUS_LABELS, type ProductStatus } from "@/app/admin/(dashboard)/products/status";
 import { ProductGallery } from "./product-gallery";
 import { OrderForm } from "./order-form";
-
-const priceFormatter = new Intl.NumberFormat("fr-FR", {
-  style: "currency",
-  currency: "EUR",
-});
 
 type ProductDetail = {
   id: number;
@@ -51,7 +48,7 @@ export default async function ProductPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const product = await getProduct(id);
+  const [product, currency] = await Promise.all([getProduct(id), getCurrency()]);
 
   if (!product) notFound();
 
@@ -73,7 +70,7 @@ export default async function ProductPage({
           ) : null}
         </h1>
         {product.price !== null ? (
-          <p className="mt-2 text-lg">{priceFormatter.format(product.price)}</p>
+          <p className="mt-2 text-lg">{formatPrice(product.price, currency)}</p>
         ) : (
           <p className="mt-2 text-sm text-zinc-500">Pièce non destinée à la vente</p>
         )}

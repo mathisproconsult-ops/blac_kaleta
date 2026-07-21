@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { SubmitButton } from "@/components/submit-button";
+import { CURRENCY_LABELS, type CurrencyCode } from "@/lib/currency";
 import { updateSettings } from "./actions";
 
 export const metadata: Metadata = {
@@ -11,6 +12,7 @@ type Settings = {
   shop_name: string;
   contact_email: string;
   header_logo_url: string | null;
+  currency: CurrencyCode;
   payment_kkiapay: boolean;
   payment_fedapay: boolean;
   notify_email_per_order: boolean;
@@ -27,6 +29,7 @@ const defaultSettings: Settings = {
   shop_name: "Blac_Kaleta",
   contact_email: "contact@blac-kaleta.com",
   header_logo_url: null,
+  currency: "EUR",
   payment_kkiapay: false,
   payment_fedapay: false,
   notify_email_per_order: true,
@@ -44,7 +47,7 @@ export default async function SettingsPage() {
   const { data } = await supabase
     .from("settings")
     .select(
-      "shop_name, contact_email, header_logo_url, payment_kkiapay, payment_fedapay, notify_email_per_order, notify_realtime_popup, social_instagram, social_facebook, social_whatsapp, social_youtube, social_tiktok, social_patreon",
+      "shop_name, contact_email, header_logo_url, currency, payment_kkiapay, payment_fedapay, notify_email_per_order, notify_realtime_popup, social_instagram, social_facebook, social_whatsapp, social_youtube, social_tiktok, social_patreon",
     )
     .eq("id", true)
     .maybeSingle();
@@ -104,6 +107,28 @@ export default async function SettingsPage() {
                 Supprimer le logo actuel
               </label>
             ) : null}
+          </div>
+        </fieldset>
+
+        <fieldset className="flex flex-col gap-3">
+          <legend className="text-sm font-semibold uppercase tracking-wide">
+            Devise
+          </legend>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs uppercase tracking-wide text-zinc-500">
+              Devise utilisée pour les prix (dashboard + site public)
+            </label>
+            <select
+              name="currency"
+              defaultValue={settings.currency}
+              className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+            >
+              {Object.entries(CURRENCY_LABELS).map(([code, label]) => (
+                <option key={code} value={code}>
+                  {label}
+                </option>
+              ))}
+            </select>
           </div>
         </fieldset>
 

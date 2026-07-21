@@ -1,3 +1,5 @@
+import type { CurrencyCode } from "@/lib/currency";
+
 type Category = { id: number; name: string };
 type AvailableMedia = { id: number; filename: string; url: string };
 
@@ -6,6 +8,7 @@ export function ProductFields({
   defaultValues,
   selectedCategoryIds,
   availableMedia,
+  currency,
 }: {
   categories: Category[];
   defaultValues?: {
@@ -22,6 +25,7 @@ export function ProductFields({
   };
   selectedCategoryIds?: number[];
   availableMedia?: AvailableMedia[];
+  currency: CurrencyCode;
 }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2">
@@ -67,7 +71,7 @@ export function ProductFields({
       </div>
       <div className="flex flex-col gap-1">
         <label className="text-xs uppercase tracking-wide text-zinc-500">
-          Prix (€)
+          Prix ({currency})
         </label>
         <input
           name="price"

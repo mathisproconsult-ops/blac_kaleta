@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { CURRENCY_LABELS, type CurrencyCode } from "@/lib/currency";
 
 function emptyToNull(value: FormDataEntryValue | null): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
@@ -10,15 +11,22 @@ function emptyToNull(value: FormDataEntryValue | null): string | null {
 export async function updateSettings(formData: FormData) {
   const shopName = formData.get("shop_name");
   const contactEmail = formData.get("contact_email");
+  const currencyInput = formData.get("currency");
 
   if (typeof shopName !== "string" || !shopName.trim()) return;
   if (typeof contactEmail !== "string" || !contactEmail.trim()) return;
+
+  const currency: CurrencyCode =
+    typeof currencyInput === "string" && currencyInput in CURRENCY_LABELS
+      ? (currencyInput as CurrencyCode)
+      : "EUR";
 
   const supabase = await createClient();
 
   const updates: Record<string, unknown> = {
     shop_name: shopName.trim(),
     contact_email: contactEmail.trim(),
+    currency,
     payment_kkiapay: formData.get("payment_kkiapay") === "on",
     payment_fedapay: formData.get("payment_fedapay") === "on",
     notify_email_per_order: formData.get("notify_email_per_order") === "on",

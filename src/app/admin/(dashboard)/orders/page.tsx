@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrency } from "@/lib/settings";
+import { formatPrice } from "@/lib/currency";
 import { SubmitButton } from "@/components/submit-button";
 import { cycleOrderStatus, markOrdersAsRead } from "./actions";
 import {
@@ -11,11 +13,6 @@ import {
 export const metadata: Metadata = {
   title: "Commandes — Admin Blac_Kaleta",
 };
-
-const priceFormatter = new Intl.NumberFormat("fr-FR", {
-  style: "currency",
-  currency: "EUR",
-});
 const dateFormatter = new Intl.DateTimeFormat("fr-FR", {
   day: "2-digit",
   month: "short",
@@ -33,13 +30,16 @@ type OrderRow = {
 
 export default async function OrdersPage() {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("orders")
-    .select(
-      "id, customer_name, customer_email, status, read, created_at, order_items(unit_price, quantity, product_title)",
-    )
-    .order("created_at", { ascending: false })
-    .returns<OrderRow[]>();
+  const [{ data, error }, currency] = await Promise.all([
+    supabase
+      .from("orders")
+      .select(
+        "id, customer_name, customer_email, status, read, created_at, order_items(unit_price, quantity, product_title)",
+      )
+      .order("created_at", { ascending: false })
+      .returns<OrderRow[]>(),
+    getCurrency(),
+  ]);
 
   const orders = data ?? [];
   const unreadCount = orders.filter((order) => !order.read).length;
@@ -95,7 +95,7 @@ export default async function OrdersPage() {
                 <p className="text-sm text-zinc-600">
                   {dateFormatter.format(new Date(order.created_at))}
                 </p>
-                <p className="text-sm">{priceFormatter.format(total)}</p>
+                <p className="text-sm">{formatPrice(total, currency)}</p>
                 <form action={cycleOrderStatus.bind(null, order.id, order.status)}>
                   <SubmitButton
                     pendingText="…"

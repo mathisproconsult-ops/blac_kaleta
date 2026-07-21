@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrency } from "@/lib/settings";
+import { formatPrice } from "@/lib/currency";
 import { Disclosure } from "@/components/disclosure";
 import { SubmitButton } from "@/components/submit-button";
 import { ProductFields } from "./product-fields";
@@ -20,11 +22,6 @@ export const metadata: Metadata = {
 };
 
 export const maxDuration = 60;
-
-const priceFormatter = new Intl.NumberFormat("fr-FR", {
-  style: "currency",
-  currency: "EUR",
-});
 
 type ProductImage = { id: number; path: string; url: string; position: number };
 type ProductRow = {
@@ -48,7 +45,7 @@ type ProductRow = {
 export default async function ProductsPage() {
   const supabase = await createClient();
 
-  const [{ data: categories }, { data: products, error }, { data: unclaimedMedia }] =
+  const [{ data: categories }, { data: products, error }, { data: unclaimedMedia }, currency] =
     await Promise.all([
       supabase.from("categories").select("id, name").order("position", { ascending: true }),
       supabase
@@ -64,6 +61,7 @@ export default async function ProductsPage() {
         .is("product_id", null)
         .in("kind", ["image", "gif"])
         .order("created_at", { ascending: false }),
+      getCurrency(),
     ]);
 
   const categoryList = categories ?? [];
@@ -92,7 +90,11 @@ export default async function ProductsPage() {
               action={createProduct}
               className="flex flex-col gap-4 border border-zinc-200 bg-white p-6"
             >
-              <ProductFields categories={categoryList} availableMedia={availableMedia} />
+              <ProductFields
+                categories={categoryList}
+                availableMedia={availableMedia}
+                currency={currency}
+              />
               <SubmitButton
                 pendingText="Ajout…"
                 className="self-start bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
@@ -149,7 +151,7 @@ export default async function ProductsPage() {
                     </p>
                   </div>
                   <p className="text-sm">
-                    {product.price !== null ? priceFormatter.format(product.price) : "—"}
+                    {product.price !== null ? formatPrice(product.price, currency) : "—"}
                   </p>
                   <p className="text-sm text-zinc-600">Stock : {product.stock}</p>
                   <form action={cycleProductStatus.bind(null, product.id, product.status)}>
@@ -233,6 +235,7 @@ export default async function ProductsPage() {
                       }}
                       selectedCategoryIds={selectedCategoryIds}
                       availableMedia={availableMedia}
+                      currency={currency}
                     />
                     <SubmitButton
                       pendingText="Enregistrement…"
