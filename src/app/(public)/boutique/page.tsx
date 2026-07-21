@@ -43,6 +43,7 @@ export default async function BoutiquePage({
       )
       .eq("is_for_sale", true)
       .eq("is_visible", true)
+      .is("deleted_at", null)
       .order("created_at", { ascending: false })
       .returns<ProductCard[]>(),
     getCurrency(),

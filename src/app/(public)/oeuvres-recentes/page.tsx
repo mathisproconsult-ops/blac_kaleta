@@ -29,6 +29,7 @@ export default async function RecentWorksPage({
     .select("id, title, year, series, technique, product_images(url, position)")
     .eq("show_in_recent_works", true)
     .eq("is_visible", true)
+    .is("deleted_at", null)
     .order("year", { ascending: false })
     .returns<Work[]>();
 

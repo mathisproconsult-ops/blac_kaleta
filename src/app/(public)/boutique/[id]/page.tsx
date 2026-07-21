@@ -27,6 +27,7 @@ async function getProduct(id: string) {
     )
     .eq("id", id)
     .eq("is_visible", true)
+    .is("deleted_at", null)
     .maybeSingle();
 
   return data as ProductDetail | null;

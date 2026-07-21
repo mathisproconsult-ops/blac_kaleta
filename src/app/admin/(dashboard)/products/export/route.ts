@@ -21,6 +21,7 @@ export async function GET() {
     .select(
       "title, price, stock, status, description, product_images(url, position), product_categories(categories(name))",
     )
+    .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .returns<ExportRow[]>();
 

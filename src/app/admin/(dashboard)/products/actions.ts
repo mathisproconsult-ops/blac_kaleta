@@ -250,3 +250,91 @@ export async function toggleProductVisibility(
   revalidatePath("/boutique");
   revalidatePath("/oeuvres-recentes");
 }
+
+export async function quickUpdateProduct(id: number, formData: FormData) {
+  const title = formData.get("title");
+  const price = formData.get("price");
+  const stock = formData.get("stock");
+  const status = formData.get("status");
+
+  if (typeof title !== "string" || !title.trim()) return;
+  if (typeof status !== "string" || !STATUS_ORDER.includes(status as ProductStatus)) {
+    return;
+  }
+
+  const supabase = await createClient();
+  await supabase
+    .from("products")
+    .update({
+      title: title.trim(),
+      price: typeof price === "string" && price ? Number(price) : null,
+      stock: typeof stock === "string" && stock ? Number(stock) : 0,
+      status,
+    })
+    .eq("id", id);
+
+  revalidatePath("/admin/products");
+  revalidatePath("/");
+  revalidatePath("/boutique");
+}
+
+export async function trashProduct(id: number) {
+  const supabase = await createClient();
+  await supabase
+    .from("products")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id);
+
+  revalidatePath("/admin/products");
+  revalidatePath("/");
+  revalidatePath("/boutique");
+  revalidatePath("/oeuvres-recentes");
+}
+
+export async function restoreProduct(id: number) {
+  const supabase = await createClient();
+  await supabase.from("products").update({ deleted_at: null }).eq("id", id);
+
+  revalidatePath("/admin/products");
+  revalidatePath("/");
+  revalidatePath("/boutique");
+  revalidatePath("/oeuvres-recentes");
+}
+
+export async function duplicateProduct(id: number) {
+  const supabase = await createClient();
+  const { data: original } = await supabase
+    .from("products")
+    .select(
+      "title, price, stock, description, year, series, technique, is_for_sale, show_in_recent_works, featured_home, product_categories(category_id)",
+    )
+    .eq("id", id)
+    .maybeSingle();
+
+  if (!original) return;
+
+  const { data: copy, error } = await supabase
+    .from("products")
+    .insert({
+      title: `${original.title} (copie)`,
+      price: original.price,
+      stock: original.stock,
+      description: original.description,
+      year: original.year,
+      series: original.series,
+      technique: original.technique,
+      is_for_sale: original.is_for_sale,
+      show_in_recent_works: original.show_in_recent_works,
+      featured_home: original.featured_home,
+      is_visible: false,
+    })
+    .select("id")
+    .single();
+
+  if (error || !copy) return;
+
+  const categoryIds = original.product_categories.map((pc) => pc.category_id);
+  await syncCategories(supabase, copy.id, categoryIds);
+
+  revalidatePath("/admin/products");
+}
