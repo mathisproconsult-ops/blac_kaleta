@@ -3,6 +3,7 @@ import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 import { Disclosure } from "@/components/disclosure";
 import { ProductFields } from "./product-fields";
+import { ImportCsvForm } from "./import-csv-form";
 import {
   createProduct,
   cycleProductStatus,
@@ -15,6 +16,8 @@ import { STATUS_LABELS, STATUS_STYLES, type ProductStatus } from "./status";
 export const metadata: Metadata = {
   title: "Produits — Admin Blac_Kaleta",
 };
+
+export const maxDuration = 60;
 
 const priceFormatter = new Intl.NumberFormat("fr-FR", {
   style: "currency",
@@ -56,20 +59,31 @@ export default async function ProductsPage() {
         <h1 className="text-2xl font-semibold uppercase tracking-wide">
           Produits
         </h1>
-        <Disclosure label="+ Ajouter un produit">
-          <form
-            action={createProduct}
-            className="flex flex-col gap-4 border border-zinc-200 bg-white p-6"
+        <div className="flex items-center gap-3">
+          <a
+            href="/admin/products/export"
+            className="border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-50"
           >
-            <ProductFields categories={categoryList} />
-            <button
-              type="submit"
-              className="self-start bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
+            Exporter en CSV
+          </a>
+          <Disclosure label="Importer un CSV">
+            <ImportCsvForm />
+          </Disclosure>
+          <Disclosure label="+ Ajouter un produit">
+            <form
+              action={createProduct}
+              className="flex flex-col gap-4 border border-zinc-200 bg-white p-6"
             >
-              Ajouter le produit
-            </button>
-          </form>
-        </Disclosure>
+              <ProductFields categories={categoryList} />
+              <button
+                type="submit"
+                className="self-start bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
+              >
+                Ajouter le produit
+              </button>
+            </form>
+          </Disclosure>
+        </div>
       </div>
 
       {error ? (
