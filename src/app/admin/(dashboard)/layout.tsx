@@ -23,6 +23,7 @@ export default async function AdminDashboardLayout({
     { label: "Catégories", href: "/admin/categories" },
     { label: "Clients", href: "/admin/customers" },
     { label: "Messages", href: "/admin/messages" },
+    { label: "Menu", href: "/admin/menu" },
     { label: "Paramètres", href: "/admin/settings" },
   ];
 

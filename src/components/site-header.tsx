@@ -3,15 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const navItems = [
-  { label: "Accueil", href: "/" },
-  { label: "À propos", href: "/a-propos" },
-  { label: "Œuvres récentes", href: "/oeuvres-recentes" },
-  { label: "Boutique", href: "/boutique" },
-  { label: "Contact", href: "/contact" },
-];
+type MenuItem = { id: number; label: string; href: string };
 
-export function SiteHeader() {
+export function SiteHeader({ items }: { items: MenuItem[] }) {
   const pathname = usePathname();
 
   return (
@@ -20,11 +14,11 @@ export function SiteHeader() {
         BLAC_KALETA
       </Link>
       <nav className="flex items-center gap-8">
-        {navItems.map((item) => {
+        {items.map((item) => {
           const isActive = pathname === item.href;
           return (
             <Link
-              key={item.href}
+              key={item.id}
               href={item.href}
               className={
                 isActive
