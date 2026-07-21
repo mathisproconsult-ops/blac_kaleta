@@ -278,6 +278,44 @@ export async function quickUpdateProduct(id: number, formData: FormData) {
   revalidatePath("/boutique");
 }
 
+export async function bulkProductAction(formData: FormData) {
+  const bulkAction = formData.get("bulk_action");
+  const ids = formData
+    .getAll("ids")
+    .map((value) => Number(value))
+    .filter((value) => Number.isInteger(value));
+
+  if (ids.length === 0 || typeof bulkAction !== "string") return;
+
+  const supabase = await createClient();
+
+  if (bulkAction === "corbeille") {
+    await supabase
+      .from("products")
+      .update({ deleted_at: new Date().toISOString() })
+      .in("id", ids);
+  } else if (bulkAction === "restaurer") {
+    await supabase.from("products").update({ deleted_at: null }).in("id", ids);
+  } else if (bulkAction === "supprimer") {
+    for (const id of ids) {
+      const { data: files } = await supabase.storage.from("products").list(String(id));
+      if (files && files.length > 0) {
+        await supabase.storage
+          .from("products")
+          .remove(files.map((file) => `${id}/${file.name}`));
+      }
+    }
+    await supabase.from("products").delete().in("id", ids);
+  } else {
+    return;
+  }
+
+  revalidatePath("/admin/products");
+  revalidatePath("/");
+  revalidatePath("/boutique");
+  revalidatePath("/oeuvres-recentes");
+}
+
 export async function trashProduct(id: number) {
   const supabase = await createClient();
   await supabase

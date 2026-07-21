@@ -9,8 +9,10 @@ import { SubmitButton } from "@/components/submit-button";
 import { ProductFields } from "./product-fields";
 import { ProductFilters } from "./product-filters";
 import { ProductRowActions } from "./product-row-actions";
+import { SelectAllCheckbox } from "./select-all-checkbox";
 import { ImportCsvForm } from "./import-csv-form";
 import {
+  bulkProductAction,
   createProduct,
   cycleProductStatus,
   deleteProduct,
@@ -206,19 +208,52 @@ export default async function ProductsPage({
       {productList.length === 0 ? (
         <p className="mt-8 text-sm text-zinc-500">Aucun produit ne correspond.</p>
       ) : (
-        <div className="mt-8 overflow-x-auto">
-          <table className="w-full min-w-[720px] text-left text-sm">
-            <thead>
-              <tr className="border-b border-zinc-200 text-xs uppercase tracking-wide text-zinc-500">
-                <th className="py-2 pr-4">Image</th>
-                <th className="py-2 pr-4">Nom</th>
-                <th className="py-2 pr-4">Stock</th>
-                <th className="py-2 pr-4">Prix</th>
-                <th className="py-2 pr-4">Catégorie</th>
-                <th className="py-2 pr-4">Date</th>
-              </tr>
-            </thead>
-            <tbody>
+        <>
+          <form id="bulk-products-form" action={bulkProductAction} />
+          <div className="mt-6 flex flex-wrap items-center gap-2">
+            <select
+              name="bulk_action"
+              form="bulk-products-form"
+              defaultValue=""
+              className="border border-zinc-300 px-2 py-2 text-sm"
+            >
+              <option value="" disabled>
+                Actions groupées
+              </option>
+              {isTrashView ? (
+                <>
+                  <option value="restaurer">Restaurer</option>
+                  <option value="supprimer">Supprimer définitivement</option>
+                </>
+              ) : (
+                <option value="corbeille">Mettre à la corbeille</option>
+              )}
+            </select>
+            <button
+              type="submit"
+              form="bulk-products-form"
+              className="border border-zinc-300 px-3 py-2 text-sm hover:bg-zinc-50"
+            >
+              Appliquer
+            </button>
+          </div>
+
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[720px] text-left text-sm">
+              <thead>
+                <tr className="border-b border-zinc-200 text-xs uppercase tracking-wide text-zinc-500">
+                  <th className="py-2 pr-2">
+                    <SelectAllCheckbox />
+                  </th>
+                  <th className="py-2 pr-4">Image</th>
+                  <th className="py-2 pr-4">Nom</th>
+                  <th className="py-2 pr-4">Stock</th>
+                  <th className="py-2 pr-4">Prix</th>
+                  <th className="py-2 pr-4">Catégorie</th>
+                  <th className="py-2 pr-4">Date</th>
+                </tr>
+              </thead>
+              <tbody>
               {productList.map((product) => {
                 const images = [...product.product_images].sort(
                   (a, b) => a.position - b.position,
@@ -239,6 +274,15 @@ export default async function ProductsPage({
                         : "group border-b border-zinc-100 align-top opacity-50"
                     }
                   >
+                    <td className="py-3 pr-2">
+                      <input
+                        type="checkbox"
+                        name="ids"
+                        value={product.id}
+                        form="bulk-products-form"
+                        aria-label={`Sélectionner ${product.title}`}
+                      />
+                    </td>
                     <td className="py-3 pr-4">
                       {images[0] ? (
                         <Image
@@ -319,9 +363,10 @@ export default async function ProductsPage({
                   </tr>
                 );
               })}
-            </tbody>
-          </table>
-        </div>
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );
