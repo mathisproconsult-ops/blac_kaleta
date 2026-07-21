@@ -106,33 +106,7 @@ export default async function BoutiqueCategoryPage({
         {currentCategory ? currentCategory.name : "Boutique"}
       </h1>
 
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex flex-wrap gap-4">
-          <Link
-            href="/boutique/categorie/tous"
-            className={
-              !selectedCategoryId
-                ? "text-sm font-semibold underline"
-                : "text-sm text-zinc-600 hover:underline"
-            }
-          >
-            Tous
-          </Link>
-          {categoryList.map((category) => (
-            <Link
-              key={category.id}
-              href={`/boutique/categorie/${category.id}`}
-              className={
-                selectedCategoryId === category.id
-                  ? "text-sm font-semibold underline"
-                  : "text-sm text-zinc-600 hover:underline"
-              }
-            >
-              {category.name}
-            </Link>
-          ))}
-        </div>
-
+      <div className="mt-6 flex justify-end">
         <SortSelect value={tri} basePath={`/boutique/categorie/${id}`} />
       </div>
 
