@@ -18,6 +18,9 @@ function productFieldsFromFormData(formData: FormData) {
   const price = formData.get("price");
   const stock = formData.get("stock");
   const description = formData.get("description");
+  const year = formData.get("year");
+  const series = formData.get("series");
+  const technique = formData.get("technique");
 
   if (typeof title !== "string" || !title.trim()) return null;
   if (typeof price !== "string" || !price) return null;
@@ -29,6 +32,12 @@ function productFieldsFromFormData(formData: FormData) {
     description:
       typeof description === "string" && description.trim()
         ? description.trim()
+        : null,
+    year: typeof year === "string" && year ? Number(year) : null,
+    series: typeof series === "string" && series.trim() ? series.trim() : null,
+    technique:
+      typeof technique === "string" && technique.trim()
+        ? technique.trim()
         : null,
   };
 }

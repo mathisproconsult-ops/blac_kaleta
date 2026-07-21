@@ -32,6 +32,9 @@ type ProductRow = {
   stock: number;
   status: ProductStatus;
   description: string | null;
+  year: number | null;
+  series: string | null;
+  technique: string | null;
   product_images: ProductImage[];
   product_categories: { categories: { id: number; name: string } | null }[];
 };
@@ -44,7 +47,7 @@ export default async function ProductsPage() {
     supabase
       .from("products")
       .select(
-        "id, title, price, stock, status, description, product_images(id, path, url, position), product_categories(categories(id, name))",
+        "id, title, price, stock, status, description, year, series, technique, product_images(id, path, url, position), product_categories(categories(id, name))",
       )
       .order("created_at", { ascending: false })
       .returns<ProductRow[]>(),
@@ -183,6 +186,9 @@ export default async function ProductsPage() {
                         price: product.price,
                         stock: product.stock,
                         description: product.description,
+                        year: product.year,
+                        series: product.series,
+                        technique: product.technique,
                       }}
                       selectedCategoryIds={selectedCategoryIds}
                     />
