@@ -23,14 +23,6 @@ export default async function BoutiquePage() {
       <h1 className="text-2xl font-semibold uppercase tracking-wide">Boutique</h1>
 
       <div className="mt-10 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-        <Link href="/boutique/categorie/tous" className="group">
-          <div className="relative flex aspect-square w-full items-center justify-center overflow-hidden bg-zinc-900">
-            <p className="px-4 text-center text-lg font-semibold uppercase tracking-wide text-white">
-              Tous les produits
-            </p>
-          </div>
-        </Link>
-
         {categoryList.map((category) => (
           <Link
             key={category.id}

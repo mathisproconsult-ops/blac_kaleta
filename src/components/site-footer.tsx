@@ -18,9 +18,6 @@ export function SiteFooter({
             {link.label}
           </Link>
         ))}
-        <Link href="/admin" className="hover:underline">
-          Tableau de bord admin
-        </Link>
       </div>
     </footer>
   );
