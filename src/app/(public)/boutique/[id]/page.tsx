@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrency } from "@/lib/settings";
 import { formatPrice } from "@/lib/currency";
 import { STATUS_LABELS, type ProductStatus } from "@/app/admin/(dashboard)/products/status";
+import { BackButton } from "@/components/back-button";
 import { ProductGallery } from "./product-gallery";
 import { AddToCartControls } from "../add-to-cart-controls";
 
@@ -59,7 +60,9 @@ export default async function ProductPage({
     .filter((name): name is string => Boolean(name));
 
   return (
-    <div className="grid gap-8 px-4 py-8 sm:px-6 sm:py-10 lg:grid-cols-2 lg:gap-10 lg:px-10 lg:py-12">
+    <div className="px-4 py-8 sm:px-6 sm:py-10 lg:px-10 lg:py-12">
+      <BackButton />
+    <div className="mt-4 grid gap-8 lg:grid-cols-2 lg:gap-10">
       <ProductGallery images={images} alt={product.title} />
       <div>
         <h1 className="flex items-center gap-3 text-2xl font-semibold">
@@ -112,6 +115,7 @@ export default async function ProductPage({
           </div>
         ) : null}
       </div>
+    </div>
     </div>
   );
 }

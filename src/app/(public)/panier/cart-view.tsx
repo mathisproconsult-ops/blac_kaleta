@@ -76,14 +76,12 @@ export function CartView({ currency }: { currency: CurrencyCode }) {
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-zinc-200 pt-6">
         <p className="text-lg font-semibold">Total : {formatPrice(subtotal, currency)}</p>
-        <button
-          type="button"
-          disabled
-          title="Disponible à la prochaine étape"
-          className="cursor-not-allowed bg-black px-6 py-3 text-sm font-medium text-white opacity-40"
+        <Link
+          href="/panier/commande"
+          className="bg-black px-6 py-3 text-sm font-medium text-white hover:bg-zinc-800"
         >
-          Passer la commande (bientôt)
-        </button>
+          Passer la commande
+        </Link>
       </div>
     </>
   );
