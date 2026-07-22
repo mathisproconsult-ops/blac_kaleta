@@ -1,10 +1,20 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Disclosure } from "@/components/disclosure";
 import { SubmitButton } from "@/components/submit-button";
+import { SelectAllCheckbox } from "@/components/select-all-checkbox";
 import { MediaFilters, MediaViewToggle } from "./media-filters";
 import { MediaUploadField } from "./media-upload-field";
-import { attachUploadedMedia, deleteMedia, toggleMediaRecentWorks } from "./actions";
+import { MigrateImagesButton } from "./migrate-images-button";
+import {
+  attachUploadedMedia,
+  bulkMediaAction,
+  deleteMedia,
+  restoreMedia,
+  toggleMediaRecentWorks,
+  trashMedia,
+} from "./actions";
 
 export const metadata: Metadata = {
   title: "Médiathèque — Admin Blac_Kaleta",
@@ -17,6 +27,7 @@ type MediaRow = {
   url: string;
   kind: "image" | "gif" | "pdf" | "other";
   created_at: string;
+  deleted_at: string | null;
   product_id: number | null;
   products: { id: number; title: string; show_in_recent_works: boolean } | null;
 };
@@ -54,6 +65,7 @@ export default async function MediaPage({
     type?: string;
     date?: string;
     vue?: string;
+    statut?: string;
   }>;
 }) {
   const {
@@ -61,16 +73,20 @@ export default async function MediaPage({
     type = "tous",
     date = "toutes",
     vue = "grille",
+    statut = "tous",
   } = await searchParams;
   const view = vue === "liste" ? "liste" : "grille";
+  const isTrashView = statut === "corbeille";
   const supabase = await createClient();
 
   let query = supabase
     .from("media")
     .select(
-      "id, filename, path, url, kind, created_at, product_id, products(id, title, show_in_recent_works)",
+      "id, filename, path, url, kind, created_at, deleted_at, product_id, products(id, title, show_in_recent_works)",
     )
     .order("created_at", { ascending: false });
+
+  query = isTrashView ? query.not("deleted_at", "is", null) : query.is("deleted_at", null);
 
   if (type !== "tous") {
     query = query.eq("kind", type);
@@ -83,9 +99,19 @@ export default async function MediaPage({
     query = query.gte("created_at", start).lt("created_at", end);
   }
 
-  const [{ data, error }, { data: allDates }] = await Promise.all([
+  const [
+    { data, error },
+    { data: allDates },
+    { count: allCount },
+    { count: trashCount },
+  ] = await Promise.all([
     query.returns<MediaRow[]>(),
     supabase.from("media").select("created_at"),
+    supabase.from("media").select("id", { count: "exact", head: true }).is("deleted_at", null),
+    supabase
+      .from("media")
+      .select("id", { count: "exact", head: true })
+      .not("deleted_at", "is", null),
   ]);
 
   const mediaList = data ?? [];
@@ -125,7 +151,32 @@ export default async function MediaPage({
         n&apos;importe quel produit.
       </p>
 
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+      <div className="mt-4 border border-zinc-200 bg-white p-4">
+        <MigrateImagesButton />
+      </div>
+
+      <div className="mt-6 flex flex-wrap items-center gap-4 text-sm">
+        <Link
+          href="/admin/media"
+          className={!isTrashView ? "font-semibold underline" : "text-zinc-600 hover:underline"}
+        >
+          Tous ({allCount ?? 0})
+        </Link>
+        <Link
+          href="/admin/media"
+          className={!isTrashView ? "font-semibold underline" : "text-zinc-600 hover:underline"}
+        >
+          Publiés ({allCount ?? 0})
+        </Link>
+        <Link
+          href="/admin/media?statut=corbeille"
+          className={isTrashView ? "font-semibold underline" : "text-zinc-600 hover:underline"}
+        >
+          Corbeille ({trashCount ?? 0})
+        </Link>
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <MediaFilters
           search={recherche}
           kind={type}
@@ -143,79 +194,151 @@ export default async function MediaPage({
 
       {mediaList.length === 0 ? (
         <p className="mt-8 text-sm text-zinc-500">Aucun fichier ne correspond.</p>
-      ) : view === "grille" ? (
-        <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-          {mediaList.map((media) => (
-            <div key={media.id} className="border border-zinc-200 bg-white p-3">
-              <div className="flex aspect-square items-center justify-center bg-zinc-50">
-                {media.kind === "image" || media.kind === "gif" ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={media.url}
-                    alt={media.filename}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <span className="text-xs uppercase tracking-wide text-zinc-400">
-                    {media.kind}
-                  </span>
-                )}
-              </div>
-              <p className="mt-2 truncate text-xs text-zinc-600" title={media.filename}>
-                {media.filename}
-              </p>
-              <p className="truncate text-xs text-zinc-400">
-                {media.products ? media.products.title : "Non utilisée"}
-              </p>
-              <RecentWorksToggle media={media} className="mt-2" />
-              <form action={deleteMedia.bind(null, media.id, media.path)} className="mt-2">
-                <SubmitButton pendingText="Suppression…" className="text-xs text-red-600 hover:underline">
-                  Supprimer
-                </SubmitButton>
-              </form>
-            </div>
-          ))}
-        </div>
       ) : (
-        <ul className="mt-8 divide-y divide-zinc-100 border-t border-zinc-100">
-          {mediaList.map((media) => (
-            <li key={media.id} className="flex flex-wrap items-center gap-3 py-3">
-              <div className="flex h-12 w-12 flex-none items-center justify-center bg-zinc-50">
-                {media.kind === "image" || media.kind === "gif" ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={media.url}
-                    alt={media.filename}
-                    className="h-full w-full object-cover"
+        <>
+          <form id="bulk-media-form" action={bulkMediaAction} />
+          <div className="mt-6 flex flex-wrap items-center gap-2">
+            <label className="flex items-center gap-2 text-xs text-zinc-500">
+              <SelectAllCheckbox formId="bulk-media-form" />
+              Tout sélectionner
+            </label>
+            <select
+              name="bulk_action"
+              form="bulk-media-form"
+              defaultValue=""
+              className="border border-zinc-300 px-2 py-2 text-sm"
+            >
+              <option value="" disabled>
+                Actions groupées
+              </option>
+              {isTrashView ? (
+                <>
+                  <option value="restaurer">Restaurer</option>
+                  <option value="supprimer">Supprimer définitivement</option>
+                </>
+              ) : (
+                <option value="corbeille">Mettre à la corbeille</option>
+              )}
+            </select>
+            <button
+              type="submit"
+              form="bulk-media-form"
+              className="border border-zinc-300 px-3 py-2 text-sm hover:bg-zinc-50"
+            >
+              Appliquer
+            </button>
+          </div>
+
+          {view === "grille" ? (
+            <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+              {mediaList.map((media) => (
+                <div key={media.id} className="border border-zinc-200 bg-white p-3">
+                  <div className="flex items-center justify-between">
+                    <input
+                      type="checkbox"
+                      name="ids"
+                      value={media.id}
+                      form="bulk-media-form"
+                      aria-label={`Sélectionner ${media.filename}`}
+                    />
+                  </div>
+                  <div className="mt-2 flex aspect-square items-center justify-center bg-zinc-50">
+                    {media.kind === "image" || media.kind === "gif" ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={media.url}
+                        alt={media.filename}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-xs uppercase tracking-wide text-zinc-400">
+                        {media.kind}
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-2 truncate text-xs text-zinc-600" title={media.filename}>
+                    {media.filename}
+                  </p>
+                  <p className="truncate text-xs text-zinc-400">
+                    {media.products ? media.products.title : "Non utilisée"}
+                  </p>
+                  <RecentWorksToggle media={media} className="mt-2" />
+                  <MediaRowActions media={media} isTrash={isTrashView} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <ul className="mt-4 divide-y divide-zinc-100 border-t border-zinc-100">
+              {mediaList.map((media) => (
+                <li key={media.id} className="flex flex-wrap items-center gap-3 py-3">
+                  <input
+                    type="checkbox"
+                    name="ids"
+                    value={media.id}
+                    form="bulk-media-form"
+                    aria-label={`Sélectionner ${media.filename}`}
                   />
-                ) : (
-                  <span className="text-[10px] uppercase tracking-wide text-zinc-400">
-                    {media.kind}
-                  </span>
-                )}
-              </div>
-              <div className="min-w-[160px] flex-1">
-                <p className="truncate text-sm" title={media.filename}>
-                  {media.filename}
-                </p>
-                <p className="truncate text-xs text-zinc-400">
-                  {media.products ? media.products.title : "Non utilisée"}
-                </p>
-              </div>
-              <p className="text-xs text-zinc-500">
-                {dateFormatter.format(new Date(media.created_at))}
-              </p>
-              <RecentWorksToggle media={media} />
-              <form action={deleteMedia.bind(null, media.id, media.path)}>
-                <SubmitButton pendingText="Suppression…" className="text-xs text-red-600 hover:underline">
-                  Supprimer
-                </SubmitButton>
-              </form>
-            </li>
-          ))}
-        </ul>
+                  <div className="flex h-12 w-12 flex-none items-center justify-center bg-zinc-50">
+                    {media.kind === "image" || media.kind === "gif" ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={media.url}
+                        alt={media.filename}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-[10px] uppercase tracking-wide text-zinc-400">
+                        {media.kind}
+                      </span>
+                    )}
+                  </div>
+                  <div className="min-w-[160px] flex-1">
+                    <p className="truncate text-sm" title={media.filename}>
+                      {media.filename}
+                    </p>
+                    <p className="truncate text-xs text-zinc-400">
+                      {media.products ? media.products.title : "Non utilisée"}
+                    </p>
+                  </div>
+                  <p className="text-xs text-zinc-500">
+                    {dateFormatter.format(new Date(media.created_at))}
+                  </p>
+                  <RecentWorksToggle media={media} />
+                  <MediaRowActions media={media} isTrash={isTrashView} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
       )}
     </div>
+  );
+}
+
+function MediaRowActions({ media, isTrash }: { media: MediaRow; isTrash: boolean }) {
+  if (isTrash) {
+    return (
+      <div className="mt-2 flex items-center gap-2">
+        <form action={restoreMedia.bind(null, media.id)}>
+          <SubmitButton pendingText="…" className="text-xs hover:underline">
+            Restaurer
+          </SubmitButton>
+        </form>
+        <form action={deleteMedia.bind(null, media.id, media.path)}>
+          <SubmitButton pendingText="…" className="text-xs text-red-600 hover:underline">
+            Supprimer définitivement
+          </SubmitButton>
+        </form>
+      </div>
+    );
+  }
+
+  return (
+    <form action={trashMedia.bind(null, media.id)} className="mt-2">
+      <SubmitButton pendingText="…" className="text-xs text-red-600 hover:underline">
+        Corbeille
+      </SubmitButton>
+    </form>
   );
 }
 

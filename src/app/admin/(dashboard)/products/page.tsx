@@ -8,7 +8,7 @@ import { Disclosure } from "@/components/disclosure";
 import { SubmitButton } from "@/components/submit-button";
 import { ProductFilters } from "./product-filters";
 import { ProductRowActions } from "./product-row-actions";
-import { SelectAllCheckbox } from "./select-all-checkbox";
+import { SelectAllCheckbox } from "@/components/select-all-checkbox";
 import { ImportCsvForm } from "./import-csv-form";
 import {
   bulkProductAction,
@@ -219,7 +219,7 @@ export default async function ProductsPage({
               <thead>
                 <tr className="border-b border-zinc-200 text-xs uppercase tracking-wide text-zinc-500">
                   <th className="py-2 pr-2">
-                    <SelectAllCheckbox />
+                    <SelectAllCheckbox formId="bulk-products-form" />
                   </th>
                   <th className="py-2 pr-4">Image</th>
                   <th className="py-2 pr-4">Nom</th>

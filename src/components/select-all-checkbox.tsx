@@ -1,6 +1,6 @@
 "use client";
 
-export function SelectAllCheckbox() {
+export function SelectAllCheckbox({ formId }: { formId: string }) {
   return (
     <input
       type="checkbox"
@@ -8,7 +8,7 @@ export function SelectAllCheckbox() {
       onChange={(event) => {
         const checked = event.currentTarget.checked;
         document
-          .querySelectorAll<HTMLInputElement>('input[name="ids"]')
+          .querySelectorAll<HTMLInputElement>(`input[name="ids"][form="${formId}"]`)
           .forEach((checkbox) => {
             checkbox.checked = checked;
           });

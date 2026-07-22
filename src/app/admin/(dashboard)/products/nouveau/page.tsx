@@ -20,6 +20,7 @@ export default async function NewProductPage() {
       .from("media")
       .select("id, filename, url")
       .is("product_id", null)
+      .is("deleted_at", null)
       .in("kind", ["image", "gif"])
       .order("created_at", { ascending: false }),
     getCurrency(),

@@ -24,6 +24,7 @@ export default async function CategoriesPage() {
     supabase
       .from("media")
       .select("id, filename, url")
+      .is("deleted_at", null)
       .in("kind", ["image", "gif"])
       .order("created_at", { ascending: false }),
   ]);

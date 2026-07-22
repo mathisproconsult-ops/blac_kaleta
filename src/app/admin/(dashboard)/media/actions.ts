@@ -64,6 +64,54 @@ export async function deleteMedia(id: number, path: string) {
   revalidatePath("/admin/products");
 }
 
+export async function trashMedia(id: number) {
+  const supabase = await createClient();
+  await supabase.from("media").update({ deleted_at: new Date().toISOString() }).eq("id", id);
+
+  revalidatePath("/admin/media");
+  revalidatePath("/admin/products");
+}
+
+export async function restoreMedia(id: number) {
+  const supabase = await createClient();
+  await supabase.from("media").update({ deleted_at: null }).eq("id", id);
+
+  revalidatePath("/admin/media");
+  revalidatePath("/admin/products");
+}
+
+export async function bulkMediaAction(formData: FormData) {
+  const bulkAction = formData.get("bulk_action");
+  const ids = formData
+    .getAll("ids")
+    .map((value) => Number(value))
+    .filter((value) => Number.isInteger(value));
+
+  if (ids.length === 0 || typeof bulkAction !== "string") return;
+
+  const supabase = await createClient();
+
+  if (bulkAction === "corbeille") {
+    await supabase
+      .from("media")
+      .update({ deleted_at: new Date().toISOString() })
+      .in("id", ids);
+  } else if (bulkAction === "restaurer") {
+    await supabase.from("media").update({ deleted_at: null }).in("id", ids);
+  } else if (bulkAction === "supprimer") {
+    const { data: rows } = await supabase.from("media").select("path").in("id", ids);
+    if (rows && rows.length > 0) {
+      await supabase.storage.from("media").remove(rows.map((row) => row.path));
+    }
+    await supabase.from("media").delete().in("id", ids);
+  } else {
+    return;
+  }
+
+  revalidatePath("/admin/media");
+  revalidatePath("/admin/products");
+}
+
 export async function toggleMediaRecentWorks(
   productId: number,
   currentValue: boolean,
