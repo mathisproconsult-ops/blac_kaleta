@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { STATUS_ORDER, type ProductStatus } from "./status";
 
@@ -44,30 +45,43 @@ function productFieldsFromFormData(formData: FormData) {
   };
 }
 
-async function uploadImages(
+type UploadedImage = { path: string; url: string; filename: string; mimeType: string };
+
+function parseUploadedImages(formData: FormData): UploadedImage[] {
+  const raw = formData.get("uploadedImages");
+  if (typeof raw !== "string" || !raw) return [];
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (item): item is UploadedImage =>
+        typeof item?.path === "string" &&
+        typeof item?.url === "string" &&
+        typeof item?.filename === "string" &&
+        typeof item?.mimeType === "string",
+    );
+  } catch {
+    return [];
+  }
+}
+
+// Les photos sont envoyées directement du navigateur vers Supabase Storage
+// (ImageUploadField), pour ne pas faire transiter le fichier par le corps
+// de la Server Action — limité côté plateforme d'hébergement. Cette
+// fonction se contente d'enregistrer les métadonnées déjà en ligne.
+async function attachUploadedImages(
   supabase: SupabaseClient,
   productId: number,
-  files: File[],
+  images: UploadedImage[],
   startPosition: number,
 ) {
   let position = startPosition;
-  for (const file of files) {
-    if (!file || file.size === 0) continue;
-
-    const path = `products/${productId}/${crypto.randomUUID()}-${file.name}`;
-    const { error: uploadError } = await supabase.storage
-      .from("media")
-      .upload(path, file, { contentType: file.type });
-    if (uploadError) continue;
-
-    const { data: publicUrlData } = supabase.storage
-      .from("media")
-      .getPublicUrl(path);
-
+  for (const image of images) {
     await supabase.from("product_images").insert({
       product_id: productId,
-      path,
-      url: publicUrlData.publicUrl,
+      path: image.path,
+      url: image.url,
       position,
     });
     position += 1;
@@ -75,11 +89,11 @@ async function uploadImages(
     // Toute nouvelle photo uploadée depuis le formulaire produit
     // rejoint automatiquement la Médiathèque, déjà associée au produit.
     await supabase.from("media").insert({
-      filename: file.name,
-      path,
-      url: publicUrlData.publicUrl,
-      mime_type: file.type,
-      kind: file.type === "image/gif" ? "gif" : "image",
+      filename: image.filename,
+      path: image.path,
+      url: image.url,
+      mime_type: image.mimeType,
+      kind: image.mimeType === "image/gif" ? "gif" : "image",
       product_id: productId,
     });
   }
@@ -152,17 +166,22 @@ export async function createProduct(formData: FormData) {
 
   await syncCategories(supabase, product.id, parseCategoryIds(formData));
 
-  const files = formData
-    .getAll("images")
-    .filter((value): value is File => value instanceof File);
-  await uploadImages(supabase, product.id, files, 0);
-  await attachLibraryMedia(supabase, product.id, parseMediaIds(formData), files.length);
+  const uploadedImages = parseUploadedImages(formData);
+  await attachUploadedImages(supabase, product.id, uploadedImages, 0);
+  await attachLibraryMedia(
+    supabase,
+    product.id,
+    parseMediaIds(formData),
+    uploadedImages.length,
+  );
 
   revalidatePath("/admin/products");
   revalidatePath("/admin/media");
   revalidatePath("/");
   revalidatePath("/boutique");
   revalidatePath("/oeuvres-recentes");
+
+  redirect("/admin/products");
 }
 
 export async function updateProduct(id: number, formData: FormData) {
@@ -179,22 +198,23 @@ export async function updateProduct(id: number, formData: FormData) {
     .select("id", { count: "exact", head: true })
     .eq("product_id", id);
 
-  const files = formData
-    .getAll("images")
-    .filter((value): value is File => value instanceof File);
-  await uploadImages(supabase, id, files, count ?? 0);
+  const uploadedImages = parseUploadedImages(formData);
+  await attachUploadedImages(supabase, id, uploadedImages, count ?? 0);
   await attachLibraryMedia(
     supabase,
     id,
     parseMediaIds(formData),
-    (count ?? 0) + files.length,
+    (count ?? 0) + uploadedImages.length,
   );
 
   revalidatePath("/admin/products");
+  revalidatePath(`/admin/products/${id}`);
   revalidatePath("/admin/media");
   revalidatePath("/");
   revalidatePath("/boutique");
   revalidatePath("/oeuvres-recentes");
+
+  redirect(`/admin/products/${id}`);
 }
 
 export async function deleteProduct(id: number) {

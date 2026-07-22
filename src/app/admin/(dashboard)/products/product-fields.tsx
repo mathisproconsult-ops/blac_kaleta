@@ -1,4 +1,5 @@
 import type { CurrencyCode } from "@/lib/currency";
+import { ImageUploadField } from "./image-upload-field";
 
 type Category = { id: number; name: string };
 type AvailableMedia = { id: number; filename: string; url: string };
@@ -129,18 +130,7 @@ export function ProductFields({
           className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
         />
       </div>
-      <div className="flex flex-col gap-1">
-        <label className="text-xs uppercase tracking-wide text-zinc-500">
-          Nouvelle photo (rejoint aussi la Médiathèque)
-        </label>
-        <input
-          name="images"
-          type="file"
-          accept="image/*"
-          multiple
-          className="text-sm"
-        />
-      </div>
+      <ImageUploadField />
       {availableMedia && availableMedia.length > 0 ? (
         <fieldset className="flex flex-col gap-1 sm:col-span-2">
           <legend className="text-xs uppercase tracking-wide text-zinc-500">

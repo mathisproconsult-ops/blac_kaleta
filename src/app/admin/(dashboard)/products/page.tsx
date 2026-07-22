@@ -6,23 +6,19 @@ import { getCurrency } from "@/lib/settings";
 import { formatPrice, type CurrencyCode } from "@/lib/currency";
 import { Disclosure } from "@/components/disclosure";
 import { SubmitButton } from "@/components/submit-button";
-import { ProductFields } from "./product-fields";
 import { ProductFilters } from "./product-filters";
 import { ProductRowActions } from "./product-row-actions";
 import { SelectAllCheckbox } from "./select-all-checkbox";
 import { ImportCsvForm } from "./import-csv-form";
 import {
   bulkProductAction,
-  createProduct,
   cycleProductStatus,
   deleteProduct,
-  deleteProductImage,
   duplicateProduct,
   quickUpdateProduct,
   restoreProduct,
   toggleProductVisibility,
   trashProduct,
-  updateProduct,
 } from "./actions";
 import { STATUS_LABELS, STATUS_ORDER, STATUS_STYLES, type ProductStatus } from "./status";
 
@@ -103,7 +99,6 @@ export default async function ProductsPage({
     { data: products, error },
     { count: allCount },
     { count: trashCount },
-    { data: unclaimedMedia },
     currency,
   ] = await Promise.all([
     supabase.from("categories").select("id, name").order("position", { ascending: true }),
@@ -113,17 +108,10 @@ export default async function ProductsPage({
       .from("products")
       .select("id", { count: "exact", head: true })
       .not("deleted_at", "is", null),
-    supabase
-      .from("media")
-      .select("id, filename, url")
-      .is("product_id", null)
-      .in("kind", ["image", "gif"])
-      .order("created_at", { ascending: false }),
     getCurrency(),
   ]);
 
   const categoryList = categories ?? [];
-  const availableMedia = unclaimedMedia ?? [];
 
   let productList = products ?? [];
 
@@ -150,24 +138,12 @@ export default async function ProductsPage({
           <Disclosure label="Importer un CSV">
             <ImportCsvForm />
           </Disclosure>
-          <Disclosure label="+ Ajouter un produit">
-            <form
-              action={createProduct}
-              className="flex flex-col gap-4 border border-zinc-200 bg-white p-6"
-            >
-              <ProductFields
-                categories={categoryList}
-                availableMedia={availableMedia}
-                currency={currency}
-              />
-              <button
-                type="submit"
-                className="self-start bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
-              >
-                Ajouter le produit
-              </button>
-            </form>
-          </Disclosure>
+          <Link
+            href="/admin/products/nouveau"
+            className="bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
+          >
+            + Ajouter un produit
+          </Link>
         </div>
       </div>
 
@@ -261,9 +237,6 @@ export default async function ProductsPage({
                 const categoryNames = product.product_categories
                   .map((pc) => pc.categories?.name)
                   .filter((name): name is string => Boolean(name));
-                const selectedCategoryIds = product.product_categories
-                  .map((pc) => pc.categories?.id)
-                  .filter((id): id is number => typeof id === "number");
 
                 return (
                   <tr
@@ -335,16 +308,6 @@ export default async function ProductsPage({
                         onRestore={restoreProduct.bind(null, product.id)}
                         onDeletePermanently={deleteProduct.bind(null, product.id)}
                         onDuplicate={duplicateProduct.bind(null, product.id)}
-                        fullEditForm={
-                          <FullEditForm
-                            product={product}
-                            images={images}
-                            categoryList={categoryList}
-                            selectedCategoryIds={selectedCategoryIds}
-                            availableMedia={availableMedia}
-                            currency={currency}
-                          />
-                        }
                         quickEditForm={
                           <QuickEditForm product={product} currency={currency} />
                         }
@@ -438,82 +401,5 @@ function QuickEditForm({
         Enregistrer
       </SubmitButton>
     </form>
-  );
-}
-
-function FullEditForm({
-  product,
-  images,
-  categoryList,
-  selectedCategoryIds,
-  availableMedia,
-  currency,
-}: {
-  product: ProductRow;
-  images: ProductImage[];
-  categoryList: { id: number; name: string }[];
-  selectedCategoryIds: number[];
-  availableMedia: { id: number; filename: string; url: string }[];
-  currency: CurrencyCode;
-}) {
-  return (
-    <div>
-      {images.length > 0 ? (
-        <div className="mb-4 flex flex-wrap gap-3">
-          {images.map((image) => (
-            <div key={image.id} className="relative">
-              <Image
-                src={image.url}
-                alt={product.title}
-                width={80}
-                height={80}
-                className="h-20 w-20 object-cover"
-              />
-              <form
-                action={deleteProductImage.bind(null, image.id, image.path)}
-                className="absolute -right-2 -top-2"
-              >
-                <SubmitButton
-                  pendingText="…"
-                  aria-label="Supprimer la photo"
-                  className="flex h-5 w-5 items-center justify-center bg-black text-xs text-white"
-                >
-                  ×
-                </SubmitButton>
-              </form>
-            </div>
-          ))}
-        </div>
-      ) : null}
-      <form
-        action={updateProduct.bind(null, product.id)}
-        className="flex flex-col gap-4 border border-zinc-200 bg-white p-6"
-      >
-        <ProductFields
-          categories={categoryList}
-          defaultValues={{
-            title: product.title,
-            price: product.price,
-            stock: product.stock,
-            description: product.description,
-            year: product.year,
-            series: product.series,
-            technique: product.technique,
-            is_for_sale: product.is_for_sale,
-            show_in_recent_works: product.show_in_recent_works,
-            featured_home: product.featured_home,
-          }}
-          selectedCategoryIds={selectedCategoryIds}
-          availableMedia={availableMedia}
-          currency={currency}
-        />
-        <SubmitButton
-          pendingText="Enregistrement…"
-          className="self-start bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
-        >
-          Enregistrer les modifications
-        </SubmitButton>
-      </form>
-    </div>
   );
 }

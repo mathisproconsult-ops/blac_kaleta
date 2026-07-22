@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import Link from "next/link";
 import { SubmitButton } from "@/components/submit-button";
 
 type BoundAction = (formData: FormData) => Promise<void>;
@@ -13,7 +14,6 @@ export function ProductRowActions({
   onRestore,
   onDeletePermanently,
   onDuplicate,
-  fullEditForm,
   quickEditForm,
 }: {
   isTrash: boolean;
@@ -23,10 +23,8 @@ export function ProductRowActions({
   onRestore: BoundAction;
   onDeletePermanently: BoundAction;
   onDuplicate: BoundAction;
-  fullEditForm: ReactNode;
   quickEditForm: ReactNode;
 }) {
-  const [modifierOpen, setModifierOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
 
   return (
@@ -48,13 +46,9 @@ export function ProductRowActions({
           </>
         ) : (
           <>
-            <button
-              type="button"
-              onClick={() => setModifierOpen((value) => !value)}
-              className="hover:underline"
-            >
-              {modifierOpen ? "Fermer" : "Modifier"}
-            </button>
+            <Link href={`/admin/products/${productId}`} className="hover:underline">
+              Modifier
+            </Link>
             <span>|</span>
             <button
               type="button"
@@ -91,7 +85,6 @@ export function ProductRowActions({
           </>
         )}
       </div>
-      {modifierOpen ? <div className="mt-3">{fullEditForm}</div> : null}
       {quickOpen ? <div className="mt-3">{quickEditForm}</div> : null}
     </>
   );
