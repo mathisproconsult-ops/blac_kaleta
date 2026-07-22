@@ -3,7 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { Disclosure } from "@/components/disclosure";
 import { SubmitButton } from "@/components/submit-button";
 import { MediaFilters, MediaViewToggle } from "./media-filters";
-import { deleteMedia, toggleMediaRecentWorks, uploadMedia } from "./actions";
+import { MediaUploadField } from "./media-upload-field";
+import { attachUploadedMedia, deleteMedia, toggleMediaRecentWorks } from "./actions";
 
 export const metadata: Metadata = {
   title: "Médiathèque — Admin Blac_Kaleta",
@@ -106,21 +107,15 @@ export default async function MediaPage({
         </h1>
         <Disclosure label="+ Ajouter un fichier média" closeLabel="Fermer">
           <form
-            action={uploadMedia}
+            action={attachUploadedMedia}
             className="flex flex-wrap items-center gap-3 border border-zinc-200 bg-white p-4"
           >
-            <input
-              type="file"
-              name="files"
-              accept="image/*,application/pdf"
-              multiple
-              className="text-sm"
-            />
+            <MediaUploadField />
             <SubmitButton
-              pendingText="Envoi…"
+              pendingText="Ajout…"
               className="bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
             >
-              Uploader
+              Ajouter à la Médiathèque
             </SubmitButton>
           </form>
         </Disclosure>
