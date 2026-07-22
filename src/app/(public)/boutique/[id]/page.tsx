@@ -5,7 +5,7 @@ import { getCurrency } from "@/lib/settings";
 import { formatPrice } from "@/lib/currency";
 import { STATUS_LABELS, type ProductStatus } from "@/app/admin/(dashboard)/products/status";
 import { ProductGallery } from "./product-gallery";
-import { OrderForm } from "./order-form";
+import { AddToCartControls } from "../add-to-cart-controls";
 
 type ProductDetail = {
   id: number;
@@ -87,11 +87,16 @@ export default async function ProductPage({
         ) : null}
 
         <div className="mt-6">
-          {product.status === "available" && product.price !== null ? (
-            <OrderForm
-              productId={product.id}
-              productTitle={product.title}
-              unitPrice={product.price}
+          {product.status === "available" && product.price !== null && product.stock > 0 ? (
+            <AddToCartControls
+              product={{
+                id: product.id,
+                title: product.title,
+                price: product.price,
+                stock: product.stock,
+                image: images[0]?.url ?? null,
+              }}
+              variant="full"
             />
           ) : null}
         </div>

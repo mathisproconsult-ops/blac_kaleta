@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { CartIcon } from "@/components/cart-icon";
 
 type MenuItem = { id: number; label: string; href: string };
 
@@ -52,15 +53,11 @@ export function SiteHeader({
             );
           })}
           <span className="h-5 w-px bg-zinc-200" aria-hidden />
-          <Link href="/panier" aria-label="Panier" className="text-lg">
-            🛒
-          </Link>
+          <CartIcon />
         </nav>
 
         <div className="flex items-center gap-4 lg:hidden">
-          <Link href="/panier" aria-label="Panier" className="text-lg">
-            🛒
-          </Link>
+          <CartIcon />
           <button
             type="button"
             aria-label={open ? "Fermer le menu" : "Ouvrir le menu"}

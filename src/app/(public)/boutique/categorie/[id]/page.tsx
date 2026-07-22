@@ -6,11 +6,13 @@ import { getCurrency } from "@/lib/settings";
 import { formatPrice } from "@/lib/currency";
 import type { ProductStatus } from "@/app/admin/(dashboard)/products/status";
 import { SortSelect } from "../../sort-select";
+import { AddToCartControls } from "../../add-to-cart-controls";
 
 type ProductCard = {
   id: number;
   title: string;
   price: number | null;
+  stock: number;
   status: ProductStatus;
   product_images: { url: string; position: number }[];
   product_categories: { category_id: number }[];
@@ -60,7 +62,7 @@ export default async function BoutiqueCategoryPage({
     supabase
       .from("products")
       .select(
-        "id, title, price, status, product_images(url, position), product_categories(category_id)",
+        "id, title, price, stock, status, product_images(url, position), product_categories(category_id)",
       )
       .eq("is_for_sale", true)
       .eq("is_visible", true)
@@ -120,40 +122,60 @@ export default async function BoutiqueCategoryPage({
             )[0];
 
             return (
-              <Link key={product.id} href={`/boutique/${product.id}`} className="group">
-                <div className="relative aspect-square w-full overflow-hidden bg-zinc-50">
-                  {image ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={image.url}
-                      alt={product.title}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div
-                      className="h-full w-full"
-                      style={{
-                        backgroundImage:
-                          "repeating-linear-gradient(45deg, #f0f0ee 0, #f0f0ee 2px, #ffffff 2px, #ffffff 12px)",
-                      }}
-                    />
-                  )}
-                  {product.status === "sold" ? (
-                    <span className="absolute right-2 top-2 bg-[#c9702f] px-2 py-1 text-xs font-medium uppercase text-white">
-                      Vendu
-                    </span>
-                  ) : null}
-                </div>
-                <p className="mt-3 text-sm font-medium">{product.title}</p>
-                <div className="mt-1 flex items-center justify-between">
+              <div key={product.id} className="group">
+                <Link href={`/boutique/${product.id}`}>
+                  <div className="relative aspect-square w-full overflow-hidden bg-zinc-50">
+                    {image ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={image.url}
+                        alt={product.title}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div
+                        className="h-full w-full"
+                        style={{
+                          backgroundImage:
+                            "repeating-linear-gradient(45deg, #f0f0ee 0, #f0f0ee 2px, #ffffff 2px, #ffffff 12px)",
+                        }}
+                      />
+                    )}
+                    {product.status === "sold" ? (
+                      <span className="absolute right-2 top-2 bg-[#c9702f] px-2 py-1 text-xs font-medium uppercase text-white">
+                        Vendu
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="mt-3 text-sm font-medium group-hover:underline">
+                    {product.title}
+                  </p>
+                </Link>
+                <div className="mt-1 flex items-center justify-between gap-2">
                   <p className="text-sm text-zinc-600">
                     {product.price !== null ? formatPrice(product.price, currency) : "Sur demande"}
                   </p>
-                  <span className="text-xs uppercase tracking-wide text-zinc-500 group-hover:underline">
-                    {product.price !== null ? statusButtonLabel[product.status] : "Voir"}
-                  </span>
+                  {product.price !== null && product.status === "available" && product.stock > 0 ? (
+                    <AddToCartControls
+                      product={{
+                        id: product.id,
+                        title: product.title,
+                        price: product.price,
+                        stock: product.stock,
+                        image: image?.url ?? null,
+                      }}
+                      variant="compact"
+                    />
+                  ) : (
+                    <Link
+                      href={`/boutique/${product.id}`}
+                      className="text-xs uppercase tracking-wide text-zinc-500 hover:underline"
+                    >
+                      {product.price !== null ? statusButtonLabel[product.status] : "Voir"}
+                    </Link>
+                  )}
                 </div>
-              </Link>
+              </div>
             );
           })}
         </div>
