@@ -30,15 +30,31 @@ type ProductDetail = {
 
 async function getProduct(id: string) {
   const supabase = await createClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("products")
     .select(
-      "id, title, price, stock, description, year, series, technique, is_for_sale, show_in_recent_works, featured_home, product_images(id, path, url, position), product_categories(categories(id, name)), product_option_groups(group_id)",
+      "id, title, price, stock, description, year, series, technique, is_for_sale, show_in_recent_works, featured_home, product_images(id, path, url, position), product_categories(categories(id, name))",
     )
     .eq("id", id)
     .maybeSingle();
 
-  return data as ProductDetail | null;
+  if (error) console.error("getProduct", error);
+  if (!data) return null;
+
+  // Requête séparée et best-effort : si les tables du système d'options
+  // n'existent pas encore (migration pas encore appliquée), la fiche
+  // produit du dashboard doit quand même s'afficher.
+  const { data: optionGroupRows, error: optionsError } = await supabase
+    .from("product_option_groups")
+    .select("group_id")
+    .eq("product_id", data.id);
+
+  if (optionsError) console.error("getProduct options", optionsError);
+
+  return {
+    ...data,
+    product_option_groups: optionGroupRows ?? [],
+  } as unknown as ProductDetail;
 }
 
 export async function generateMetadata({

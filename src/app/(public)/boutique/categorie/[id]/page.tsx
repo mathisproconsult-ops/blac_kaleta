@@ -71,7 +71,7 @@ export default async function BoutiqueCategoryPage({
       .returns<ProductCard[]>(),
     getSettings(),
   ]);
-  const { currency, usd_rate: usdRate } = settings;
+  const { usd_rate: usdRate } = settings;
 
   const categoryList = categories ?? [];
 
@@ -155,9 +155,9 @@ export default async function BoutiqueCategoryPage({
                 <div className="mt-1 flex items-center justify-between gap-2">
                   <div className="flex flex-col">
                     <p className="text-sm text-zinc-600">
-                      {product.price !== null ? formatPrice(product.price, currency) : "Sur demande"}
+                      {product.price !== null ? formatPrice(product.price, "XOF") : "Sur demande"}
                     </p>
-                    {product.price !== null && currency === "XOF" ? (
+                    {product.price !== null ? (
                       <p className="text-xs text-zinc-400">
                         {formatIndicativeConversion(product.price, usdRate)}
                       </p>

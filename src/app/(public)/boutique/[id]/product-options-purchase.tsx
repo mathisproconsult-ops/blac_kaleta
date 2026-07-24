@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useCart, type SelectedOption } from "@/lib/cart-context";
-import { formatPrice, formatIndicativeConversion, type CurrencyCode } from "@/lib/currency";
+import { formatPrice, formatIndicativeConversion } from "@/lib/currency";
 
 type Choice = { id: number; label: string; priceDelta: number };
 type Group = {
@@ -23,12 +23,10 @@ type Product = {
 export function ProductOptionsPurchase({
   product,
   groups,
-  currency,
   usdRate,
 }: {
   product: Product;
   groups: Group[];
-  currency: CurrencyCode;
   usdRate: number;
 }) {
   const { items, addItem, removeItem } = useCart();
@@ -120,12 +118,10 @@ export function ProductOptionsPurchase({
 
   return (
     <div>
-      <p className="text-lg">{formatPrice(finalPrice, currency)}</p>
-      {currency === "XOF" ? (
-        <p className="mt-1 text-sm text-zinc-400">
-          {formatIndicativeConversion(finalPrice, usdRate)}
-        </p>
-      ) : null}
+      <p className="text-lg">{formatPrice(finalPrice, "XOF")}</p>
+      <p className="mt-1 text-sm text-zinc-400">
+        {formatIndicativeConversion(finalPrice, usdRate)}
+      </p>
 
       <div className="mt-4 flex flex-col gap-4">
         {groups.map((group) =>
@@ -148,7 +144,7 @@ export function ProductOptionsPurchase({
                   <option key={choice.id} value={choice.id}>
                     {choice.label}
                     {choice.priceDelta !== 0
-                      ? ` (${choice.priceDelta > 0 ? "+" : ""}${formatPrice(choice.priceDelta, currency)})`
+                      ? ` (${choice.priceDelta > 0 ? "+" : ""}${formatPrice(choice.priceDelta, "XOF")})`
                       : ""}
                   </option>
                 ))}
@@ -169,7 +165,7 @@ export function ProductOptionsPurchase({
                     />
                     {choice.label}
                     {choice.priceDelta !== 0
-                      ? ` (${choice.priceDelta > 0 ? "+" : ""}${formatPrice(choice.priceDelta, currency)})`
+                      ? ` (${choice.priceDelta > 0 ? "+" : ""}${formatPrice(choice.priceDelta, "XOF")})`
                       : ""}
                   </label>
                 ))}

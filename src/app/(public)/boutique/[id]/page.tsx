@@ -35,17 +35,35 @@ type ProductDetail = {
 
 async function getProduct(id: string) {
   const supabase = await createClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("products")
     .select(
-      "id, title, price, status, stock, description, product_images(url, position), product_categories(categories(name)), product_option_groups(group_id, option_groups(id, name, selection_type, position, option_choices(id, label, price_delta, position)))",
+      "id, title, price, status, stock, description, product_images(url, position), product_categories(categories(name))",
     )
     .eq("id", id)
     .eq("is_visible", true)
     .is("deleted_at", null)
     .maybeSingle();
 
-  return data as ProductDetail | null;
+  if (error) console.error("getProduct", error);
+  if (!data) return null;
+
+  // Requête séparée et best-effort : si les tables du système d'options
+  // n'existent pas encore (migration pas encore appliquée) ou qu'une autre
+  // erreur survient ici, la fiche produit doit quand même s'afficher.
+  const { data: optionGroupRows, error: optionsError } = await supabase
+    .from("product_option_groups")
+    .select(
+      "group_id, option_groups(id, name, selection_type, position, option_choices(id, label, price_delta, position))",
+    )
+    .eq("product_id", data.id);
+
+  if (optionsError) console.error("getProduct options", optionsError);
+
+  return {
+    ...data,
+    product_option_groups: optionGroupRows ?? [],
+  } as unknown as ProductDetail;
 }
 
 export async function generateMetadata({
@@ -65,7 +83,7 @@ export default async function ProductPage({
 }) {
   const { id } = await params;
   const [product, settings] = await Promise.all([getProduct(id), getSettings()]);
-  const { currency, usd_rate: usdRate } = settings;
+  const { usd_rate: usdRate } = settings;
 
   if (!product) notFound();
 
@@ -107,12 +125,10 @@ export default async function ProductPage({
         </h1>
         {isPurchasable && optionGroups.length > 0 ? null : product.price !== null ? (
           <>
-            <p className="mt-2 text-lg">{formatPrice(product.price, currency)}</p>
-            {currency === "XOF" ? (
-              <p className="mt-1 text-sm text-zinc-400">
-                {formatIndicativeConversion(product.price, usdRate)}
-              </p>
-            ) : null}
+            <p className="mt-2 text-lg">{formatPrice(product.price, "XOF")}</p>
+            <p className="mt-1 text-sm text-zinc-400">
+              {formatIndicativeConversion(product.price, usdRate)}
+            </p>
           </>
         ) : (
           <p className="mt-2 text-sm text-zinc-500">Pièce non destinée à la vente</p>
@@ -139,7 +155,6 @@ export default async function ProductPage({
                 image: images[0]?.url ?? null,
               }}
               groups={optionGroups}
-              currency={currency}
               usdRate={usdRate}
             />
           ) : isPurchasable ? (
