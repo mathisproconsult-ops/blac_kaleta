@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrency } from "@/lib/settings";
-import { formatPrice } from "@/lib/currency";
+import { getSettings } from "@/lib/settings";
+import { formatPrice, formatIndicativeConversion } from "@/lib/currency";
 import { STATUS_LABELS, type ProductStatus } from "@/app/admin/(dashboard)/products/status";
 import { BackButton } from "@/components/back-button";
 import { ProductGallery } from "./product-gallery";
@@ -50,7 +50,8 @@ export default async function ProductPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [product, currency] = await Promise.all([getProduct(id), getCurrency()]);
+  const [product, settings] = await Promise.all([getProduct(id), getSettings()]);
+  const { currency, usd_rate: usdRate } = settings;
 
   if (!product) notFound();
 
@@ -74,7 +75,14 @@ export default async function ProductPage({
           ) : null}
         </h1>
         {product.price !== null ? (
-          <p className="mt-2 text-lg">{formatPrice(product.price, currency)}</p>
+          <>
+            <p className="mt-2 text-lg">{formatPrice(product.price, currency)}</p>
+            {currency === "XOF" ? (
+              <p className="mt-1 text-sm text-zinc-400">
+                {formatIndicativeConversion(product.price, usdRate)}
+              </p>
+            ) : null}
+          </>
         ) : (
           <p className="mt-2 text-sm text-zinc-500">Pièce non destinée à la vente</p>
         )}

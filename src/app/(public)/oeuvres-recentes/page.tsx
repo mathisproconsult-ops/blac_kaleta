@@ -82,25 +82,25 @@ export default async function RecentWorksPage({
       {filtered.length === 0 ? (
         <p className="mt-12 text-sm text-zinc-500">Aucune œuvre ne correspond à ces filtres.</p>
       ) : (
-        <div className="mt-10 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-10 columns-1 gap-8 sm:columns-2 lg:columns-3">
           {filtered.map((work) => {
             const image = [...work.product_images].sort(
               (a, b) => a.position - b.position,
             )[0];
 
             return (
-              <Link key={work.id} href={`/boutique/${work.id}`} className="group">
-                <div className="aspect-square w-full overflow-hidden bg-zinc-50">
+              <Link
+                key={work.id}
+                href={`/boutique/${work.id}`}
+                className="group mb-8 block break-inside-avoid"
+              >
+                <div className="w-full bg-zinc-50">
                   {image ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={image.url}
-                      alt={work.title}
-                      className="h-full w-full object-cover"
-                    />
+                    <img src={image.url} alt={work.title} className="block h-auto w-full" />
                   ) : (
                     <div
-                      className="h-full w-full"
+                      className="aspect-square w-full"
                       style={{
                         backgroundImage:
                           "repeating-linear-gradient(45deg, #f0f0ee 0, #f0f0ee 2px, #ffffff 2px, #ffffff 12px)",

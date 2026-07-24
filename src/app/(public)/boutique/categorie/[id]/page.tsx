@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrency } from "@/lib/settings";
-import { formatPrice } from "@/lib/currency";
+import { getSettings } from "@/lib/settings";
+import { formatPrice, formatIndicativeConversion } from "@/lib/currency";
 import type { ProductStatus } from "@/app/admin/(dashboard)/products/status";
 import { SortSelect } from "../../sort-select";
 import { AddToCartControls } from "../../add-to-cart-controls";
@@ -57,7 +57,7 @@ export default async function BoutiqueCategoryPage({
   const selectedCategoryId = id === "tous" ? null : Number(id);
   if (id !== "tous" && !Number.isInteger(selectedCategoryId)) notFound();
 
-  const [{ data: categories }, { data: products }, currency] = await Promise.all([
+  const [{ data: categories }, { data: products }, settings] = await Promise.all([
     supabase.from("categories").select("id, name").order("position", { ascending: true }),
     supabase
       .from("products")
@@ -69,8 +69,9 @@ export default async function BoutiqueCategoryPage({
       .is("deleted_at", null)
       .order("created_at", { ascending: false })
       .returns<ProductCard[]>(),
-    getCurrency(),
+    getSettings(),
   ]);
+  const { currency, usd_rate: usdRate } = settings;
 
   const categoryList = categories ?? [];
 
@@ -115,26 +116,26 @@ export default async function BoutiqueCategoryPage({
       {productList.length === 0 ? (
         <p className="mt-12 text-sm text-zinc-500">Aucun produit dans cette catégorie.</p>
       ) : (
-        <div className="mt-10 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-10 columns-1 gap-8 sm:columns-2 lg:columns-3">
           {productList.map((product) => {
             const image = [...product.product_images].sort(
               (a, b) => a.position - b.position,
             )[0];
 
             return (
-              <div key={product.id} className="group">
+              <div key={product.id} className="group mb-8 break-inside-avoid">
                 <Link href={`/boutique/${product.id}`}>
-                  <div className="relative aspect-square w-full overflow-hidden bg-zinc-50">
+                  <div className="relative w-full bg-zinc-50">
                     {image ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={image.url}
                         alt={product.title}
-                        className="h-full w-full object-cover"
+                        className="block h-auto w-full"
                       />
                     ) : (
                       <div
-                        className="h-full w-full"
+                        className="aspect-square w-full"
                         style={{
                           backgroundImage:
                             "repeating-linear-gradient(45deg, #f0f0ee 0, #f0f0ee 2px, #ffffff 2px, #ffffff 12px)",
@@ -152,9 +153,16 @@ export default async function BoutiqueCategoryPage({
                   </p>
                 </Link>
                 <div className="mt-1 flex items-center justify-between gap-2">
-                  <p className="text-sm text-zinc-600">
-                    {product.price !== null ? formatPrice(product.price, currency) : "Sur demande"}
-                  </p>
+                  <div className="flex flex-col">
+                    <p className="text-sm text-zinc-600">
+                      {product.price !== null ? formatPrice(product.price, currency) : "Sur demande"}
+                    </p>
+                    {product.price !== null && currency === "XOF" ? (
+                      <p className="text-xs text-zinc-400">
+                        {formatIndicativeConversion(product.price, usdRate)}
+                      </p>
+                    ) : null}
+                  </div>
                   {product.price !== null && product.status === "available" && product.stock > 0 ? (
                     <AddToCartControls
                       product={{

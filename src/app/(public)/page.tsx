@@ -1,4 +1,3 @@
-import Link from "next/link";
 import {
   SiFacebook,
   SiInstagram,
@@ -9,6 +8,7 @@ import {
 } from "react-icons/si";
 import { getSettings, type Settings } from "@/lib/settings";
 import { createClient } from "@/lib/supabase/server";
+import { ScrollingWorksBanner } from "./scrolling-works-banner";
 
 const SOCIAL_ICONS: {
   key: keyof Settings;
@@ -51,46 +51,18 @@ export default async function HomePage() {
 
   const socialLinks = SOCIAL_ICONS.filter(({ key }) => settings[key]);
 
-  return (
-    <div className="flex flex-col items-center gap-8 px-4 py-10 sm:px-6 sm:py-16">
-      {featuredWorks.length > 0 ? (
-        <div className="flex w-full max-w-3xl flex-wrap justify-center gap-6">
-          {featuredWorks.map((work) => {
-            const image = [...work.product_images].sort(
-              (a, b) => a.position - b.position,
-            )[0];
+  const bannerWorks = featuredWorks.map((work) => {
+    const image = [...work.product_images].sort((a, b) => a.position - b.position)[0];
+    return { id: work.id, title: work.title, image: image?.url ?? null };
+  });
 
-            return (
-              <Link
-                key={work.id}
-                href={`/boutique/${work.id}`}
-                className="aspect-square w-full max-w-[560px] flex-1"
-              >
-                {image ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={image.url}
-                    alt={work.title}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div
-                    className="flex h-full w-full items-center justify-center text-xs uppercase tracking-widest text-zinc-400"
-                    style={{
-                      backgroundImage:
-                        "repeating-linear-gradient(45deg, #f0f0ee 0, #f0f0ee 2px, #ffffff 2px, #ffffff 12px)",
-                    }}
-                  >
-                    {work.title}
-                  </div>
-                )}
-              </Link>
-            );
-          })}
-        </div>
+  return (
+    <div className="flex flex-col items-center gap-8 py-10 sm:py-16">
+      {bannerWorks.length > 0 ? (
+        <ScrollingWorksBanner works={bannerWorks} />
       ) : (
         <div
-          className="flex aspect-square w-full max-w-[560px] items-center justify-center text-xs uppercase tracking-widest text-zinc-400"
+          className="mx-4 flex h-[220px] w-full max-w-[560px] items-center justify-center text-xs uppercase tracking-widest text-zinc-400 sm:mx-6 sm:h-[280px] lg:h-[380px]"
           style={{
             backgroundImage:
               "repeating-linear-gradient(45deg, #f0f0ee 0, #f0f0ee 2px, #ffffff 2px, #ffffff 12px)",
@@ -100,7 +72,7 @@ export default async function HomePage() {
         </div>
       )}
       {socialLinks.length > 0 ? (
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 px-4 sm:px-6">
           {socialLinks.map(({ key, label, Icon }) => (
             <a
               key={key}
@@ -117,7 +89,7 @@ export default async function HomePage() {
       ) : null}
       <a
         href={`mailto:${settings.contact_email}`}
-        className="text-sm text-zinc-600 hover:underline"
+        className="px-4 text-sm text-zinc-600 hover:underline sm:px-6"
       >
         {settings.contact_email}
       </a>

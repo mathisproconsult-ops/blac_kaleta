@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { SubmitButton } from "@/components/submit-button";
-import { CURRENCY_LABELS, type CurrencyCode } from "@/lib/currency";
+import { CURRENCY_LABELS, EUR_XOF_RATE, type CurrencyCode } from "@/lib/currency";
 import { updateSettings } from "./actions";
 
 export const metadata: Metadata = {
@@ -13,6 +13,7 @@ type Settings = {
   contact_email: string;
   header_logo_url: string | null;
   currency: CurrencyCode;
+  usd_rate: number;
   payment_kkiapay: boolean;
   payment_fedapay: boolean;
   notify_email_per_order: boolean;
@@ -30,6 +31,7 @@ const defaultSettings: Settings = {
   contact_email: "contact@blac-kaleta.com",
   header_logo_url: null,
   currency: "EUR",
+  usd_rate: 610,
   payment_kkiapay: false,
   payment_fedapay: false,
   notify_email_per_order: true,
@@ -47,7 +49,7 @@ export default async function SettingsPage() {
   const { data } = await supabase
     .from("settings")
     .select(
-      "shop_name, contact_email, header_logo_url, currency, payment_kkiapay, payment_fedapay, notify_email_per_order, notify_realtime_popup, social_instagram, social_facebook, social_whatsapp, social_youtube, social_tiktok, social_patreon",
+      "shop_name, contact_email, header_logo_url, currency, usd_rate, payment_kkiapay, payment_fedapay, notify_email_per_order, notify_realtime_popup, social_instagram, social_facebook, social_whatsapp, social_youtube, social_tiktok, social_patreon",
     )
     .eq("id", true)
     .maybeSingle();
@@ -129,6 +131,41 @@ export default async function SettingsPage() {
                 </option>
               ))}
             </select>
+          </div>
+        </fieldset>
+
+        <fieldset className="flex flex-col gap-3">
+          <legend className="text-sm font-semibold uppercase tracking-wide">
+            Conversions indicatives (FCFA → EUR / USD)
+          </legend>
+          <p className="text-xs text-zinc-500">
+            Affichées en petit texte gris sous le prix principal en FCFA, sur
+            la fiche produit et dans la grille Boutique. Le paiement reste
+            toujours en FCFA — ces conversions sont juste indicatives.
+          </p>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs uppercase tracking-wide text-zinc-500">
+              Taux EUR (fixe, légal — ne change jamais)
+            </label>
+            <input
+              disabled
+              value={`1 € = ${EUR_XOF_RATE} FCFA`}
+              className="border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-500"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs uppercase tracking-wide text-zinc-500">
+              Taux USD (nombre de FCFA pour 1 $, à mettre à jour toi-même)
+            </label>
+            <input
+              name="usd_rate"
+              type="number"
+              min="1"
+              step="0.01"
+              defaultValue={settings.usd_rate}
+              required
+              className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+            />
           </div>
         </fieldset>
 

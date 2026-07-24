@@ -1,4 +1,4 @@
-export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
+export const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
 const COMPRESS_ABOVE_BYTES = 1.5 * 1024 * 1024;
 const MAX_DIMENSION = 2000;
 const QUALITY_STEPS = [0.82, 0.7, 0.55, 0.4];

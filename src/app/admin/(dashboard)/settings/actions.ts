@@ -12,6 +12,7 @@ export async function updateSettings(formData: FormData) {
   const shopName = formData.get("shop_name");
   const contactEmail = formData.get("contact_email");
   const currencyInput = formData.get("currency");
+  const usdRateInput = formData.get("usd_rate");
 
   if (typeof shopName !== "string" || !shopName.trim()) return;
   if (typeof contactEmail !== "string" || !contactEmail.trim()) return;
@@ -21,12 +22,17 @@ export async function updateSettings(formData: FormData) {
       ? (currencyInput as CurrencyCode)
       : "EUR";
 
+  const parsedUsdRate =
+    typeof usdRateInput === "string" ? Number(usdRateInput) : NaN;
+  if (!Number.isFinite(parsedUsdRate) || parsedUsdRate <= 0) return;
+
   const supabase = await createClient();
 
   const updates: Record<string, unknown> = {
     shop_name: shopName.trim(),
     contact_email: contactEmail.trim(),
     currency,
+    usd_rate: parsedUsdRate,
     payment_kkiapay: formData.get("payment_kkiapay") === "on",
     payment_fedapay: formData.get("payment_fedapay") === "on",
     notify_email_per_order: formData.get("notify_email_per_order") === "on",
