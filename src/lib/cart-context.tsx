@@ -8,6 +8,14 @@ import {
   type ReactNode,
 } from "react";
 
+export type SelectedOption = {
+  groupId: number;
+  groupName: string;
+  choiceId: number;
+  label: string;
+  priceDelta: number;
+};
+
 export type CartItem = {
   productId: number;
   title: string;
@@ -15,13 +23,25 @@ export type CartItem = {
   image: string | null;
   stock: number;
   quantity: number;
+  selectedOptions: SelectedOption[];
 };
+
+function optionsKey(selectedOptions: SelectedOption[]) {
+  return selectedOptions
+    .map((option) => option.choiceId)
+    .sort((a, b) => a - b)
+    .join(",");
+}
+
+function sameLine(a: CartItem, b: Pick<CartItem, "productId" | "selectedOptions">) {
+  return a.productId === b.productId && optionsKey(a.selectedOptions) === optionsKey(b.selectedOptions);
+}
 
 type CartContextValue = {
   items: CartItem[];
-  addItem: (item: Omit<CartItem, "quantity">, quantity: number) => void;
-  removeItem: (productId: number) => void;
-  setQuantity: (productId: number, quantity: number) => void;
+  addItem: (item: Omit<CartItem, "quantity" | "selectedOptions"> & { selectedOptions?: SelectedOption[] }, quantity: number) => void;
+  removeItem: (productId: number, selectedOptions?: SelectedOption[]) => void;
+  setQuantity: (productId: number, quantity: number, selectedOptions?: SelectedOption[]) => void;
   clear: () => void;
   totalCount: number;
   subtotal: number;
@@ -37,8 +57,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- hydratation unique du panier depuis localStorage au montage
-      if (raw) setItems(JSON.parse(raw));
+      if (raw) {
+        const parsed = JSON.parse(raw) as CartItem[];
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- hydratation unique du panier depuis localStorage au montage
+        setItems(
+          parsed.map((entry) => ({ ...entry, selectedOptions: entry.selectedOptions ?? [] })),
+        );
+      }
     } catch {
       // Panier corrompu ou stockage indisponible : on repart d'un panier vide.
     }
@@ -50,30 +75,39 @@ export function CartProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
   }, [items, hydrated]);
 
-  function addItem(item: Omit<CartItem, "quantity">, quantity: number) {
+  function addItem(
+    item: Omit<CartItem, "quantity" | "selectedOptions"> & { selectedOptions?: SelectedOption[] },
+    quantity: number,
+  ) {
+    const selectedOptions = item.selectedOptions ?? [];
     setItems((current) => {
-      const existing = current.find((entry) => entry.productId === item.productId);
+      const existing = current.find((entry) => sameLine(entry, { productId: item.productId, selectedOptions }));
       if (existing) {
         const nextQuantity = Math.min(existing.quantity + quantity, item.stock);
         return current.map((entry) =>
-          entry.productId === item.productId
-            ? { ...entry, ...item, quantity: nextQuantity }
+          entry === existing
+            ? { ...entry, ...item, selectedOptions, quantity: nextQuantity }
             : entry,
         );
       }
-      return [...current, { ...item, quantity: Math.min(Math.max(quantity, 1), item.stock) }];
+      return [
+        ...current,
+        { ...item, selectedOptions, quantity: Math.min(Math.max(quantity, 1), item.stock) },
+      ];
     });
   }
 
-  function removeItem(productId: number) {
-    setItems((current) => current.filter((entry) => entry.productId !== productId));
+  function removeItem(productId: number, selectedOptions: SelectedOption[] = []) {
+    setItems((current) =>
+      current.filter((entry) => !sameLine(entry, { productId, selectedOptions })),
+    );
   }
 
-  function setQuantity(productId: number, quantity: number) {
+  function setQuantity(productId: number, quantity: number, selectedOptions: SelectedOption[] = []) {
     setItems((current) =>
       current
         .map((entry) =>
-          entry.productId === productId
+          sameLine(entry, { productId, selectedOptions })
             ? { ...entry, quantity: Math.max(1, Math.min(quantity, entry.stock)) }
             : entry,
         )

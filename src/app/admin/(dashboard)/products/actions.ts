@@ -14,6 +14,13 @@ function parseCategoryIds(formData: FormData): number[] {
     .filter((value) => Number.isInteger(value));
 }
 
+function parseOptionGroupIds(formData: FormData): number[] {
+  return formData
+    .getAll("optionGroupIds")
+    .map((value) => Number(value))
+    .filter((value) => Number.isInteger(value));
+}
+
 function productFieldsFromFormData(formData: FormData) {
   const title = formData.get("title");
   const price = formData.get("price");
@@ -151,6 +158,23 @@ async function syncCategories(
   }
 }
 
+async function syncOptionGroups(
+  supabase: SupabaseClient,
+  productId: number,
+  groupIds: number[],
+) {
+  await supabase.from("product_option_groups").delete().eq("product_id", productId);
+  if (groupIds.length > 0) {
+    await supabase.from("product_option_groups").insert(
+      groupIds.map((groupId, index) => ({
+        product_id: productId,
+        group_id: groupId,
+        position: index,
+      })),
+    );
+  }
+}
+
 export async function createProduct(formData: FormData) {
   const fields = productFieldsFromFormData(formData);
   if (!fields) return;
@@ -165,6 +189,7 @@ export async function createProduct(formData: FormData) {
   if (error || !product) return;
 
   await syncCategories(supabase, product.id, parseCategoryIds(formData));
+  await syncOptionGroups(supabase, product.id, parseOptionGroupIds(formData));
 
   const uploadedImages = parseUploadedImages(formData);
   await attachUploadedImages(supabase, product.id, uploadedImages, 0);
@@ -192,6 +217,7 @@ export async function updateProduct(id: number, formData: FormData) {
   await supabase.from("products").update(fields).eq("id", id);
 
   await syncCategories(supabase, id, parseCategoryIds(formData));
+  await syncOptionGroups(supabase, id, parseOptionGroupIds(formData));
 
   const { count } = await supabase
     .from("product_images")

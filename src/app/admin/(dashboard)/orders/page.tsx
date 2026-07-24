@@ -25,7 +25,12 @@ type OrderRow = {
   status: OrderStatus;
   read: boolean;
   created_at: string;
-  order_items: { unit_price: number; quantity: number; product_title: string }[];
+  order_items: {
+    unit_price: number;
+    quantity: number;
+    product_title: string;
+    selected_options: { label: string; priceDelta: number }[] | null;
+  }[];
 };
 
 export default async function OrdersPage() {
@@ -34,7 +39,7 @@ export default async function OrdersPage() {
     supabase
       .from("orders")
       .select(
-        "id, customer_name, customer_email, status, read, created_at, order_items(unit_price, quantity, product_title)",
+        "id, customer_name, customer_email, status, read, created_at, order_items(unit_price, quantity, product_title, selected_options)",
       )
       .order("created_at", { ascending: false })
       .returns<OrderRow[]>(),
@@ -80,7 +85,11 @@ export default async function OrdersPage() {
               0,
             );
             const items = order.order_items
-              .map((item) => item.product_title)
+              .map((item) =>
+                item.selected_options && item.selected_options.length > 0
+                  ? `${item.product_title} (${item.selected_options.map((option) => option.label).join(", ")})`
+                  : item.product_title,
+              )
               .join(", ");
 
             return (

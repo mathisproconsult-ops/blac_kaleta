@@ -21,8 +21,11 @@ export function CartView({ currency }: { currency: CurrencyCode }) {
   return (
     <>
       <ul className="mt-8 divide-y divide-zinc-100 border-t border-zinc-100">
-        {items.map((item) => (
-          <li key={item.productId} className="flex flex-wrap items-center gap-4 py-4">
+        {items.map((item, index) => (
+          <li
+            key={`${item.productId}-${index}`}
+            className="flex flex-wrap items-center gap-4 py-4"
+          >
             {item.image ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -40,6 +43,11 @@ export function CartView({ currency }: { currency: CurrencyCode }) {
               >
                 {item.title}
               </Link>
+              {item.selectedOptions.length > 0 ? (
+                <p className="text-xs text-zinc-500">
+                  {item.selectedOptions.map((option) => option.label).join(", ")}
+                </p>
+              ) : null}
               <p className="text-xs text-zinc-500">
                 {item.price !== null ? formatPrice(item.price, currency) : "Sur demande"} / unité
               </p>
@@ -51,7 +59,7 @@ export function CartView({ currency }: { currency: CurrencyCode }) {
                 max={item.stock}
                 value={item.quantity}
                 onChange={(event) =>
-                  setQuantity(item.productId, Number(event.target.value) || 1)
+                  setQuantity(item.productId, Number(event.target.value) || 1, item.selectedOptions)
                 }
                 className="w-16 border border-zinc-300 px-2 py-1 text-sm focus:border-black focus:outline-none"
               />
@@ -65,7 +73,7 @@ export function CartView({ currency }: { currency: CurrencyCode }) {
             </p>
             <button
               type="button"
-              onClick={() => removeItem(item.productId)}
+              onClick={() => removeItem(item.productId, item.selectedOptions)}
               className="text-sm text-red-600 hover:underline"
             >
               Retirer

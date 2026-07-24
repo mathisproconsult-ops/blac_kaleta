@@ -14,17 +14,22 @@ export const maxDuration = 60;
 
 export default async function NewProductPage() {
   const supabase = await createClient();
-  const [{ data: categories }, { data: unclaimedMedia }, currency] = await Promise.all([
-    supabase.from("categories").select("id, name").order("position", { ascending: true }),
-    supabase
-      .from("media")
-      .select("id, filename, url")
-      .is("product_id", null)
-      .is("deleted_at", null)
-      .in("kind", ["image", "gif"])
-      .order("created_at", { ascending: false }),
-    getCurrency(),
-  ]);
+  const [{ data: categories }, { data: unclaimedMedia }, { data: optionGroups }, currency] =
+    await Promise.all([
+      supabase.from("categories").select("id, name").order("position", { ascending: true }),
+      supabase
+        .from("media")
+        .select("id, filename, url")
+        .is("product_id", null)
+        .is("deleted_at", null)
+        .in("kind", ["image", "gif"])
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("option_groups")
+        .select("id, name, selection_type")
+        .order("position", { ascending: true }),
+      getCurrency(),
+    ]);
 
   return (
     <div>
@@ -43,6 +48,7 @@ export default async function NewProductPage() {
           categories={categories ?? []}
           availableMedia={unclaimedMedia ?? []}
           currency={currency}
+          optionGroups={optionGroups ?? []}
         />
         <SubmitButton
           pendingText="Ajout…"

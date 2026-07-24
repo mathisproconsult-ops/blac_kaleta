@@ -3,6 +3,7 @@ import { ImageUploadField } from "./image-upload-field";
 
 type Category = { id: number; name: string };
 type AvailableMedia = { id: number; filename: string; url: string };
+type OptionGroup = { id: number; name: string; selection_type: "single" | "multiple" };
 
 export function ProductFields({
   categories,
@@ -10,6 +11,8 @@ export function ProductFields({
   selectedCategoryIds,
   availableMedia,
   currency,
+  optionGroups,
+  selectedOptionGroupIds,
 }: {
   categories: Category[];
   defaultValues?: {
@@ -27,6 +30,8 @@ export function ProductFields({
   selectedCategoryIds?: number[];
   availableMedia?: AvailableMedia[];
   currency: CurrencyCode;
+  optionGroups?: OptionGroup[];
+  selectedOptionGroupIds?: number[];
 }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2">
@@ -162,6 +167,29 @@ export function ProductFields({
           className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
         />
       </div>
+      {optionGroups && optionGroups.length > 0 ? (
+        <fieldset className="flex flex-col gap-1 sm:col-span-2">
+          <legend className="text-xs uppercase tracking-wide text-zinc-500">
+            Groupes d&apos;options applicables
+          </legend>
+          <div className="flex flex-wrap gap-3">
+            {optionGroups.map((group) => (
+              <label key={group.id} className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  name="optionGroupIds"
+                  value={group.id}
+                  defaultChecked={selectedOptionGroupIds?.includes(group.id)}
+                />
+                {group.name}{" "}
+                <span className="text-xs text-zinc-400">
+                  ({group.selection_type === "single" ? "choix unique" : "choix multiples"})
+                </span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      ) : null}
       <fieldset className="flex flex-col gap-1 sm:col-span-2">
         <legend className="text-xs uppercase tracking-wide text-zinc-500">
           Catégories

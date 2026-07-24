@@ -25,6 +25,7 @@ type ProductDetail = {
   featured_home: boolean;
   product_images: ProductImage[];
   product_categories: { categories: { id: number; name: string } | null }[];
+  product_option_groups: { group_id: number }[];
 };
 
 async function getProduct(id: string) {
@@ -32,7 +33,7 @@ async function getProduct(id: string) {
   const { data } = await supabase
     .from("products")
     .select(
-      "id, title, price, stock, description, year, series, technique, is_for_sale, show_in_recent_works, featured_home, product_images(id, path, url, position), product_categories(categories(id, name))",
+      "id, title, price, stock, description, year, series, technique, is_for_sale, show_in_recent_works, featured_home, product_images(id, path, url, position), product_categories(categories(id, name)), product_option_groups(group_id)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -58,18 +59,23 @@ export default async function EditProductPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const [product, { data: categories }, { data: unclaimedMedia }, currency] = await Promise.all([
-    getProduct(id),
-    supabase.from("categories").select("id, name").order("position", { ascending: true }),
-    supabase
-      .from("media")
-      .select("id, filename, url")
-      .is("product_id", null)
-      .is("deleted_at", null)
-      .in("kind", ["image", "gif"])
-      .order("created_at", { ascending: false }),
-    getCurrency(),
-  ]);
+  const [product, { data: categories }, { data: unclaimedMedia }, { data: optionGroups }, currency] =
+    await Promise.all([
+      getProduct(id),
+      supabase.from("categories").select("id, name").order("position", { ascending: true }),
+      supabase
+        .from("media")
+        .select("id, filename, url")
+        .is("product_id", null)
+        .is("deleted_at", null)
+        .in("kind", ["image", "gif"])
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("option_groups")
+        .select("id, name, selection_type")
+        .order("position", { ascending: true }),
+      getCurrency(),
+    ]);
 
   if (!product) notFound();
 
@@ -77,6 +83,7 @@ export default async function EditProductPage({
   const selectedCategoryIds = product.product_categories
     .map((pc) => pc.categories?.id)
     .filter((categoryId): categoryId is number => typeof categoryId === "number");
+  const selectedOptionGroupIds = product.product_option_groups.map((pog) => pog.group_id);
 
   return (
     <div>
@@ -136,6 +143,8 @@ export default async function EditProductPage({
           selectedCategoryIds={selectedCategoryIds}
           availableMedia={unclaimedMedia ?? []}
           currency={currency}
+          optionGroups={optionGroups ?? []}
+          selectedOptionGroupIds={selectedOptionGroupIds}
         />
         <SubmitButton
           pendingText="Enregistrement…"

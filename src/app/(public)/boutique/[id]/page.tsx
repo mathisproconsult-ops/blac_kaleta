@@ -7,6 +7,19 @@ import { STATUS_LABELS, type ProductStatus } from "@/app/admin/(dashboard)/produ
 import { BackButton } from "@/components/back-button";
 import { ProductGallery } from "./product-gallery";
 import { AddToCartControls } from "../add-to-cart-controls";
+import { ProductOptionsPurchase } from "./product-options-purchase";
+
+type ProductOptionChoice = { id: number; label: string; price_delta: number; position: number };
+type ProductOptionGroupJoin = {
+  group_id: number;
+  option_groups: {
+    id: number;
+    name: string;
+    selection_type: "single" | "multiple";
+    position: number;
+    option_choices: ProductOptionChoice[];
+  } | null;
+};
 
 type ProductDetail = {
   id: number;
@@ -17,6 +30,7 @@ type ProductDetail = {
   description: string | null;
   product_images: { url: string; position: number }[];
   product_categories: { categories: { name: string } | null }[];
+  product_option_groups: ProductOptionGroupJoin[];
 };
 
 async function getProduct(id: string) {
@@ -24,7 +38,7 @@ async function getProduct(id: string) {
   const { data } = await supabase
     .from("products")
     .select(
-      "id, title, price, status, stock, description, product_images(url, position), product_categories(categories(name))",
+      "id, title, price, status, stock, description, product_images(url, position), product_categories(categories(name)), product_option_groups(group_id, option_groups(id, name, selection_type, position, option_choices(id, label, price_delta, position)))",
     )
     .eq("id", id)
     .eq("is_visible", true)
@@ -60,6 +74,23 @@ export default async function ProductPage({
     .map((pc) => pc.categories?.name)
     .filter((name): name is string => Boolean(name));
 
+  const optionGroups = product.product_option_groups
+    .map((pog) => pog.option_groups)
+    .filter((group): group is NonNullable<typeof group> => group !== null)
+    .sort((a, b) => a.position - b.position)
+    .map((group) => ({
+      id: group.id,
+      name: group.name,
+      selectionType: group.selection_type,
+      choices: [...group.option_choices]
+        .sort((a, b) => a.position - b.position)
+        .map((choice) => ({ id: choice.id, label: choice.label, priceDelta: choice.price_delta })),
+    }))
+    .filter((group) => group.choices.length > 0);
+
+  const isPurchasable =
+    product.status === "available" && product.price !== null && product.stock > 0;
+
   return (
     <div className="px-4 py-8 sm:px-6 sm:py-10 lg:px-10 lg:py-12">
       <BackButton />
@@ -74,7 +105,7 @@ export default async function ProductPage({
             </span>
           ) : null}
         </h1>
-        {product.price !== null ? (
+        {isPurchasable && optionGroups.length > 0 ? null : product.price !== null ? (
           <>
             <p className="mt-2 text-lg">{formatPrice(product.price, currency)}</p>
             {currency === "XOF" ? (
@@ -98,12 +129,25 @@ export default async function ProductPage({
         ) : null}
 
         <div className="mt-6">
-          {product.status === "available" && product.price !== null && product.stock > 0 ? (
+          {isPurchasable && optionGroups.length > 0 ? (
+            <ProductOptionsPurchase
+              product={{
+                id: product.id,
+                title: product.title,
+                price: product.price as number,
+                stock: product.stock,
+                image: images[0]?.url ?? null,
+              }}
+              groups={optionGroups}
+              currency={currency}
+              usdRate={usdRate}
+            />
+          ) : isPurchasable ? (
             <AddToCartControls
               product={{
                 id: product.id,
                 title: product.title,
-                price: product.price,
+                price: product.price as number,
                 stock: product.stock,
                 image: images[0]?.url ?? null,
               }}

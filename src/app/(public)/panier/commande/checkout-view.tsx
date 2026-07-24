@@ -38,7 +38,11 @@ export function CheckoutView({ currency }: { currency: CurrencyCode }) {
   }
 
   const cartPayload = JSON.stringify(
-    items.map((item) => ({ productId: item.productId, quantity: item.quantity })),
+    items.map((item) => ({
+      productId: item.productId,
+      quantity: item.quantity,
+      optionChoiceIds: item.selectedOptions.map((option) => option.choiceId),
+    })),
   );
 
   return (
@@ -97,10 +101,18 @@ export function CheckoutView({ currency }: { currency: CurrencyCode }) {
       <div>
         <h2 className="text-sm font-semibold uppercase tracking-wide">Récapitulatif</h2>
         <ul className="mt-4 divide-y divide-zinc-100 border-t border-zinc-100">
-          {items.map((item) => (
-            <li key={item.productId} className="flex items-center justify-between gap-3 py-3">
+          {items.map((item, index) => (
+            <li
+              key={`${item.productId}-${index}`}
+              className="flex items-center justify-between gap-3 py-3"
+            >
               <div>
                 <p className="text-sm font-medium">{item.title}</p>
+                {item.selectedOptions.length > 0 ? (
+                  <p className="text-xs text-zinc-500">
+                    {item.selectedOptions.map((option) => option.label).join(", ")}
+                  </p>
+                ) : null}
                 <p className="text-xs text-zinc-500">Qté : {item.quantity}</p>
               </div>
               <p className="text-sm">

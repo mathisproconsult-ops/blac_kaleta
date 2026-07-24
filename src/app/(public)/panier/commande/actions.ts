@@ -8,7 +8,7 @@ export type CheckoutState = {
   error: string | null;
 };
 
-type CartLine = { productId: number; quantity: number };
+type CartLine = { productId: number; quantity: number; optionChoiceIds: number[] };
 
 function parseCart(formData: FormData): CartLine[] {
   const raw = formData.get("cart");
@@ -21,6 +21,9 @@ function parseCart(formData: FormData): CartLine[] {
       .map((item) => ({
         productId: Number(item?.productId),
         quantity: Number(item?.quantity),
+        optionChoiceIds: Array.isArray(item?.optionChoiceIds)
+          ? item.optionChoiceIds.map(Number).filter((id: number) => Number.isInteger(id))
+          : [],
       }))
       .filter(
         (item) => Number.isInteger(item.productId) && Number.isInteger(item.quantity) && item.quantity > 0,
@@ -59,6 +62,43 @@ export async function createCartOrder(
     .in("id", productIds);
 
   const productsById = new Map((products ?? []).map((product) => [product.id, product]));
+
+  const optionChoiceIds = Array.from(
+    new Set(cartLines.flatMap((line) => line.optionChoiceIds)),
+  );
+  const { data: optionChoices } =
+    optionChoiceIds.length > 0
+      ? await supabase
+          .from("option_choices")
+          .select("id, label, price_delta, option_groups(name)")
+          .in("id", optionChoiceIds)
+      : { data: [] };
+
+  type OptionChoiceRow = {
+    id: number;
+    label: string;
+    price_delta: number;
+    option_groups: { name: string }[] | { name: string } | null;
+  };
+  const optionChoicesById = new Map(
+    ((optionChoices ?? []) as unknown as OptionChoiceRow[]).map((choice) => [choice.id, choice]),
+  );
+
+  function resolveLineOptions(line: CartLine) {
+    return line.optionChoiceIds
+      .map((choiceId) => optionChoicesById.get(choiceId))
+      .filter((choice): choice is OptionChoiceRow => Boolean(choice))
+      .map((choice) => {
+        const groupName = Array.isArray(choice.option_groups)
+          ? choice.option_groups[0]?.name
+          : choice.option_groups?.name;
+        return {
+          label: groupName ? `${groupName} : ${choice.label}` : choice.label,
+          priceDelta: choice.price_delta,
+        };
+      });
+  }
+
   const problems: string[] = [];
 
   for (const line of cartLines) {
@@ -104,12 +144,17 @@ export async function createCartOrder(
     const product = productsById.get(line.productId);
     if (!product || product.price === null) continue;
 
+    const lineOptions = resolveLineOptions(line);
+    const unitPrice =
+      product.price + lineOptions.reduce((sum, option) => sum + option.priceDelta, 0);
+
     await supabase.from("order_items").insert({
       order_id: order.id,
       product_id: product.id,
       product_title: product.title,
-      unit_price: product.price,
+      unit_price: unitPrice,
       quantity: line.quantity,
+      selected_options: lineOptions.length > 0 ? lineOptions : null,
     });
 
     const wasUnique = product.stock === 1;

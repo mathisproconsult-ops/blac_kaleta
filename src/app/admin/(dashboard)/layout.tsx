@@ -25,6 +25,7 @@ export default async function AdminDashboardLayout({
       children: [
         { label: "Produits", href: "/admin/products" },
         { label: "Catégories", href: "/admin/categories" },
+        { label: "Options", href: "/admin/options" },
       ],
     },
     { type: "link", label: "Médias", href: "/admin/media" },
