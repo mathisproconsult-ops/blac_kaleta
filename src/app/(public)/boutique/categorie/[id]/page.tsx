@@ -155,7 +155,7 @@ export default async function BoutiqueCategoryPage({
                 <div className="mt-1 flex items-center justify-between gap-2">
                   <div className="flex flex-col">
                     <p className="text-sm text-zinc-600">
-                      {product.price !== null ? formatPrice(product.price, "XOF") : "Sur demande"}
+                      {product.price !== null ? formatPrice(product.price) : "Sur demande"}
                     </p>
                     {product.price !== null ? (
                       <p className="text-xs text-zinc-400">

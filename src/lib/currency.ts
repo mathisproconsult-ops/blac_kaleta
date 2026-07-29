@@ -1,14 +1,9 @@
-export type CurrencyCode = "EUR" | "XOF";
-
-export const CURRENCY_LABELS: Record<CurrencyCode, string> = {
-  EUR: "Euro (€)",
-  XOF: "Franc CFA (XOF)",
-};
-
-export function formatPrice(amount: number, currency: CurrencyCode = "EUR") {
+// Le client saisit et facture toujours en FCFA — l'EUR/USD ne sont que des
+// conversions indicatives (voir formatIndicativeConversion ci-dessous).
+export function formatPrice(amount: number) {
   return new Intl.NumberFormat("fr-FR", {
     style: "currency",
-    currency,
+    currency: "XOF",
   }).format(amount);
 }
 

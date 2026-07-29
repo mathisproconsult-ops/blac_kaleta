@@ -1,4 +1,3 @@
-import type { CurrencyCode } from "@/lib/currency";
 import { ImageUploadField } from "./image-upload-field";
 
 type Category = { id: number; name: string };
@@ -10,7 +9,6 @@ export function ProductFields({
   defaultValues,
   selectedCategoryIds,
   availableMedia,
-  currency,
   optionGroups,
   selectedOptionGroupIds,
 }: {
@@ -28,7 +26,6 @@ export function ProductFields({
   };
   selectedCategoryIds?: number[];
   availableMedia?: AvailableMedia[];
-  currency: CurrencyCode;
   optionGroups?: OptionGroup[];
   selectedOptionGroupIds?: number[];
 }) {
@@ -76,7 +73,7 @@ export function ProductFields({
       </div>
       <div className="flex flex-col gap-1">
         <label className="text-xs uppercase tracking-wide text-zinc-500">
-          Prix ({currency})
+          Prix (FCFA)
         </label>
         <input
           name="price"

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrency } from "@/lib/settings";
 import { SubmitButton } from "@/components/submit-button";
 import { ProductFields } from "../product-fields";
 import { createProduct } from "../actions";
@@ -14,7 +13,7 @@ export const maxDuration = 60;
 
 export default async function NewProductPage() {
   const supabase = await createClient();
-  const [{ data: categories }, { data: unclaimedMedia }, { data: optionGroups }, currency] =
+  const [{ data: categories }, { data: unclaimedMedia }, { data: optionGroups }] =
     await Promise.all([
       supabase.from("categories").select("id, name").order("position", { ascending: true }),
       supabase
@@ -28,7 +27,6 @@ export default async function NewProductPage() {
         .from("option_groups")
         .select("id, name, selection_type")
         .order("position", { ascending: true }),
-      getCurrency(),
     ]);
 
   return (
@@ -47,7 +45,6 @@ export default async function NewProductPage() {
         <ProductFields
           categories={categories ?? []}
           availableMedia={unclaimedMedia ?? []}
-          currency={currency}
           optionGroups={optionGroups ?? []}
         />
         <SubmitButton

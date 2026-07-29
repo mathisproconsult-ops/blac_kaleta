@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useCart } from "@/lib/cart-context";
-import { formatPrice, type CurrencyCode } from "@/lib/currency";
+import { formatPrice } from "@/lib/currency";
 
-export function CartView({ currency }: { currency: CurrencyCode }) {
+export function CartView() {
   const { items, removeItem, setQuantity, subtotal } = useCart();
 
   if (items.length === 0) {
@@ -49,7 +49,7 @@ export function CartView({ currency }: { currency: CurrencyCode }) {
                 </p>
               ) : null}
               <p className="text-xs text-zinc-500">
-                {item.price !== null ? formatPrice(item.price, currency) : "Sur demande"} / unité
+                {item.price !== null ? formatPrice(item.price) : "Sur demande"} / unité
               </p>
             </div>
             {item.stock > 1 ? (
@@ -68,7 +68,7 @@ export function CartView({ currency }: { currency: CurrencyCode }) {
             )}
             <p className="w-24 text-right text-sm font-medium">
               {item.price !== null
-                ? formatPrice(item.price * item.quantity, currency)
+                ? formatPrice(item.price * item.quantity)
                 : "—"}
             </p>
             <button
@@ -83,7 +83,7 @@ export function CartView({ currency }: { currency: CurrencyCode }) {
       </ul>
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-zinc-200 pt-6">
-        <p className="text-lg font-semibold">Total : {formatPrice(subtotal, currency)}</p>
+        <p className="text-lg font-semibold">Total : {formatPrice(subtotal)}</p>
         <Link
           href="/panier/commande"
           className="bg-black px-6 py-3 text-sm font-medium text-white hover:bg-zinc-800"

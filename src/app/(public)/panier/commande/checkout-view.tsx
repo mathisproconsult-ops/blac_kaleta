@@ -3,12 +3,12 @@
 import { useActionState, useEffect } from "react";
 import Link from "next/link";
 import { useCart } from "@/lib/cart-context";
-import { formatPrice, type CurrencyCode } from "@/lib/currency";
+import { formatPrice } from "@/lib/currency";
 import { createCartOrder, type CheckoutState } from "./actions";
 
 const initialState: CheckoutState = { success: false, error: null };
 
-export function CheckoutView({ currency }: { currency: CurrencyCode }) {
+export function CheckoutView() {
   const { items, subtotal, clear } = useCart();
   const [state, formAction, pending] = useActionState(createCartOrder, initialState);
 
@@ -117,7 +117,7 @@ export function CheckoutView({ currency }: { currency: CurrencyCode }) {
               </div>
               <p className="text-sm">
                 {item.price !== null
-                  ? formatPrice(item.price * item.quantity, currency)
+                  ? formatPrice(item.price * item.quantity)
                   : "—"}
               </p>
             </li>
@@ -125,7 +125,7 @@ export function CheckoutView({ currency }: { currency: CurrencyCode }) {
         </ul>
         <div className="mt-4 flex items-center justify-between border-t border-zinc-200 pt-4">
           <p className="text-sm font-semibold uppercase tracking-wide">Total</p>
-          <p className="text-lg font-semibold">{formatPrice(subtotal, currency)}</p>
+          <p className="text-lg font-semibold">{formatPrice(subtotal)}</p>
         </div>
       </div>
     </form>

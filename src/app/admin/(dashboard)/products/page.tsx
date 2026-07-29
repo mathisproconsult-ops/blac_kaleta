@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrency } from "@/lib/settings";
-import { formatPrice, type CurrencyCode } from "@/lib/currency";
+import { formatPrice } from "@/lib/currency";
 import { Disclosure } from "@/components/disclosure";
 import { SubmitButton } from "@/components/submit-button";
 import { ProductFilters } from "./product-filters";
@@ -98,7 +97,6 @@ export default async function ProductsPage({
     { data: products, error },
     { count: allCount },
     { count: trashCount },
-    currency,
   ] = await Promise.all([
     supabase.from("categories").select("id, name").order("position", { ascending: true }),
     query.returns<ProductRow[]>(),
@@ -107,7 +105,6 @@ export default async function ProductsPage({
       .from("products")
       .select("id", { count: "exact", head: true })
       .not("deleted_at", "is", null),
-    getCurrency(),
   ]);
 
   const categoryList = categories ?? [];
@@ -307,14 +304,12 @@ export default async function ProductsPage({
                         onRestore={restoreProduct.bind(null, product.id)}
                         onDeletePermanently={deleteProduct.bind(null, product.id)}
                         onDuplicate={duplicateProduct.bind(null, product.id)}
-                        quickEditForm={
-                          <QuickEditForm product={product} currency={currency} />
-                        }
+                        quickEditForm={<QuickEditForm product={product} />}
                       />
                     </td>
                     <td className="py-3 pr-4">{product.stock}</td>
                     <td className="py-3 pr-4">
-                      {product.price !== null ? formatPrice(product.price, currency) : "—"}
+                      {product.price !== null ? formatPrice(product.price) : "—"}
                     </td>
                     <td className="py-3 pr-4">
                       {categoryNames.length > 0 ? categoryNames.join(", ") : "Sans catégorie"}
@@ -334,13 +329,7 @@ export default async function ProductsPage({
   );
 }
 
-function QuickEditForm({
-  product,
-  currency,
-}: {
-  product: ProductRow;
-  currency: CurrencyCode;
-}) {
+function QuickEditForm({ product }: { product: ProductRow }) {
   return (
     <form
       action={quickUpdateProduct.bind(null, product.id)}
@@ -357,7 +346,7 @@ function QuickEditForm({
       </div>
       <div className="flex flex-col gap-1">
         <label className="text-xs uppercase tracking-wide text-zinc-500">
-          Prix ({currency})
+          Prix (FCFA)
         </label>
         <input
           name="price"

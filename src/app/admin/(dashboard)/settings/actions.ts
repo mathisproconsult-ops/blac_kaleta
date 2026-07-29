@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { CURRENCY_LABELS, type CurrencyCode } from "@/lib/currency";
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
 
@@ -73,16 +72,10 @@ async function updateLogo(supabase: SupabaseClient, formData: FormData) {
 export async function updateSettings(formData: FormData) {
   const shopName = formData.get("shop_name");
   const contactEmail = formData.get("contact_email");
-  const currencyInput = formData.get("currency");
   const usdRateInput = formData.get("usd_rate");
 
   if (typeof shopName !== "string" || !shopName.trim()) return;
   if (typeof contactEmail !== "string" || !contactEmail.trim()) return;
-
-  const currency: CurrencyCode =
-    typeof currencyInput === "string" && currencyInput in CURRENCY_LABELS
-      ? (currencyInput as CurrencyCode)
-      : "EUR";
 
   const parsedUsdRate =
     typeof usdRateInput === "string" ? Number(usdRateInput) : NaN;
@@ -95,7 +88,6 @@ export async function updateSettings(formData: FormData) {
   const updates: Record<string, unknown> = {
     shop_name: shopName.trim(),
     contact_email: contactEmail.trim(),
-    currency,
     usd_rate: parsedUsdRate,
     notify_email_per_order: formData.get("notify_email_per_order") === "on",
     notify_realtime_popup: formData.get("notify_realtime_popup") === "on",

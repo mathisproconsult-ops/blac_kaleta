@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrency } from "@/lib/settings";
 import { formatPrice } from "@/lib/currency";
 import { SubmitButton } from "@/components/submit-button";
 import { cycleOrderStatus, markOrdersAsRead } from "./actions";
@@ -35,16 +34,13 @@ type OrderRow = {
 
 export default async function OrdersPage() {
   const supabase = await createClient();
-  const [{ data, error }, currency] = await Promise.all([
-    supabase
-      .from("orders")
-      .select(
-        "id, customer_name, customer_email, status, read, created_at, order_items(unit_price, quantity, product_title, selected_options)",
-      )
-      .order("created_at", { ascending: false })
-      .returns<OrderRow[]>(),
-    getCurrency(),
-  ]);
+  const { data, error } = await supabase
+    .from("orders")
+    .select(
+      "id, customer_name, customer_email, status, read, created_at, order_items(unit_price, quantity, product_title, selected_options)",
+    )
+    .order("created_at", { ascending: false })
+    .returns<OrderRow[]>();
 
   const orders = data ?? [];
   const unreadCount = orders.filter((order) => !order.read).length;
@@ -104,7 +100,7 @@ export default async function OrdersPage() {
                 <p className="text-sm text-zinc-600">
                   {dateFormatter.format(new Date(order.created_at))}
                 </p>
-                <p className="text-sm">{formatPrice(total, currency)}</p>
+                <p className="text-sm">{formatPrice(total)}</p>
                 <form action={cycleOrderStatus.bind(null, order.id, order.status)}>
                   <SubmitButton
                     pendingText="…"

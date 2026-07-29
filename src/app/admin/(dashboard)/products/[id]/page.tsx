@@ -3,7 +3,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrency } from "@/lib/settings";
 import { SubmitButton } from "@/components/submit-button";
 import { ProductFields } from "../product-fields";
 import { deleteProductImage, updateProduct } from "../actions";
@@ -74,7 +73,7 @@ export default async function EditProductPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const [product, { data: categories }, { data: unclaimedMedia }, { data: optionGroups }, currency] =
+  const [product, { data: categories }, { data: unclaimedMedia }, { data: optionGroups }] =
     await Promise.all([
       getProduct(id),
       supabase.from("categories").select("id, name").order("position", { ascending: true }),
@@ -89,7 +88,6 @@ export default async function EditProductPage({
         .from("option_groups")
         .select("id, name, selection_type")
         .order("position", { ascending: true }),
-      getCurrency(),
     ]);
 
   if (!product) notFound();
@@ -156,7 +154,6 @@ export default async function EditProductPage({
           }}
           selectedCategoryIds={selectedCategoryIds}
           availableMedia={unclaimedMedia ?? []}
-          currency={currency}
           optionGroups={optionGroups ?? []}
           selectedOptionGroupIds={selectedOptionGroupIds}
         />

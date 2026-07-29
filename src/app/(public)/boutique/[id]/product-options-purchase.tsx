@@ -118,7 +118,7 @@ export function ProductOptionsPurchase({
 
   return (
     <div>
-      <p className="text-lg">{formatPrice(finalPrice, "XOF")}</p>
+      <p className="text-lg">{formatPrice(finalPrice)}</p>
       <p className="mt-1 text-sm text-zinc-400">
         {formatIndicativeConversion(finalPrice, usdRate)}
       </p>
@@ -144,7 +144,7 @@ export function ProductOptionsPurchase({
                   <option key={choice.id} value={choice.id}>
                     {choice.label}
                     {choice.priceDelta !== 0
-                      ? ` (${choice.priceDelta > 0 ? "+" : ""}${formatPrice(choice.priceDelta, "XOF")})`
+                      ? ` (${choice.priceDelta > 0 ? "+" : ""}${formatPrice(choice.priceDelta)})`
                       : ""}
                   </option>
                 ))}
@@ -165,7 +165,7 @@ export function ProductOptionsPurchase({
                     />
                     {choice.label}
                     {choice.priceDelta !== 0
-                      ? ` (${choice.priceDelta > 0 ? "+" : ""}${formatPrice(choice.priceDelta, "XOF")})`
+                      ? ` (${choice.priceDelta > 0 ? "+" : ""}${formatPrice(choice.priceDelta)})`
                       : ""}
                   </label>
                 ))}

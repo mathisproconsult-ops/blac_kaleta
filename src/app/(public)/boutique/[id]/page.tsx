@@ -125,7 +125,7 @@ export default async function ProductPage({
         </h1>
         {isPurchasable && optionGroups.length > 0 ? null : product.price !== null ? (
           <>
-            <p className="mt-2 text-lg">{formatPrice(product.price, "XOF")}</p>
+            <p className="mt-2 text-lg">{formatPrice(product.price)}</p>
             <p className="mt-1 text-sm text-zinc-400">
               {formatIndicativeConversion(product.price, usdRate)}
             </p>

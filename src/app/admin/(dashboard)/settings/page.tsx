@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { SubmitButton } from "@/components/submit-button";
-import { CURRENCY_LABELS, EUR_XOF_RATE, type CurrencyCode } from "@/lib/currency";
+import { EUR_XOF_RATE } from "@/lib/currency";
 import { SOCIAL_PLATFORMS, getSocialPlatform } from "@/lib/social-platforms";
 import { updateSettings } from "./actions";
 import { createSocialLink, deleteSocialLink, moveSocialLink } from "./social-actions";
@@ -14,7 +14,6 @@ type Settings = {
   shop_name: string;
   contact_email: string;
   header_logo_url: string | null;
-  currency: CurrencyCode;
   usd_rate: number;
   notify_email_per_order: boolean;
   notify_realtime_popup: boolean;
@@ -24,7 +23,6 @@ const defaultSettings: Settings = {
   shop_name: "Blac_Kaleta",
   contact_email: "contact@blac-kaleta.com",
   header_logo_url: null,
-  currency: "EUR",
   usd_rate: 610,
   notify_email_per_order: true,
   notify_realtime_popup: true,
@@ -38,7 +36,7 @@ export default async function SettingsPage() {
     supabase
       .from("settings")
       .select(
-        "shop_name, contact_email, header_logo_url, currency, usd_rate, notify_email_per_order, notify_realtime_popup",
+        "shop_name, contact_email, header_logo_url, usd_rate, notify_email_per_order, notify_realtime_popup",
       )
       .eq("id", true)
       .maybeSingle(),
@@ -104,28 +102,6 @@ export default async function SettingsPage() {
                 Supprimer le logo actuel
               </label>
             ) : null}
-          </div>
-        </fieldset>
-
-        <fieldset className="flex flex-col gap-3">
-          <legend className="text-sm font-semibold uppercase tracking-wide">
-            Devise
-          </legend>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs uppercase tracking-wide text-zinc-500">
-              Devise utilisée pour les prix (dashboard + site public)
-            </label>
-            <select
-              name="currency"
-              defaultValue={settings.currency}
-              className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-            >
-              {Object.entries(CURRENCY_LABELS).map(([code, label]) => (
-                <option key={code} value={code}>
-                  {label}
-                </option>
-              ))}
-            </select>
           </div>
         </fieldset>
 
