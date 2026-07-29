@@ -8,12 +8,6 @@ export type Settings = {
   footer_copyright_text: string;
   currency: CurrencyCode;
   usd_rate: number;
-  social_instagram: string | null;
-  social_facebook: string | null;
-  social_whatsapp: string | null;
-  social_youtube: string | null;
-  social_tiktok: string | null;
-  social_patreon: string | null;
 };
 
 const defaultSettings: Settings = {
@@ -23,12 +17,6 @@ const defaultSettings: Settings = {
   footer_copyright_text: "© Blac_Kaleta",
   currency: "EUR",
   usd_rate: 610,
-  social_instagram: null,
-  social_facebook: null,
-  social_whatsapp: null,
-  social_youtube: null,
-  social_tiktok: null,
-  social_patreon: null,
 };
 
 export async function getSettings(): Promise<Settings> {
@@ -36,7 +24,7 @@ export async function getSettings(): Promise<Settings> {
   const { data } = await supabase
     .from("settings")
     .select(
-      "shop_name, contact_email, header_logo_url, footer_copyright_text, currency, usd_rate, social_instagram, social_facebook, social_whatsapp, social_youtube, social_tiktok, social_patreon",
+      "shop_name, contact_email, header_logo_url, footer_copyright_text, currency, usd_rate",
     )
     .eq("id", true)
     .maybeSingle();

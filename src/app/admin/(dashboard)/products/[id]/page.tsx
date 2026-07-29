@@ -18,7 +18,6 @@ type ProductDetail = {
   stock: number;
   description: string | null;
   year: number | null;
-  series: string | null;
   technique: string | null;
   is_for_sale: boolean;
   show_in_recent_works: boolean;
@@ -33,7 +32,7 @@ async function getProduct(id: string) {
   const { data, error } = await supabase
     .from("products")
     .select(
-      "id, title, price, stock, description, year, series, technique, is_for_sale, show_in_recent_works, featured_home, product_images(id, path, url, position), product_categories(categories(id, name))",
+      "id, title, price, stock, description, year, technique, is_for_sale, show_in_recent_works, featured_home, product_images(id, path, url, position), product_categories(categories(id, name))",
     )
     .eq("id", id)
     .maybeSingle();
@@ -150,7 +149,6 @@ export default async function EditProductPage({
             stock: product.stock,
             description: product.description,
             year: product.year,
-            series: product.series,
             technique: product.technique,
             is_for_sale: product.is_for_sale,
             show_in_recent_works: product.show_in_recent_works,

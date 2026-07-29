@@ -11,7 +11,6 @@ type Work = {
   id: number;
   title: string;
   year: number | null;
-  series: string | null;
   technique: string | null;
   product_images: { url: string; position: number }[];
 };
@@ -19,14 +18,14 @@ type Work = {
 export default async function RecentWorksPage({
   searchParams,
 }: {
-  searchParams: Promise<{ annee?: string; serie?: string; technique?: string }>;
+  searchParams: Promise<{ annee?: string; technique?: string }>;
 }) {
-  const { annee, serie, technique } = await searchParams;
+  const { annee, technique } = await searchParams;
   const supabase = await createClient();
 
   const { data } = await supabase
     .from("products")
-    .select("id, title, year, series, technique, product_images(url, position)")
+    .select("id, title, year, technique, product_images(url, position)")
     .eq("show_in_recent_works", true)
     .eq("is_visible", true)
     .is("deleted_at", null)
@@ -38,9 +37,6 @@ export default async function RecentWorksPage({
   const years = Array.from(
     new Set(works.map((work) => work.year).filter((year): year is number => year !== null)),
   ).sort((a, b) => b - a);
-  const seriesList = Array.from(
-    new Set(works.map((work) => work.series).filter((series): series is string => Boolean(series))),
-  ).sort();
   const techniques = Array.from(
     new Set(
       works.map((work) => work.technique).filter((tech): tech is string => Boolean(tech)),
@@ -49,10 +45,9 @@ export default async function RecentWorksPage({
 
   let filtered = works;
   if (annee) filtered = filtered.filter((work) => String(work.year) === annee);
-  if (serie) filtered = filtered.filter((work) => work.series === serie);
   if (technique) filtered = filtered.filter((work) => work.technique === technique);
 
-  const hasFilters = Boolean(annee || serie || technique);
+  const hasFilters = Boolean(annee || technique);
 
   return (
     <div className="px-4 py-8 sm:px-6 sm:py-10 lg:px-10 lg:py-12">
@@ -63,9 +58,8 @@ export default async function RecentWorksPage({
       <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
         <FiltersBar
           years={years}
-          seriesList={seriesList}
           techniques={techniques}
-          current={{ annee, serie, technique }}
+          current={{ annee, technique }}
         />
         <div className="flex items-center gap-4">
           {hasFilters ? (

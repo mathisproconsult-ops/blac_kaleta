@@ -19,14 +19,12 @@ function useUpdateParam() {
 
 export function FiltersBar({
   years,
-  seriesList,
   techniques,
   current,
 }: {
   years: number[];
-  seriesList: string[];
   techniques: string[];
-  current: { annee?: string; serie?: string; technique?: string };
+  current: { annee?: string; technique?: string };
 }) {
   const updateParam = useUpdateParam();
 
@@ -41,18 +39,6 @@ export function FiltersBar({
         {years.map((year) => (
           <option key={year} value={year}>
             {year}
-          </option>
-        ))}
-      </select>
-      <select
-        defaultValue={current.serie ?? ""}
-        onChange={(event) => updateParam("serie", event.target.value)}
-        className="border border-zinc-300 px-2 py-1 text-sm"
-      >
-        <option value="">Toutes les séries</option>
-        {seriesList.map((series) => (
-          <option key={series} value={series}>
-            {series}
           </option>
         ))}
       </select>

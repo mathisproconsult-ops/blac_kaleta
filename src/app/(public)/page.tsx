@@ -1,27 +1,20 @@
-import {
-  SiFacebook,
-  SiInstagram,
-  SiPatreon,
-  SiTiktok,
-  SiWhatsapp,
-  SiYoutube,
-} from "react-icons/si";
-import { getSettings, type Settings } from "@/lib/settings";
+import { getSettings } from "@/lib/settings";
 import { createClient } from "@/lib/supabase/server";
+import { getSocialPlatform } from "@/lib/social-platforms";
 import { ScrollingWorksBanner } from "./scrolling-works-banner";
 
-const SOCIAL_ICONS: {
-  key: keyof Settings;
-  label: string;
-  Icon: typeof SiInstagram;
-}[] = [
-  { key: "social_instagram", label: "Instagram", Icon: SiInstagram },
-  { key: "social_facebook", label: "Facebook", Icon: SiFacebook },
-  { key: "social_whatsapp", label: "WhatsApp", Icon: SiWhatsapp },
-  { key: "social_youtube", label: "YouTube", Icon: SiYoutube },
-  { key: "social_tiktok", label: "TikTok", Icon: SiTiktok },
-  { key: "social_patreon", label: "Patreon", Icon: SiPatreon },
-];
+type SocialLink = { id: number; platform: string; url: string };
+
+async function getSocialLinks() {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("social_links")
+    .select("id, platform, url")
+    .order("position", { ascending: true })
+    .returns<SocialLink[]>();
+
+  return data ?? [];
+}
 
 type FeaturedWork = {
   id: number;
@@ -44,12 +37,11 @@ async function getFeaturedWorks() {
 }
 
 export default async function HomePage() {
-  const [settings, featuredWorks] = await Promise.all([
+  const [settings, featuredWorks, socialLinks] = await Promise.all([
     getSettings(),
     getFeaturedWorks(),
+    getSocialLinks(),
   ]);
-
-  const socialLinks = SOCIAL_ICONS.filter(({ key }) => settings[key]);
 
   const bannerWorks = featuredWorks.map((work) => {
     const image = [...work.product_images].sort((a, b) => a.position - b.position)[0];
@@ -62,7 +54,7 @@ export default async function HomePage() {
         <ScrollingWorksBanner works={bannerWorks} />
       ) : (
         <div
-          className="mx-4 flex h-[220px] w-full max-w-[560px] items-center justify-center text-xs uppercase tracking-widest text-zinc-400 sm:mx-6 sm:h-[280px] lg:h-[380px]"
+          className="mx-4 flex h-[320px] w-full max-w-[560px] items-center justify-center text-xs uppercase tracking-widest text-zinc-400 sm:mx-6 sm:h-[420px] lg:h-[520px]"
           style={{
             backgroundImage:
               "repeating-linear-gradient(45deg, #f0f0ee 0, #f0f0ee 2px, #ffffff 2px, #ffffff 12px)",
@@ -73,18 +65,22 @@ export default async function HomePage() {
       )}
       {socialLinks.length > 0 ? (
         <div className="flex items-center gap-4 px-4 sm:px-6">
-          {socialLinks.map(({ key, label, Icon }) => (
-            <a
-              key={key}
-              href={settings[key] as string}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={label}
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-zinc-200 text-zinc-700 hover:border-zinc-400 hover:text-black"
-            >
-              <Icon size={18} />
-            </a>
-          ))}
+          {socialLinks.map((link) => {
+            const platform = getSocialPlatform(link.platform);
+            if (!platform) return null;
+            return (
+              <a
+                key={link.id}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={platform.label}
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-zinc-200 text-zinc-700 hover:border-zinc-400 hover:text-black"
+              >
+                <platform.Icon size={18} />
+              </a>
+            );
+          })}
         </div>
       ) : null}
       <a

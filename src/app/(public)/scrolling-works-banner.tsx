@@ -108,7 +108,7 @@ export function ScrollingWorksBanner({ works }: { works: BannerWork[] }) {
           key={`${work.id}-${index}`}
           href={`/boutique/${work.id}`}
           draggable={false}
-          className="h-[220px] flex-none sm:h-[280px] lg:h-[380px]"
+          className="h-[320px] flex-none sm:h-[420px] lg:h-[520px]"
         >
           {work.image ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -120,7 +120,7 @@ export function ScrollingWorksBanner({ works }: { works: BannerWork[] }) {
             />
           ) : (
             <div
-              className="flex h-full w-[220px] items-center justify-center text-xs uppercase tracking-widest text-zinc-400 sm:w-[280px] lg:w-[380px]"
+              className="flex h-full w-[320px] items-center justify-center text-xs uppercase tracking-widest text-zinc-400 sm:w-[420px] lg:w-[520px]"
               style={{
                 backgroundImage:
                   "repeating-linear-gradient(45deg, #f0f0ee 0, #f0f0ee 2px, #ffffff 2px, #ffffff 12px)",

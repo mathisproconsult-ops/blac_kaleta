@@ -24,7 +24,7 @@ export default async function PublicLayout({
 
   return (
     <CartProvider>
-      <div className="flex min-h-screen flex-col">
+      <div className="flex flex-col">
         <SiteHeader
           items={menuItems ?? []}
           siteName={settings.shop_name}

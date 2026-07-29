@@ -27,7 +27,6 @@ function productFieldsFromFormData(formData: FormData) {
   const stock = formData.get("stock");
   const description = formData.get("description");
   const year = formData.get("year");
-  const series = formData.get("series");
   const technique = formData.get("technique");
 
   if (typeof title !== "string" || !title.trim()) return null;
@@ -41,7 +40,6 @@ function productFieldsFromFormData(formData: FormData) {
         ? description.trim()
         : null,
     year: typeof year === "string" && year ? Number(year) : null,
-    series: typeof series === "string" && series.trim() ? series.trim() : null,
     technique:
       typeof technique === "string" && technique.trim()
         ? technique.trim()
@@ -390,7 +388,7 @@ export async function duplicateProduct(id: number) {
   const { data: original } = await supabase
     .from("products")
     .select(
-      "title, price, stock, description, year, series, technique, is_for_sale, show_in_recent_works, featured_home, product_categories(category_id)",
+      "title, price, stock, description, year, technique, is_for_sale, show_in_recent_works, featured_home, product_categories(category_id)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -405,7 +403,6 @@ export async function duplicateProduct(id: number) {
       stock: original.stock,
       description: original.description,
       year: original.year,
-      series: original.series,
       technique: original.technique,
       is_for_sale: original.is_for_sale,
       show_in_recent_works: original.show_in_recent_works,

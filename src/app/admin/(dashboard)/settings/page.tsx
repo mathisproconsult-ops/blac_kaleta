@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { SubmitButton } from "@/components/submit-button";
 import { CURRENCY_LABELS, EUR_XOF_RATE, type CurrencyCode } from "@/lib/currency";
+import { SOCIAL_PLATFORMS, getSocialPlatform } from "@/lib/social-platforms";
 import { updateSettings } from "./actions";
+import { createSocialLink, deleteSocialLink, moveSocialLink } from "./social-actions";
 
 export const metadata: Metadata = {
   title: "Paramètres — Admin Blac_Kaleta",
@@ -14,16 +16,8 @@ type Settings = {
   header_logo_url: string | null;
   currency: CurrencyCode;
   usd_rate: number;
-  payment_kkiapay: boolean;
-  payment_fedapay: boolean;
   notify_email_per_order: boolean;
   notify_realtime_popup: boolean;
-  social_instagram: string | null;
-  social_facebook: string | null;
-  social_whatsapp: string | null;
-  social_youtube: string | null;
-  social_tiktok: string | null;
-  social_patreon: string | null;
 };
 
 const defaultSettings: Settings = {
@@ -32,29 +26,30 @@ const defaultSettings: Settings = {
   header_logo_url: null,
   currency: "EUR",
   usd_rate: 610,
-  payment_kkiapay: false,
-  payment_fedapay: false,
   notify_email_per_order: true,
   notify_realtime_popup: true,
-  social_instagram: null,
-  social_facebook: null,
-  social_whatsapp: null,
-  social_youtube: null,
-  social_tiktok: null,
-  social_patreon: null,
 };
+
+type SocialLink = { id: number; platform: string; url: string };
 
 export default async function SettingsPage() {
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("settings")
-    .select(
-      "shop_name, contact_email, header_logo_url, currency, usd_rate, payment_kkiapay, payment_fedapay, notify_email_per_order, notify_realtime_popup, social_instagram, social_facebook, social_whatsapp, social_youtube, social_tiktok, social_patreon",
-    )
-    .eq("id", true)
-    .maybeSingle();
+  const [{ data }, { data: socialLinksData, error: socialLinksError }] = await Promise.all([
+    supabase
+      .from("settings")
+      .select(
+        "shop_name, contact_email, header_logo_url, currency, usd_rate, notify_email_per_order, notify_realtime_popup",
+      )
+      .eq("id", true)
+      .maybeSingle(),
+    supabase
+      .from("social_links")
+      .select("id, platform, url")
+      .order("position", { ascending: true }),
+  ]);
 
   const settings = (data as Settings | null) ?? defaultSettings;
+  const socialLinks = (socialLinksData ?? []) as SocialLink[];
 
   return (
     <div>
@@ -171,108 +166,6 @@ export default async function SettingsPage() {
 
         <fieldset className="flex flex-col gap-3">
           <legend className="text-sm font-semibold uppercase tracking-wide">
-            Moyens de paiement
-          </legend>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              name="payment_kkiapay"
-              defaultChecked={settings.payment_kkiapay}
-            />
-            Kkiapay (Mobile Money)
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              name="payment_fedapay"
-              defaultChecked={settings.payment_fedapay}
-            />
-            FedaPay (Mobile Money)
-          </label>
-          <p className="text-xs text-zinc-500">
-            L&apos;intégration technique de ces moyens de paiement sera
-            branchée dans une prochaine étape.
-          </p>
-        </fieldset>
-
-        <fieldset className="flex flex-col gap-3">
-          <legend className="text-sm font-semibold uppercase tracking-wide">
-            Réseaux sociaux
-          </legend>
-          <p className="text-xs text-zinc-500">
-            Laisse un champ vide pour ne pas afficher son icône sur la page
-            d&apos;accueil.
-          </p>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs uppercase tracking-wide text-zinc-500">
-              Instagram
-            </label>
-            <input
-              name="social_instagram"
-              defaultValue={settings.social_instagram ?? ""}
-              placeholder="https://instagram.com/..."
-              className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs uppercase tracking-wide text-zinc-500">
-              Facebook
-            </label>
-            <input
-              name="social_facebook"
-              defaultValue={settings.social_facebook ?? ""}
-              placeholder="https://facebook.com/..."
-              className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs uppercase tracking-wide text-zinc-500">
-              WhatsApp
-            </label>
-            <input
-              name="social_whatsapp"
-              defaultValue={settings.social_whatsapp ?? ""}
-              placeholder="https://wa.me/..."
-              className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs uppercase tracking-wide text-zinc-500">
-              YouTube
-            </label>
-            <input
-              name="social_youtube"
-              defaultValue={settings.social_youtube ?? ""}
-              placeholder="https://youtube.com/..."
-              className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs uppercase tracking-wide text-zinc-500">
-              TikTok
-            </label>
-            <input
-              name="social_tiktok"
-              defaultValue={settings.social_tiktok ?? ""}
-              placeholder="https://tiktok.com/@..."
-              className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs uppercase tracking-wide text-zinc-500">
-              Patreon
-            </label>
-            <input
-              name="social_patreon"
-              defaultValue={settings.social_patreon ?? ""}
-              placeholder="https://patreon.com/..."
-              className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-            />
-          </div>
-        </fieldset>
-
-        <fieldset className="flex flex-col gap-3">
-          <legend className="text-sm font-semibold uppercase tracking-wide">
             Notifications
           </legend>
           <label className="flex items-center gap-2 text-sm">
@@ -300,6 +193,109 @@ export default async function SettingsPage() {
           Enregistrer
         </SubmitButton>
       </form>
+
+      <fieldset className="mt-10 flex max-w-lg flex-col gap-3">
+        <legend className="text-sm font-semibold uppercase tracking-wide">
+          Réseaux sociaux
+        </legend>
+        <p className="text-xs text-zinc-500">
+          Ajoute les réseaux que tu veux afficher sur la page d&apos;accueil —
+          seuls ceux ajoutés ici apparaissent, dans cet ordre.
+        </p>
+
+        <form action={createSocialLink} className="flex flex-wrap items-end gap-2">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs uppercase tracking-wide text-zinc-500">
+              Réseau
+            </label>
+            <select
+              name="platform"
+              defaultValue=""
+              required
+              className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+            >
+              <option value="" disabled>
+                Choisir…
+              </option>
+              {SOCIAL_PLATFORMS.map((platform) => (
+                <option key={platform.key} value={platform.key}>
+                  {platform.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-1 flex-col gap-1">
+            <label className="text-xs uppercase tracking-wide text-zinc-500">
+              Lien
+            </label>
+            <input
+              name="url"
+              placeholder="https://..."
+              required
+              className="w-full border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+            />
+          </div>
+          <SubmitButton
+            pendingText="Ajout…"
+            className="bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
+          >
+            + Ajouter
+          </SubmitButton>
+        </form>
+
+        {socialLinksError ? (
+          <p className="text-sm text-red-600">
+            Erreur de chargement : {socialLinksError.message}
+          </p>
+        ) : null}
+
+        {socialLinks.length === 0 ? (
+          <p className="text-sm text-zinc-500">Aucun réseau ajouté pour l&apos;instant.</p>
+        ) : (
+          <ul className="divide-y divide-zinc-100 border-y border-zinc-100">
+            {socialLinks.map((link, index) => {
+              const platform = getSocialPlatform(link.platform);
+              return (
+                <li key={link.id} className="flex flex-wrap items-center gap-3 py-3">
+                  <div className="flex flex-col">
+                    <SubmitButton
+                      formAction={moveSocialLink.bind(null, link.id, "up")}
+                      disabled={index === 0}
+                      aria-label="Monter"
+                      className="text-xs text-zinc-500 hover:text-black disabled:opacity-20"
+                    >
+                      ▲
+                    </SubmitButton>
+                    <SubmitButton
+                      formAction={moveSocialLink.bind(null, link.id, "down")}
+                      disabled={index === socialLinks.length - 1}
+                      aria-label="Descendre"
+                      className="text-xs text-zinc-500 hover:text-black disabled:opacity-20"
+                    >
+                      ▼
+                    </SubmitButton>
+                  </div>
+                  {platform ? <platform.Icon size={20} /> : null}
+                  <p className="w-24 flex-none text-sm font-medium">
+                    {platform?.label ?? link.platform}
+                  </p>
+                  <p className="min-w-[140px] flex-1 truncate text-sm text-zinc-600">
+                    {link.url}
+                  </p>
+                  <form action={deleteSocialLink.bind(null, link.id)}>
+                    <SubmitButton
+                      pendingText="Suppression…"
+                      className="text-sm text-red-600 hover:underline"
+                    >
+                      Supprimer
+                    </SubmitButton>
+                  </form>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </fieldset>
     </div>
   );
 }
