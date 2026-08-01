@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { SubmitButton } from "@/components/submit-button";
 import { EUR_XOF_RATE } from "@/lib/currency";
-import { getSocialPlatform } from "@/lib/social-platforms";
+import { SOCIAL_PLATFORMS } from "@/lib/social-platforms";
 import { updateSettings } from "./actions";
-import { deleteSocialLink, moveSocialLink } from "./social-actions";
+import { deleteSocialLink, moveSocialLink, updateSocialLink } from "./social-actions";
 import { SocialLinkForm } from "./social-link-form";
 
 export const metadata: Metadata = {
@@ -56,7 +56,90 @@ export default async function SettingsPage() {
         Paramètres
       </h1>
 
-      <form action={updateSettings} className="mt-8 flex max-w-lg flex-col gap-10">
+      <fieldset className="mt-8 flex max-w-2xl flex-col gap-3">
+        <legend className="text-sm font-semibold uppercase tracking-wide">
+          Réseaux sociaux
+        </legend>
+        <p className="text-xs text-zinc-500">
+          Ajoute les réseaux que tu veux afficher sur la page d&apos;accueil —
+          seuls ceux ajoutés ici apparaissent, dans cet ordre.
+        </p>
+
+        <SocialLinkForm />
+
+        {socialLinksError ? (
+          <p className="text-sm text-red-600">
+            Erreur de chargement : {socialLinksError.message}
+          </p>
+        ) : null}
+
+        {socialLinks.length === 0 ? (
+          <p className="text-sm text-zinc-500">Aucun réseau ajouté pour l&apos;instant.</p>
+        ) : (
+          <ul className="divide-y divide-zinc-100 border-y border-zinc-100">
+            {socialLinks.map((link, index) => (
+              <li key={link.id} className="py-3">
+                <form
+                  action={updateSocialLink.bind(null, link.id)}
+                  className="flex flex-wrap items-center gap-2"
+                >
+                  <div className="flex flex-none flex-col">
+                    <SubmitButton
+                      formAction={moveSocialLink.bind(null, link.id, "up")}
+                      disabled={index === 0}
+                      aria-label="Monter"
+                      className="text-xs text-zinc-500 hover:text-black disabled:opacity-20"
+                    >
+                      ▲
+                    </SubmitButton>
+                    <SubmitButton
+                      formAction={moveSocialLink.bind(null, link.id, "down")}
+                      disabled={index === socialLinks.length - 1}
+                      aria-label="Descendre"
+                      className="text-xs text-zinc-500 hover:text-black disabled:opacity-20"
+                    >
+                      ▼
+                    </SubmitButton>
+                  </div>
+                  <select
+                    name="platform"
+                    defaultValue={link.platform}
+                    className="flex-none border border-zinc-300 px-2 py-2 text-sm focus:border-black focus:outline-none"
+                  >
+                    {SOCIAL_PLATFORMS.map((platform) => (
+                      <option key={platform.key} value={platform.key}>
+                        {platform.label}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    name="url"
+                    type="url"
+                    autoComplete="off"
+                    defaultValue={link.url}
+                    className="min-w-0 flex-1 border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                  />
+                  <SubmitButton
+                    pendingText="Enregistrement…"
+                    className="flex-none text-sm text-zinc-600 hover:underline"
+                  >
+                    Enregistrer
+                  </SubmitButton>
+                  <SubmitButton
+                    formAction={deleteSocialLink.bind(null, link.id)}
+                    pendingText="Suppression…"
+                    className="flex-none text-sm text-red-600 hover:underline"
+                  >
+                    Supprimer
+                  </SubmitButton>
+                </form>
+              </li>
+            ))}
+          </ul>
+        )}
+      </fieldset>
+
+      <form action={updateSettings} className="mt-10 flex max-w-lg flex-col gap-10">
         <fieldset className="flex flex-col gap-3">
           <legend className="text-sm font-semibold uppercase tracking-wide">
             Header
@@ -170,71 +253,6 @@ export default async function SettingsPage() {
           Enregistrer
         </SubmitButton>
       </form>
-
-      <fieldset className="mt-10 flex max-w-lg flex-col gap-3">
-        <legend className="text-sm font-semibold uppercase tracking-wide">
-          Réseaux sociaux
-        </legend>
-        <p className="text-xs text-zinc-500">
-          Ajoute les réseaux que tu veux afficher sur la page d&apos;accueil —
-          seuls ceux ajoutés ici apparaissent, dans cet ordre.
-        </p>
-
-        <SocialLinkForm />
-
-        {socialLinksError ? (
-          <p className="text-sm text-red-600">
-            Erreur de chargement : {socialLinksError.message}
-          </p>
-        ) : null}
-
-        {socialLinks.length === 0 ? (
-          <p className="text-sm text-zinc-500">Aucun réseau ajouté pour l&apos;instant.</p>
-        ) : (
-          <ul className="divide-y divide-zinc-100 border-y border-zinc-100">
-            {socialLinks.map((link, index) => {
-              const platform = getSocialPlatform(link.platform);
-              return (
-                <li key={link.id} className="flex flex-wrap items-center gap-3 py-3">
-                  <div className="flex flex-col">
-                    <SubmitButton
-                      formAction={moveSocialLink.bind(null, link.id, "up")}
-                      disabled={index === 0}
-                      aria-label="Monter"
-                      className="text-xs text-zinc-500 hover:text-black disabled:opacity-20"
-                    >
-                      ▲
-                    </SubmitButton>
-                    <SubmitButton
-                      formAction={moveSocialLink.bind(null, link.id, "down")}
-                      disabled={index === socialLinks.length - 1}
-                      aria-label="Descendre"
-                      className="text-xs text-zinc-500 hover:text-black disabled:opacity-20"
-                    >
-                      ▼
-                    </SubmitButton>
-                  </div>
-                  {platform ? <platform.Icon size={20} /> : null}
-                  <p className="w-24 flex-none text-sm font-medium">
-                    {platform?.label ?? link.platform}
-                  </p>
-                  <p className="min-w-[140px] flex-1 truncate text-sm text-zinc-600">
-                    {link.url}
-                  </p>
-                  <form action={deleteSocialLink.bind(null, link.id)}>
-                    <SubmitButton
-                      pendingText="Suppression…"
-                      className="text-sm text-red-600 hover:underline"
-                    >
-                      Supprimer
-                    </SubmitButton>
-                  </form>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </fieldset>
     </div>
   );
 }

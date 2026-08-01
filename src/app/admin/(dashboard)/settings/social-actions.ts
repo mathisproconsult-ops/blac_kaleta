@@ -58,6 +58,24 @@ export async function createSocialLink(
   return { success: true, error: null };
 }
 
+export async function updateSocialLink(id: number, formData: FormData) {
+  const platform = formData.get("platform");
+  const url = formData.get("url");
+
+  if (!isValidPlatform(platform)) return;
+  if (typeof url !== "string" || !url.trim()) return;
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("social_links")
+    .update({ platform, url: url.trim() })
+    .eq("id", id);
+
+  if (error) console.error("updateSocialLink", error);
+
+  revalidateSocial();
+}
+
 export async function deleteSocialLink(id: number) {
   const supabase = await createClient();
   const { error } = await supabase.from("social_links").delete().eq("id", id);
