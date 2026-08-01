@@ -7,12 +7,13 @@ type SocialLink = { id: number; platform: string; url: string };
 
 async function getSocialLinks() {
   const supabase = await createClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("social_links")
     .select("id, platform, url")
     .order("position", { ascending: true })
     .returns<SocialLink[]>();
 
+  if (error) console.error("getSocialLinks", error);
   return data ?? [];
 }
 

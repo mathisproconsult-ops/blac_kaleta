@@ -17,7 +17,7 @@ type ProductDetail = {
   stock: number;
   description: string | null;
   year: number | null;
-  technique: string | null;
+  technique_id: number | null;
   is_for_sale: boolean;
   show_in_recent_works: boolean;
   featured_home: boolean;
@@ -31,7 +31,7 @@ async function getProduct(id: string) {
   const { data, error } = await supabase
     .from("products")
     .select(
-      "id, title, price, stock, description, year, technique, is_for_sale, show_in_recent_works, featured_home, product_images(id, path, url, position), product_categories(categories(id, name))",
+      "id, title, price, stock, description, year, technique_id, is_for_sale, show_in_recent_works, featured_home, product_images(id, path, url, position), product_categories(categories(id, name))",
     )
     .eq("id", id)
     .maybeSingle();
@@ -73,22 +73,28 @@ export default async function EditProductPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const [product, { data: categories }, { data: unclaimedMedia }, { data: optionGroups }] =
-    await Promise.all([
-      getProduct(id),
-      supabase.from("categories").select("id, name").order("position", { ascending: true }),
-      supabase
-        .from("media")
-        .select("id, filename, url")
-        .is("product_id", null)
-        .is("deleted_at", null)
-        .in("kind", ["image", "gif"])
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("option_groups")
-        .select("id, name, selection_type")
-        .order("position", { ascending: true }),
-    ]);
+  const [
+    product,
+    { data: categories },
+    { data: techniques },
+    { data: unclaimedMedia },
+    { data: optionGroups },
+  ] = await Promise.all([
+    getProduct(id),
+    supabase.from("categories").select("id, name").order("position", { ascending: true }),
+    supabase.from("techniques").select("id, name").order("position", { ascending: true }),
+    supabase
+      .from("media")
+      .select("id, filename, url")
+      .is("product_id", null)
+      .is("deleted_at", null)
+      .in("kind", ["image", "gif"])
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("option_groups")
+      .select("id, name, selection_type")
+      .order("position", { ascending: true }),
+  ]);
 
   if (!product) notFound();
 
@@ -141,13 +147,14 @@ export default async function EditProductPage({
       >
         <ProductFields
           categories={categories ?? []}
+          techniques={techniques ?? []}
           defaultValues={{
             title: product.title,
             price: product.price,
             stock: product.stock,
             description: product.description,
             year: product.year,
-            technique: product.technique,
+            technique_id: product.technique_id,
             is_for_sale: product.is_for_sale,
             show_in_recent_works: product.show_in_recent_works,
             featured_home: product.featured_home,

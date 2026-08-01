@@ -42,7 +42,7 @@ type ProductRow = {
   status: ProductStatus;
   description: string | null;
   year: number | null;
-  technique: string | null;
+  technique_id: number | null;
   is_for_sale: boolean;
   show_in_recent_works: boolean;
   featured_home: boolean;
@@ -82,7 +82,7 @@ export default async function ProductsPage({
   let query = supabase
     .from("products")
     .select(
-      "id, title, price, stock, status, description, year, technique, is_for_sale, show_in_recent_works, featured_home, is_visible, deleted_at, created_at, product_images(id, path, url, position), product_categories(categories(id, name))",
+      "id, title, price, stock, status, description, year, technique_id, is_for_sale, show_in_recent_works, featured_home, is_visible, deleted_at, created_at, product_images(id, path, url, position), product_categories(categories(id, name))",
     )
     .order("created_at", { ascending: false });
 

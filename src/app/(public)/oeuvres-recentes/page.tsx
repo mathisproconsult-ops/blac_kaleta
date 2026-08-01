@@ -11,7 +11,7 @@ type Work = {
   id: number;
   title: string;
   year: number | null;
-  technique: string | null;
+  techniques: { name: string } | null;
   product_images: { url: string; position: number }[];
 };
 
@@ -25,7 +25,7 @@ export default async function RecentWorksPage({
 
   const { data } = await supabase
     .from("products")
-    .select("id, title, year, technique, product_images(url, position)")
+    .select("id, title, year, techniques(name), product_images(url, position)")
     .eq("show_in_recent_works", true)
     .eq("is_visible", true)
     .is("deleted_at", null)
@@ -39,13 +39,13 @@ export default async function RecentWorksPage({
   ).sort((a, b) => b - a);
   const techniques = Array.from(
     new Set(
-      works.map((work) => work.technique).filter((tech): tech is string => Boolean(tech)),
+      works.map((work) => work.techniques?.name).filter((name): name is string => Boolean(name)),
     ),
   ).sort();
 
   let filtered = works;
   if (annee) filtered = filtered.filter((work) => String(work.year) === annee);
-  if (technique) filtered = filtered.filter((work) => work.technique === technique);
+  if (technique) filtered = filtered.filter((work) => work.techniques?.name === technique);
 
   const hasFilters = Boolean(annee || technique);
 
@@ -104,7 +104,7 @@ export default async function RecentWorksPage({
                 </div>
                 <p className="mt-3 text-sm font-medium">{work.title}</p>
                 <p className="mt-1 text-xs text-zinc-500">
-                  {[work.technique, work.year].filter(Boolean).join(" — ")}
+                  {[work.techniques?.name, work.year].filter(Boolean).join(" — ")}
                 </p>
               </Link>
             );

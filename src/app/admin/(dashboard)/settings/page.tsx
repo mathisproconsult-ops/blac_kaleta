@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { SubmitButton } from "@/components/submit-button";
 import { EUR_XOF_RATE } from "@/lib/currency";
-import { SOCIAL_PLATFORMS, getSocialPlatform } from "@/lib/social-platforms";
+import { getSocialPlatform } from "@/lib/social-platforms";
 import { updateSettings } from "./actions";
-import { createSocialLink, deleteSocialLink, moveSocialLink } from "./social-actions";
+import { deleteSocialLink, moveSocialLink } from "./social-actions";
+import { SocialLinkForm } from "./social-link-form";
 
 export const metadata: Metadata = {
   title: "Paramètres — Admin Blac_Kaleta",
@@ -179,45 +180,7 @@ export default async function SettingsPage() {
           seuls ceux ajoutés ici apparaissent, dans cet ordre.
         </p>
 
-        <form action={createSocialLink} className="flex flex-wrap items-end gap-2">
-          <div className="flex flex-col gap-1">
-            <label className="text-xs uppercase tracking-wide text-zinc-500">
-              Réseau
-            </label>
-            <select
-              name="platform"
-              defaultValue=""
-              required
-              className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-            >
-              <option value="" disabled>
-                Choisir…
-              </option>
-              {SOCIAL_PLATFORMS.map((platform) => (
-                <option key={platform.key} value={platform.key}>
-                  {platform.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex flex-1 flex-col gap-1">
-            <label className="text-xs uppercase tracking-wide text-zinc-500">
-              Lien
-            </label>
-            <input
-              name="url"
-              placeholder="https://..."
-              required
-              className="w-full border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-            />
-          </div>
-          <SubmitButton
-            pendingText="Ajout…"
-            className="bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
-          >
-            + Ajouter
-          </SubmitButton>
-        </form>
+        <SocialLinkForm />
 
         {socialLinksError ? (
           <p className="text-sm text-red-600">

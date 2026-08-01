@@ -1,11 +1,13 @@
 import { ImageUploadField } from "./image-upload-field";
 
 type Category = { id: number; name: string };
+type Technique = { id: number; name: string };
 type AvailableMedia = { id: number; filename: string; url: string };
 type OptionGroup = { id: number; name: string; selection_type: "single" | "multiple" };
 
 export function ProductFields({
   categories,
+  techniques,
   defaultValues,
   selectedCategoryIds,
   availableMedia,
@@ -13,13 +15,14 @@ export function ProductFields({
   selectedOptionGroupIds,
 }: {
   categories: Category[];
+  techniques: Technique[];
   defaultValues?: {
     title: string;
     price: number | null;
     stock: number;
     description: string | null;
     year: number | null;
-    technique: string | null;
+    technique_id: number | null;
     is_for_sale: boolean;
     show_in_recent_works: boolean;
     featured_home: boolean;
@@ -115,11 +118,23 @@ export function ProductFields({
         <label className="text-xs uppercase tracking-wide text-zinc-500">
           Technique (pour Œuvres récentes)
         </label>
-        <input
-          name="technique"
-          defaultValue={defaultValues?.technique ?? undefined}
+        <select
+          name="technique_id"
+          defaultValue={defaultValues?.technique_id ?? ""}
           className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-        />
+        >
+          <option value="">Aucune</option>
+          {techniques.map((technique) => (
+            <option key={technique.id} value={technique.id}>
+              {technique.name}
+            </option>
+          ))}
+        </select>
+        {techniques.length === 0 ? (
+          <p className="text-xs text-zinc-500">
+            Aucune technique — crée-en une dans Techniques.
+          </p>
+        ) : null}
       </div>
       <ImageUploadField />
       {availableMedia && availableMedia.length > 0 ? (

@@ -13,9 +13,10 @@ export const maxDuration = 60;
 
 export default async function NewProductPage() {
   const supabase = await createClient();
-  const [{ data: categories }, { data: unclaimedMedia }, { data: optionGroups }] =
+  const [{ data: categories }, { data: techniques }, { data: unclaimedMedia }, { data: optionGroups }] =
     await Promise.all([
       supabase.from("categories").select("id, name").order("position", { ascending: true }),
+      supabase.from("techniques").select("id, name").order("position", { ascending: true }),
       supabase
         .from("media")
         .select("id, filename, url")
@@ -44,6 +45,7 @@ export default async function NewProductPage() {
       >
         <ProductFields
           categories={categories ?? []}
+          techniques={techniques ?? []}
           availableMedia={unclaimedMedia ?? []}
           optionGroups={optionGroups ?? []}
         />
