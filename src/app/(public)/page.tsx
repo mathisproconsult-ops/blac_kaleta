@@ -1,4 +1,3 @@
-import { getSettings } from "@/lib/settings";
 import { createClient } from "@/lib/supabase/server";
 import { getSocialPlatform } from "@/lib/social-platforms";
 import { ScrollingWorksBanner } from "./scrolling-works-banner";
@@ -38,8 +37,7 @@ async function getFeaturedWorks() {
 }
 
 export default async function HomePage() {
-  const [settings, featuredWorks, socialLinks] = await Promise.all([
-    getSettings(),
+  const [featuredWorks, socialLinks] = await Promise.all([
     getFeaturedWorks(),
     getSocialLinks(),
   ]);
@@ -84,12 +82,6 @@ export default async function HomePage() {
           })}
         </div>
       ) : null}
-      <a
-        href={`mailto:${settings.contact_email}`}
-        className="px-4 text-sm text-zinc-600 hover:underline sm:px-6"
-      >
-        {settings.contact_email}
-      </a>
     </div>
   );
 }
