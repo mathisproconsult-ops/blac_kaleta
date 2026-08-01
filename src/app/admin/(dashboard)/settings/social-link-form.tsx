@@ -17,13 +17,19 @@ export function SocialLinkForm() {
 
   return (
     <div className="flex flex-col gap-2">
-      <form ref={formRef} action={formAction} className="flex flex-wrap items-end gap-2">
+      <form
+        ref={formRef}
+        action={formAction}
+        autoComplete="off"
+        className="flex flex-wrap items-end gap-2"
+      >
         <div className="flex flex-col gap-1">
           <label className="text-xs uppercase tracking-wide text-zinc-500">Réseau</label>
           <select
             name="platform"
             defaultValue=""
             required
+            autoComplete="off"
             className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
           >
             <option value="" disabled>
@@ -40,6 +46,12 @@ export function SocialLinkForm() {
           <label className="text-xs uppercase tracking-wide text-zinc-500">Lien</label>
           <input
             name="url"
+            type="url"
+            inputMode="url"
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
             placeholder="https://..."
             required
             className="w-full border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
@@ -52,7 +64,17 @@ export function SocialLinkForm() {
           + Ajouter
         </SubmitButton>
       </form>
-      {state.error ? <p className="text-sm text-red-600">{state.error}</p> : null}
+      <div aria-live="polite">
+        {state.error ? (
+          <p className="border border-red-300 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+            ⚠ {state.error}
+          </p>
+        ) : state.success ? (
+          <p className="border border-green-300 bg-green-50 px-3 py-2 text-sm font-medium text-green-700">
+            ✓ Réseau ajouté.
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 }
