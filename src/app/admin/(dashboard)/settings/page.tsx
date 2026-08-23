@@ -6,6 +6,7 @@ import { SOCIAL_PLATFORMS } from "@/lib/social-platforms";
 import { updateSettings } from "./actions";
 import { deleteSocialLink, moveSocialLink, updateSocialLink } from "./social-actions";
 import { SocialLinkForm } from "./social-link-form";
+import { PrintifySection } from "./printify-section";
 
 export const metadata: Metadata = {
   title: "Paramètres — Admin Blac_Kaleta",
@@ -29,26 +30,41 @@ const defaultSettings: Settings = {
   notify_realtime_popup: true,
 };
 
+type PrintifySettings = { printify_api_key: string | null; printify_shop_id: string | null };
+
 type SocialLink = { id: number; platform: string; url: string };
 
 export default async function SettingsPage() {
   const supabase = await createClient();
-  const [{ data }, { data: socialLinksData, error: socialLinksError }] = await Promise.all([
-    supabase
-      .from("settings")
-      .select(
-        "shop_name, contact_email, header_logo_url, usd_rate, notify_email_per_order, notify_realtime_popup",
-      )
-      .eq("id", true)
-      .maybeSingle(),
-    supabase
-      .from("social_links")
-      .select("id, platform, url")
-      .order("position", { ascending: true }),
-  ]);
+  const [{ data }, { data: socialLinksData, error: socialLinksError }, { data: printifyData }] =
+    await Promise.all([
+      supabase
+        .from("settings")
+        .select(
+          "shop_name, contact_email, header_logo_url, usd_rate, notify_email_per_order, notify_realtime_popup",
+        )
+        .eq("id", true)
+        .maybeSingle(),
+      supabase
+        .from("social_links")
+        .select("id, platform, url")
+        .order("position", { ascending: true }),
+      // Requête séparée : la colonne printify_* peut ne pas encore exister si
+      // la migration 0028 n'a pas été appliquée, et ne doit pas faire échouer
+      // la lecture du reste des paramètres (déjà vécu avec usd_rate).
+      supabase
+        .from("settings")
+        .select("printify_api_key, printify_shop_id")
+        .eq("id", true)
+        .maybeSingle(),
+    ]);
 
   const settings = (data as Settings | null) ?? defaultSettings;
   const socialLinks = (socialLinksData ?? []) as SocialLink[];
+  const printifySettings = (printifyData as PrintifySettings | null) ?? {
+    printify_api_key: null,
+    printify_shop_id: null,
+  };
 
   return (
     <div>
@@ -138,6 +154,11 @@ export default async function SettingsPage() {
           </ul>
         )}
       </fieldset>
+
+      <PrintifySection
+        apiKey={printifySettings.printify_api_key ?? ""}
+        shopId={printifySettings.printify_shop_id ?? ""}
+      />
 
       <form action={updateSettings} className="mt-10 flex max-w-lg flex-col gap-10">
         <fieldset className="flex flex-col gap-3">

@@ -24,6 +24,7 @@ type ProductDetail = {
   product_images: ProductImage[];
   product_categories: { categories: { id: number; name: string } | null }[];
   product_option_groups: { group_id: number }[];
+  source: string;
 };
 
 async function getProduct(id: string) {
@@ -49,9 +50,18 @@ async function getProduct(id: string) {
 
   if (optionsError) console.error("getProduct options", optionsError);
 
+  // Requête séparée et best-effort : la colonne source peut ne pas encore
+  // exister si la migration Printify (0028) n'a pas été appliquée.
+  const { data: sourceRow } = await supabase
+    .from("products")
+    .select("source")
+    .eq("id", data.id)
+    .maybeSingle();
+
   return {
     ...data,
     product_option_groups: optionGroupRows ?? [],
+    source: (sourceRow as { source: string } | null)?.source ?? "original",
   } as unknown as ProductDetail;
 }
 
@@ -111,33 +121,63 @@ export default async function EditProductPage({
       </Link>
       <h1 className="mt-2 text-2xl font-semibold uppercase tracking-wide">
         {product.title}
+        {product.source === "printify" ? (
+          <span className="ml-2 rounded bg-zinc-900 px-2 py-1 align-middle text-xs font-medium uppercase tracking-wide text-white dark:bg-zinc-100 dark:text-zinc-900">
+            Printify
+          </span>
+        ) : null}
       </h1>
 
       {images.length > 0 ? (
         <div className="mt-6 flex flex-wrap gap-3">
-          {images.map((image) => (
-            <div key={image.id} className="relative">
-              <Image
-                src={image.url}
-                alt={product.title}
-                width={100}
-                height={100}
-                className="h-24 w-24 object-cover"
-              />
-              <form
-                action={deleteProductImage.bind(null, image.id, image.path)}
-                className="absolute -right-2 -top-2"
-              >
-                <SubmitButton
-                  pendingText="…"
-                  aria-label="Supprimer la photo"
-                  className="flex h-5 w-5 items-center justify-center bg-black text-xs text-white dark:bg-zinc-100 dark:text-zinc-900"
+          {images.map((image) =>
+            product.source === "printify" ? (
+              <div key={image.id} className="relative">
+                {/* Image hébergée sur le CDN Printify, hors des domaines
+                autorisés pour next/image (next.config.ts) : <img> brut. */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={image.url}
+                  alt={product.title}
+                  className="h-24 w-24 object-cover"
+                />
+                <form
+                  action={deleteProductImage.bind(null, image.id, image.path)}
+                  className="absolute -right-2 -top-2"
                 >
-                  ×
-                </SubmitButton>
-              </form>
-            </div>
-          ))}
+                  <SubmitButton
+                    pendingText="…"
+                    aria-label="Supprimer la photo"
+                    className="flex h-5 w-5 items-center justify-center bg-black text-xs text-white dark:bg-zinc-100 dark:text-zinc-900"
+                  >
+                    ×
+                  </SubmitButton>
+                </form>
+              </div>
+            ) : (
+              <div key={image.id} className="relative">
+                <Image
+                  src={image.url}
+                  alt={product.title}
+                  width={100}
+                  height={100}
+                  className="h-24 w-24 object-cover"
+                />
+                <form
+                  action={deleteProductImage.bind(null, image.id, image.path)}
+                  className="absolute -right-2 -top-2"
+                >
+                  <SubmitButton
+                    pendingText="…"
+                    aria-label="Supprimer la photo"
+                    className="flex h-5 w-5 items-center justify-center bg-black text-xs text-white dark:bg-zinc-100 dark:text-zinc-900"
+                  >
+                    ×
+                  </SubmitButton>
+                </form>
+              </div>
+            ),
+          )}
         </div>
       ) : null}
 

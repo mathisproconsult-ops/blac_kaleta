@@ -111,6 +111,25 @@ export default async function ProductsPage({
 
   let productList = products ?? [];
 
+  // Requête séparée et best-effort : la colonne source peut ne pas encore
+  // exister si la migration Printify (0028) n'a pas été appliquée, et ne
+  // doit pas faire échouer l'affichage de la liste des produits.
+  const productIds = productList.map((product) => product.id);
+  let printifySourceIds = new Set<number>();
+  if (productIds.length > 0) {
+    const { data: sourceRows } = await supabase
+      .from("products")
+      .select("id, source")
+      .in("id", productIds);
+    if (sourceRows) {
+      printifySourceIds = new Set(
+        (sourceRows as { id: number; source: string }[])
+          .filter((row) => row.source === "printify")
+          .map((row) => row.id),
+      );
+    }
+  }
+
   const selectedCategoryId = categorie !== "toutes" ? Number(categorie) : null;
   if (selectedCategoryId) {
     productList = productList.filter((product) =>
@@ -254,19 +273,37 @@ export default async function ProductsPage({
                     </td>
                     <td className="py-3 pr-4">
                       {images[0] ? (
-                        <Image
-                          src={images[0].url}
-                          alt={product.title}
-                          width={48}
-                          height={48}
-                          className="h-12 w-12 object-cover"
-                        />
+                        printifySourceIds.has(product.id) ? (
+                          // Image hébergée sur le CDN Printify, hors des domaines
+                          // autorisés pour next/image (next.config.ts) : <img> brut.
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={images[0].url}
+                            alt={product.title}
+                            className="h-12 w-12 object-cover"
+                          />
+                        ) : (
+                          <Image
+                            src={images[0].url}
+                            alt={product.title}
+                            width={48}
+                            height={48}
+                            className="h-12 w-12 object-cover"
+                          />
+                        )
                       ) : (
                         <div className="h-12 w-12 bg-zinc-100 dark:bg-zinc-800" />
                       )}
                     </td>
                     <td className="py-3 pr-4">
-                      <p className="font-medium">{product.title}</p>
+                      <p className="font-medium">
+                        {product.title}
+                        {printifySourceIds.has(product.id) ? (
+                          <span className="ml-2 rounded bg-zinc-900 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white dark:bg-zinc-100 dark:text-zinc-900">
+                            Printify
+                          </span>
+                        ) : null}
+                      </p>
                       <div className="mt-1 flex flex-wrap items-center gap-2">
                         <form action={cycleProductStatus.bind(null, product.id, product.status)}>
                           <SubmitButton
