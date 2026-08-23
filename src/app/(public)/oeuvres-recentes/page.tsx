@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { FiltersBar } from "./filters-bar";
+import { LightboxGallery } from "./lightbox-gallery";
 
 export const metadata: Metadata = {
   title: "Œuvres récentes — Blac_Kaleta",
@@ -76,40 +77,16 @@ export default async function RecentWorksPage({
       {filtered.length === 0 ? (
         <p className="mt-12 text-sm text-zinc-500">Aucune œuvre ne correspond à ces filtres.</p>
       ) : (
-        <div className="mt-10 columns-1 gap-8 sm:columns-2 lg:columns-3">
-          {filtered.map((work) => {
-            const image = [...work.product_images].sort(
-              (a, b) => a.position - b.position,
-            )[0];
-
-            return (
-              <Link
-                key={work.id}
-                href={`/boutique/${work.id}`}
-                className="group mb-8 block break-inside-avoid"
-              >
-                <div className="w-full bg-zinc-50 dark:bg-zinc-900">
-                  {image ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={image.url} alt={work.title} className="block h-auto w-full" />
-                  ) : (
-                    <div
-                      className="aspect-square w-full"
-                      style={{
-                        backgroundImage:
-                          "repeating-linear-gradient(45deg, #f0f0ee 0, #f0f0ee 2px, #ffffff 2px, #ffffff 12px)",
-                      }}
-                    />
-                  )}
-                </div>
-                <p className="mt-3 text-sm font-medium">{work.title}</p>
-                <p className="mt-1 text-xs text-zinc-500">
-                  {[work.techniques?.name, work.year].filter(Boolean).join(" — ")}
-                </p>
-              </Link>
-            );
-          })}
-        </div>
+        <LightboxGallery
+          works={filtered.map((work) => ({
+            id: work.id,
+            title: work.title,
+            year: work.year,
+            technique: work.techniques?.name ?? null,
+            imageUrl:
+              [...work.product_images].sort((a, b) => a.position - b.position)[0]?.url ?? null,
+          }))}
+        />
       )}
     </div>
   );
