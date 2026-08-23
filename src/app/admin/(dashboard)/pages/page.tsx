@@ -21,7 +21,7 @@ export default async function PagesIndex() {
       <h1 className="text-2xl font-semibold uppercase tracking-wide">
         Contenu des pages
       </h1>
-      <p className="mt-2 text-sm text-zinc-600">
+      <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
         Crée une page ou choisis-en une pour modifier ses blocs (titre,
         texte, image).
       </p>
@@ -33,7 +33,7 @@ export default async function PagesIndex() {
       {pageList.length === 0 ? (
         <p className="mt-8 text-sm text-zinc-500">Aucune page pour l&apos;instant.</p>
       ) : (
-        <ul className="mt-8 divide-y divide-zinc-100 border-t border-zinc-100">
+        <ul className="mt-8 divide-y divide-zinc-100 border-t border-zinc-100 dark:border-zinc-800">
           {pageList.map((page) => (
             <li key={page.slug} className="flex flex-wrap items-center justify-between gap-2 py-3">
               <Link

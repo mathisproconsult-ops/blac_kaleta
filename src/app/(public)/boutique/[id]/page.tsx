@@ -134,12 +134,12 @@ export default async function ProductPage({
           <p className="mt-2 text-sm text-zinc-500">Pièce non destinée à la vente</p>
         )}
 
-        <p className="mt-4 inline-block border border-zinc-300 px-3 py-1 text-sm">
+        <p className="mt-4 inline-block border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700">
           {STATUS_LABELS[product.status]}
         </p>
 
         {categoryNames.length > 0 ? (
-          <p className="mt-4 text-sm text-zinc-600">
+          <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400">
             Catégorie : {categoryNames.join(", ")}
           </p>
         ) : null}
@@ -176,7 +176,7 @@ export default async function ProductPage({
             <h2 className="text-sm font-semibold uppercase tracking-wide">
               À propos de cette pièce
             </h2>
-            <p className="mt-2 whitespace-pre-line text-sm text-zinc-700">
+            <p className="mt-2 whitespace-pre-line text-sm text-zinc-700 dark:text-zinc-300">
               {product.description}
             </p>
           </div>

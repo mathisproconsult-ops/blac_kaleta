@@ -47,7 +47,7 @@ export default async function AdminDashboardLayout({
   return (
     <div className="flex min-h-screen flex-col lg:flex-row">
       <AdminSidebar navItems={navItems} email={email} logoutAction={logout} />
-      <main className="flex-1 overflow-x-hidden bg-[#fafaf9] p-4 sm:p-6 lg:p-10">
+      <main className="flex-1 overflow-x-hidden bg-[#fafaf9] p-4 dark:bg-[#0a0a0a] dark:text-zinc-100 sm:p-6 lg:p-10">
         {children}
       </main>
     </div>

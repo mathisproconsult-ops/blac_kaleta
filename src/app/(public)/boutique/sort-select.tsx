@@ -30,7 +30,7 @@ export function SortSelect({
         }
         router.push(`${basePath}?${params.toString()}`);
       }}
-      className="border border-zinc-300 px-2 py-1 text-sm"
+      className="border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-700"
     >
       {sortOptions.map((option) => (
         <option key={option.value} value={option.value}>

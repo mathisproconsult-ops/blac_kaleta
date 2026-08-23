@@ -11,7 +11,7 @@ export function CreatePageForm() {
   return (
     <form
       action={formAction}
-      className="flex flex-wrap items-end gap-3 border border-zinc-200 bg-white p-6"
+      className="flex flex-wrap items-end gap-3 border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900"
     >
       <div className="flex flex-col gap-1">
         <label className="text-xs uppercase tracking-wide text-zinc-500">
@@ -21,7 +21,7 @@ export function CreatePageForm() {
           name="title"
           required
           placeholder="Ex: Mentions légales"
-          className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+          className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
         />
       </div>
       <div className="flex flex-col gap-1">
@@ -31,7 +31,7 @@ export function CreatePageForm() {
         <input
           name="slug"
           placeholder="ex: mentions-legales"
-          className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+          className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
         />
       </div>
       <label className="flex items-center gap-2 pb-2 text-sm">
@@ -41,11 +41,11 @@ export function CreatePageForm() {
       <button
         type="submit"
         disabled={pending}
-        className="bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
+        className="bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
       >
         {pending ? "Création..." : "+ Créer la page"}
       </button>
-      {state.error ? <p className="w-full text-sm text-red-600">{state.error}</p> : null}
+      {state.error ? <p className="w-full text-sm text-red-600 dark:text-red-400">{state.error}</p> : null}
     </form>
   );
 }

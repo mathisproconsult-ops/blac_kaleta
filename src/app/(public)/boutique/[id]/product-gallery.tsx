@@ -14,7 +14,7 @@ export function ProductGallery({
 
   return (
     <div>
-      <div className="aspect-[3/4] w-full bg-zinc-50">
+      <div className="aspect-[3/4] w-full bg-zinc-50 dark:bg-zinc-900">
         {main ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={main.url} alt={alt} className="h-full w-full object-cover" />
@@ -37,8 +37,8 @@ export function ProductGallery({
               onClick={() => setSelected(index)}
               className={
                 index === selected
-                  ? "h-16 w-16 border-2 border-black"
-                  : "h-16 w-16 border border-zinc-200"
+                  ? "h-16 w-16 border-2 border-black dark:border-zinc-100"
+                  : "h-16 w-16 border border-zinc-200 dark:border-zinc-800"
               }
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}

@@ -81,7 +81,7 @@ export function ImageUploadField() {
         volumineuses sont automatiquement réduites avant l&apos;envoi.
       </p>
       {pending ? <p className="text-xs text-zinc-500">Envoi en cours…</p> : null}
-      {error ? <p className="text-xs text-red-600">{error}</p> : null}
+      {error ? <p className="text-xs text-red-600 dark:text-red-400">{error}</p> : null}
       {uploaded.length > 0 ? (
         <div className="flex flex-wrap gap-2">
           {uploaded.map((item) => (
@@ -96,7 +96,7 @@ export function ImageUploadField() {
                 type="button"
                 onClick={() => removeUploaded(item.path)}
                 aria-label={`Retirer ${item.filename}`}
-                className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center bg-black text-xs text-white"
+                className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center bg-black text-xs text-white dark:bg-zinc-100 dark:text-zinc-900"
               >
                 ×
               </button>

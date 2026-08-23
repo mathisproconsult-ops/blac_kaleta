@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { SubmitButton } from "@/components/submit-button";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 type LeafItem = { type: "link"; label: string; href: string; badge?: number };
 type GroupItem = {
@@ -125,11 +126,14 @@ export function AdminSidebar({
 
   const content = (
     <>
-      <div className="mb-10">
-        <p className="text-base font-bold tracking-wide">BLAC_KALETA</p>
-        <p className="text-xs uppercase tracking-widest text-zinc-400">
-          Admin dashboard
-        </p>
+      <div className="mb-10 flex items-start justify-between gap-2">
+        <div>
+          <p className="text-base font-bold tracking-wide">BLAC_KALETA</p>
+          <p className="text-xs uppercase tracking-widest text-zinc-400">
+            Admin dashboard
+          </p>
+        </div>
+        <ThemeToggle className="flex h-9 w-9 flex-none items-center justify-center rounded-full text-lg text-zinc-200 hover:bg-white/10" />
       </div>
       <NavLinks
         navItems={navItems}
@@ -156,23 +160,26 @@ export function AdminSidebar({
     <>
       <div className="flex items-center justify-between bg-[#111111] px-4 py-4 text-white lg:hidden">
         <p className="text-sm font-bold tracking-wide">BLAC_KALETA ADMIN</p>
-        <button
-          type="button"
-          aria-label={open ? "Fermer le menu" : "Ouvrir le menu"}
-          aria-expanded={open}
-          onClick={() => setOpen((value) => !value)}
-          className="flex h-9 w-9 flex-none items-center justify-center"
-        >
-          {open ? (
-            <span className="text-2xl leading-none">×</span>
-          ) : (
-            <span className="flex flex-col gap-1.5">
-              <span className="h-px w-6 bg-white" />
-              <span className="h-px w-6 bg-white" />
-              <span className="h-px w-6 bg-white" />
-            </span>
-          )}
-        </button>
+        <div className="flex items-center gap-1">
+          <ThemeToggle className="flex h-9 w-9 flex-none items-center justify-center rounded-full text-lg text-zinc-200 hover:bg-white/10" />
+          <button
+            type="button"
+            aria-label={open ? "Fermer le menu" : "Ouvrir le menu"}
+            aria-expanded={open}
+            onClick={() => setOpen((value) => !value)}
+            className="flex h-9 w-9 flex-none items-center justify-center"
+          >
+            {open ? (
+              <span className="text-2xl leading-none">×</span>
+            ) : (
+              <span className="flex flex-col gap-1.5">
+                <span className="h-px w-6 bg-white" />
+                <span className="h-px w-6 bg-white" />
+                <span className="h-px w-6 bg-white" />
+              </span>
+            )}
+          </button>
+        </div>
       </div>
 
       {open ? (

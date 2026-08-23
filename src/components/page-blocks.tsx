@@ -16,7 +16,7 @@ function renderBlock(block: PageBlock) {
     return (
       <p
         key={block.id}
-        className="max-w-2xl whitespace-pre-line text-sm leading-relaxed text-zinc-700"
+        className="max-w-2xl whitespace-pre-line text-sm leading-relaxed text-zinc-700 dark:text-zinc-300"
       >
         {block.content.text ?? ""}
       </p>

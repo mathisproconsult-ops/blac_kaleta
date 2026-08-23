@@ -125,7 +125,7 @@ export default async function BoutiqueCategoryPage({
             return (
               <div key={product.id} className="group mb-8 break-inside-avoid">
                 <Link href={`/boutique/${product.id}`}>
-                  <div className="relative w-full bg-zinc-50">
+                  <div className="relative w-full bg-zinc-50 dark:bg-zinc-900">
                     {image ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
@@ -154,7 +154,7 @@ export default async function BoutiqueCategoryPage({
                 </Link>
                 <div className="mt-1 flex items-center justify-between gap-2">
                   <div className="flex flex-col">
-                    <p className="text-sm text-zinc-600">
+                    <p className="text-sm text-zinc-600 dark:text-zinc-400">
                       {product.price !== null ? formatPrice(product.price) : "Sur demande"}
                     </p>
                     {product.price !== null ? (

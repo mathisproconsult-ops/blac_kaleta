@@ -20,7 +20,7 @@ export function Disclosure({
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className="bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
+        className="bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
       >
         {open ? closeLabel : label}
       </button>

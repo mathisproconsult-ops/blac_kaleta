@@ -71,7 +71,7 @@ export function ProductFields({
           name="title"
           required
           defaultValue={defaultValues?.title}
-          className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+          className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
         />
       </div>
       <div className="flex flex-col gap-1">
@@ -84,7 +84,7 @@ export function ProductFields({
           min="0"
           step="0.01"
           defaultValue={defaultValues?.price ?? undefined}
-          className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+          className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
         />
       </div>
       <div className="flex flex-col gap-1">
@@ -97,7 +97,7 @@ export function ProductFields({
           min="0"
           step="1"
           defaultValue={defaultValues?.stock ?? 0}
-          className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+          className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
         />
       </div>
       <div className="flex flex-col gap-1">
@@ -111,7 +111,7 @@ export function ProductFields({
           max="2100"
           step="1"
           defaultValue={defaultValues?.year ?? undefined}
-          className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+          className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
         />
       </div>
       <div className="flex flex-col gap-1">
@@ -121,7 +121,7 @@ export function ProductFields({
         <select
           name="technique_id"
           defaultValue={defaultValues?.technique_id ?? ""}
-          className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+          className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
         >
           <option value="">Aucune</option>
           {techniques.map((technique) => (
@@ -165,7 +165,7 @@ export function ProductFields({
           name="description"
           rows={3}
           defaultValue={defaultValues?.description ?? ""}
-          className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+          className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
         />
       </div>
       {optionGroups && optionGroups.length > 0 ? (

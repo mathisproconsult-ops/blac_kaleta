@@ -39,7 +39,7 @@ export function ProductRowActions({
             </form>
             <span>|</span>
             <form action={onDeletePermanently}>
-              <SubmitButton pendingText="…" className="text-red-600 hover:underline">
+              <SubmitButton pendingText="…" className="text-red-600 hover:underline dark:text-red-400">
                 Supprimer définitivement
               </SubmitButton>
             </form>

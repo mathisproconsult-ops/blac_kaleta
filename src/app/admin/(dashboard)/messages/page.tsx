@@ -39,7 +39,7 @@ export default async function MessagesPage() {
       </h1>
 
       {error ? (
-        <p className="mt-4 text-sm text-red-600">
+        <p className="mt-4 text-sm text-red-600 dark:text-red-400">
           Erreur de chargement : {error.message}
         </p>
       ) : null}
@@ -47,7 +47,7 @@ export default async function MessagesPage() {
       {messages.length === 0 ? (
         <p className="mt-8 text-sm text-zinc-500">Aucun message pour l&apos;instant.</p>
       ) : (
-        <ul className="mt-8 divide-y divide-zinc-100 border-t border-zinc-100">
+        <ul className="mt-8 divide-y divide-zinc-100 border-t border-zinc-100 dark:border-zinc-800">
           {messages.map((message) => (
             <li key={message.id} className="flex flex-wrap items-start gap-3 py-4">
               <div className="min-w-[200px] flex-1">
@@ -55,7 +55,7 @@ export default async function MessagesPage() {
                   {message.name}{" "}
                   <span className="font-normal text-zinc-500">— {message.email}</span>
                 </p>
-                <p className="mt-1 whitespace-pre-line text-sm text-zinc-700">
+                <p className="mt-1 whitespace-pre-line text-sm text-zinc-700 dark:text-zinc-300">
                   {message.message}
                 </p>
               </div>
@@ -63,7 +63,7 @@ export default async function MessagesPage() {
                 {dateFormatter.format(new Date(message.created_at))}
               </p>
               <form action={deleteContactMessage.bind(null, message.id)}>
-                <SubmitButton pendingText="Suppression…" className="text-sm text-red-600 hover:underline">
+                <SubmitButton pendingText="Suppression…" className="text-sm text-red-600 hover:underline dark:text-red-400">
                   Supprimer
                 </SubmitButton>
               </form>

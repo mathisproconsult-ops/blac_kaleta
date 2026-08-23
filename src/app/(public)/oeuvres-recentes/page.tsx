@@ -88,7 +88,7 @@ export default async function RecentWorksPage({
                 href={`/boutique/${work.id}`}
                 className="group mb-8 block break-inside-avoid"
               >
-                <div className="w-full bg-zinc-50">
+                <div className="w-full bg-zinc-50 dark:bg-zinc-900">
                   {image ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={image.url} alt={work.title} className="block h-auto w-full" />

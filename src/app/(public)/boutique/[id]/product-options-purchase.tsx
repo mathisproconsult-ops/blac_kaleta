@@ -138,7 +138,7 @@ export function ProductOptionsPurchase({
                     [group.id]: Number(event.target.value),
                   }))
                 }
-                className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
               >
                 {group.choices.map((choice) => (
                   <option key={choice.id} value={choice.id}>
@@ -181,7 +181,7 @@ export function ProductOptionsPurchase({
             <button
               type="button"
               onClick={handleRemove}
-              className="border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-50"
+              className="border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
             >
               Retirer du panier
             </button>
@@ -189,7 +189,7 @@ export function ProductOptionsPurchase({
             <button
               type="button"
               onClick={handleAdd}
-              className="bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
+              className="bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
             >
               Ajouter au panier
             </button>
@@ -206,13 +206,13 @@ export function ProductOptionsPurchase({
                   Math.max(1, Math.min(Number(event.target.value) || 1, Math.max(remaining, 1))),
                 )
               }
-              className="w-20 border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+              className="w-20 border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
             />
             <button
               type="button"
               onClick={handleAdd}
               disabled={remaining <= 0}
-              className="bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
+              className="bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
             >
               Ajouter au panier
             </button>

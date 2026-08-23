@@ -56,8 +56,8 @@ export function AddToCartControls({
         onClick={handleRemove}
         className={
           variant === "compact"
-            ? "border border-zinc-300 px-3 py-1 text-xs font-medium hover:bg-zinc-50"
-            : "border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-50"
+            ? "border border-zinc-300 px-3 py-1 text-xs font-medium hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
+            : "border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
         }
       >
         Retirer du panier
@@ -68,8 +68,8 @@ export function AddToCartControls({
         onClick={handleAdd}
         className={
           variant === "compact"
-            ? "bg-black px-3 py-1 text-xs font-medium text-white hover:bg-zinc-800"
-            : "bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
+            ? "bg-black px-3 py-1 text-xs font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
+            : "bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
         }
       >
         Ajouter au panier
@@ -85,7 +85,7 @@ export function AddToCartControls({
         type="button"
         onClick={handleAdd}
         disabled={remaining <= 0}
-        className="border border-zinc-300 px-3 py-1 text-xs font-medium hover:bg-zinc-50 disabled:opacity-40"
+        className="border border-zinc-300 px-3 py-1 text-xs font-medium hover:bg-zinc-50 disabled:opacity-40 dark:border-zinc-700 dark:hover:bg-zinc-900"
       >
         + Ajouter
       </button>
@@ -104,13 +104,13 @@ export function AddToCartControls({
             Math.max(1, Math.min(Number(event.target.value) || 1, Math.max(remaining, 1))),
           )
         }
-        className="w-20 border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+        className="w-20 border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
       />
       <button
         type="button"
         onClick={handleAdd}
         disabled={remaining <= 0}
-        className="bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
+        className="bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
       >
         Ajouter au panier
       </button>

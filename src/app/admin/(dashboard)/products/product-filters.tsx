@@ -47,7 +47,7 @@ export function ProductFilters({
         onChange={(event) =>
           router.push(withParam(searchParams, "categorie", event.target.value, "toutes"))
         }
-        className="border border-zinc-300 px-2 py-2 text-sm"
+        className="border border-zinc-300 px-2 py-2 text-sm dark:border-zinc-700"
       >
         <option value="toutes">Toutes les catégories</option>
         {categories.map((cat) => (
@@ -62,7 +62,7 @@ export function ProductFilters({
         onChange={(event) =>
           router.push(withParam(searchParams, "stock", event.target.value, "tous"))
         }
-        className="border border-zinc-300 px-2 py-2 text-sm"
+        className="border border-zinc-300 px-2 py-2 text-sm dark:border-zinc-700"
       >
         {STOCK_OPTIONS.map((option) => (
           <option key={option.value} value={option.value}>
@@ -82,11 +82,11 @@ export function ProductFilters({
           value={searchValue}
           onChange={(event) => setSearchValue(event.target.value)}
           placeholder="Rechercher des produits"
-          className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+          className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
         />
         <button
           type="submit"
-          className="border border-zinc-300 px-3 py-2 text-sm hover:bg-zinc-50"
+          className="border border-zinc-300 px-3 py-2 text-sm hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
         >
           Rechercher
         </button>

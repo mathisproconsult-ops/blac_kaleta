@@ -29,7 +29,7 @@ export default async function BoutiquePage() {
             href={`/boutique/categorie/${category.id}`}
             className="group"
           >
-            <div className="relative aspect-square w-full overflow-hidden bg-zinc-50">
+            <div className="relative aspect-square w-full overflow-hidden bg-zinc-50 dark:bg-zinc-900">
               {category.cover_image_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -47,7 +47,7 @@ export default async function BoutiquePage() {
                 />
               )}
               <div className="absolute inset-0 flex items-center justify-center bg-black/10">
-                <p className="bg-white px-4 py-2 text-center text-sm font-medium uppercase tracking-wide">
+                <p className="bg-white px-4 py-2 text-center text-sm font-medium uppercase tracking-wide dark:bg-zinc-900">
                   {category.name}
                 </p>
               </div>

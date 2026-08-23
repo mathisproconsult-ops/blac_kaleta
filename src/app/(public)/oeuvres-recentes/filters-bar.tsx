@@ -33,7 +33,7 @@ export function FiltersBar({
       <select
         defaultValue={current.annee ?? ""}
         onChange={(event) => updateParam("annee", event.target.value)}
-        className="border border-zinc-300 px-2 py-1 text-sm"
+        className="border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-700"
       >
         <option value="">Toutes les années</option>
         {years.map((year) => (
@@ -45,7 +45,7 @@ export function FiltersBar({
       <select
         defaultValue={current.technique ?? ""}
         onChange={(event) => updateParam("technique", event.target.value)}
-        className="border border-zinc-300 px-2 py-1 text-sm"
+        className="border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-700"
       >
         <option value="">Toutes les techniques</option>
         {techniques.map((technique) => (

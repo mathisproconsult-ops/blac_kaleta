@@ -20,7 +20,7 @@ export function CartView() {
 
   return (
     <>
-      <ul className="mt-8 divide-y divide-zinc-100 border-t border-zinc-100">
+      <ul className="mt-8 divide-y divide-zinc-100 border-t border-zinc-100 dark:border-zinc-800">
         {items.map((item, index) => (
           <li
             key={`${item.productId}-${index}`}
@@ -34,7 +34,7 @@ export function CartView() {
                 className="h-16 w-16 flex-none object-cover"
               />
             ) : (
-              <div className="h-16 w-16 flex-none bg-zinc-100" />
+              <div className="h-16 w-16 flex-none bg-zinc-100 dark:bg-zinc-800" />
             )}
             <div className="min-w-[140px] flex-1">
               <Link
@@ -61,10 +61,10 @@ export function CartView() {
                 onChange={(event) =>
                   setQuantity(item.productId, Number(event.target.value) || 1, item.selectedOptions)
                 }
-                className="w-16 border border-zinc-300 px-2 py-1 text-sm focus:border-black focus:outline-none"
+                className="w-16 border border-zinc-300 px-2 py-1 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
               />
             ) : (
-              <p className="text-sm text-zinc-600">Qté : 1</p>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">Qté : 1</p>
             )}
             <p className="w-24 text-right text-sm font-medium">
               {item.price !== null
@@ -74,7 +74,7 @@ export function CartView() {
             <button
               type="button"
               onClick={() => removeItem(item.productId, item.selectedOptions)}
-              className="text-sm text-red-600 hover:underline"
+              className="text-sm text-red-600 hover:underline dark:text-red-400"
             >
               Retirer
             </button>
@@ -82,11 +82,11 @@ export function CartView() {
         ))}
       </ul>
 
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-zinc-200 pt-6">
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-zinc-200 pt-6 dark:border-zinc-800">
         <p className="text-lg font-semibold">Total : {formatPrice(subtotal)}</p>
         <Link
           href="/panier/commande"
-          className="bg-black px-6 py-3 text-sm font-medium text-white hover:bg-zinc-800"
+          className="bg-black px-6 py-3 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
         >
           Passer la commande
         </Link>

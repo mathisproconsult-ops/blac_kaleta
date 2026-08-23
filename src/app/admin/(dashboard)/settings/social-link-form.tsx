@@ -30,7 +30,7 @@ export function SocialLinkForm() {
             defaultValue=""
             required
             autoComplete="off"
-            className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+            className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
           >
             <option value="" disabled>
               Choisir…
@@ -54,23 +54,23 @@ export function SocialLinkForm() {
             spellCheck={false}
             placeholder="https://..."
             required
-            className="w-full border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+            className="w-full border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
           />
         </div>
         <SubmitButton
           pendingText="Ajout…"
-          className="bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
+          className="bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
         >
           + Ajouter
         </SubmitButton>
       </form>
       <div aria-live="polite">
         {state.error ? (
-          <p className="border border-red-300 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+          <p className="border border-red-300 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300">
             ⚠ {state.error}
           </p>
         ) : state.success ? (
-          <p className="border border-green-300 bg-green-50 px-3 py-2 text-sm font-medium text-green-700">
+          <p className="border border-green-300 bg-green-50 px-3 py-2 text-sm font-medium text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-300">
             ✓ Réseau ajouté.
           </p>
         ) : null}

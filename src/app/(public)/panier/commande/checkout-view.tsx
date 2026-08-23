@@ -19,7 +19,7 @@ export function CheckoutView() {
 
   if (state.success) {
     return (
-      <p className="mt-8 border border-zinc-300 px-4 py-3 text-sm">
+      <p className="mt-8 border border-zinc-300 px-4 py-3 text-sm dark:border-zinc-700">
         Votre commande a bien été reçue, nous vous recontactons pour le
         paiement.
       </p>
@@ -54,7 +54,7 @@ export function CheckoutView() {
           <input
             name="name"
             required
-            className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+            className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
           />
         </div>
         <div className="flex flex-col gap-1">
@@ -63,7 +63,7 @@ export function CheckoutView() {
             name="email"
             type="email"
             required
-            className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+            className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
           />
         </div>
         <div className="flex flex-col gap-1">
@@ -72,7 +72,7 @@ export function CheckoutView() {
           </label>
           <input
             name="phone"
-            className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+            className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
           />
         </div>
         <div className="flex flex-col gap-1">
@@ -82,14 +82,14 @@ export function CheckoutView() {
           <textarea
             name="address"
             rows={2}
-            className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+            className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
           />
         </div>
-        {state.error ? <p className="text-sm text-red-600">{state.error}</p> : null}
+        {state.error ? <p className="text-sm text-red-600 dark:text-red-400">{state.error}</p> : null}
         <button
           type="submit"
           disabled={pending}
-          className="self-start bg-black px-6 py-3 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
+          className="self-start bg-black px-6 py-3 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
         >
           {pending ? "Envoi…" : "Confirmer la commande"}
         </button>
@@ -100,7 +100,7 @@ export function CheckoutView() {
 
       <div>
         <h2 className="text-sm font-semibold uppercase tracking-wide">Récapitulatif</h2>
-        <ul className="mt-4 divide-y divide-zinc-100 border-t border-zinc-100">
+        <ul className="mt-4 divide-y divide-zinc-100 border-t border-zinc-100 dark:border-zinc-800">
           {items.map((item, index) => (
             <li
               key={`${item.productId}-${index}`}
@@ -123,7 +123,7 @@ export function CheckoutView() {
             </li>
           ))}
         </ul>
-        <div className="mt-4 flex items-center justify-between border-t border-zinc-200 pt-4">
+        <div className="mt-4 flex items-center justify-between border-t border-zinc-200 pt-4 dark:border-zinc-800">
           <p className="text-sm font-semibold uppercase tracking-wide">Total</p>
           <p className="text-lg font-semibold">{formatPrice(subtotal)}</p>
         </div>

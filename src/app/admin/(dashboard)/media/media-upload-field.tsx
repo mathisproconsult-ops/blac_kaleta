@@ -72,7 +72,7 @@ export function MediaUploadField() {
         volumineuses sont automatiquement réduites avant l&apos;envoi.
       </p>
       {pending ? <p className="text-xs text-zinc-500">Envoi en cours…</p> : null}
-      {error ? <p className="text-xs text-red-600">{error}</p> : null}
+      {error ? <p className="text-xs text-red-600 dark:text-red-400">{error}</p> : null}
       {uploaded.length > 0 ? (
         <p className="text-xs text-zinc-500">
           {uploaded.length} fichier(s) prêt(s) — clique sur « Ajouter à la

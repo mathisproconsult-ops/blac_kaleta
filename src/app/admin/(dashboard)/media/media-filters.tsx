@@ -49,7 +49,7 @@ export function MediaFilters({
         onChange={(event) =>
           router.push(withParam(searchParams, "type", event.target.value, "tous"))
         }
-        className="border border-zinc-300 px-2 py-2 text-sm"
+        className="border border-zinc-300 px-2 py-2 text-sm dark:border-zinc-700"
       >
         {KIND_OPTIONS.map((option) => (
           <option key={option.value} value={option.value}>
@@ -63,7 +63,7 @@ export function MediaFilters({
         onChange={(event) =>
           router.push(withParam(searchParams, "date", event.target.value, "toutes"))
         }
-        className="border border-zinc-300 px-2 py-2 text-sm"
+        className="border border-zinc-300 px-2 py-2 text-sm dark:border-zinc-700"
       >
         <option value="toutes">Toutes les dates</option>
         {dateOptions.map((option) => (
@@ -84,11 +84,11 @@ export function MediaFilters({
           value={searchValue}
           onChange={(event) => setSearchValue(event.target.value)}
           placeholder="Rechercher des médias"
-          className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+          className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
         />
         <button
           type="submit"
-          className="border border-zinc-300 px-3 py-2 text-sm hover:bg-zinc-50"
+          className="border border-zinc-300 px-3 py-2 text-sm hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
         >
           Rechercher
         </button>
@@ -101,14 +101,14 @@ export function MediaViewToggle({ view }: { view: "grille" | "liste" }) {
   const searchParams = useSearchParams();
 
   return (
-    <div className="flex items-center border border-zinc-300 text-sm">
+    <div className="flex items-center border border-zinc-300 text-sm dark:border-zinc-700">
       <Link
         href={withParam(searchParams, "vue", "grille", "grille")}
         aria-label="Vue grille"
         className={
           view === "grille"
-            ? "bg-black px-3 py-2 text-white"
-            : "px-3 py-2 text-zinc-500 hover:text-black"
+            ? "bg-black px-3 py-2 text-white dark:bg-zinc-100 dark:text-zinc-900"
+            : "px-3 py-2 text-zinc-500 hover:text-black dark:hover:text-zinc-100"
         }
       >
         Grille
@@ -118,8 +118,8 @@ export function MediaViewToggle({ view }: { view: "grille" | "liste" }) {
         aria-label="Vue liste"
         className={
           view === "liste"
-            ? "bg-black px-3 py-2 text-white"
-            : "px-3 py-2 text-zinc-500 hover:text-black"
+            ? "bg-black px-3 py-2 text-white dark:bg-zinc-100 dark:text-zinc-900"
+            : "px-3 py-2 text-zinc-500 hover:text-black dark:hover:text-zinc-100"
         }
       >
         Liste

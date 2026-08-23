@@ -68,7 +68,7 @@ export default async function SettingsPage() {
         <SocialLinkForm />
 
         {socialLinksError ? (
-          <p className="text-sm text-red-600">
+          <p className="text-sm text-red-600 dark:text-red-400">
             Erreur de chargement : {socialLinksError.message}
           </p>
         ) : null}
@@ -76,7 +76,7 @@ export default async function SettingsPage() {
         {socialLinks.length === 0 ? (
           <p className="text-sm text-zinc-500">Aucun réseau ajouté pour l&apos;instant.</p>
         ) : (
-          <ul className="divide-y divide-zinc-100 border-y border-zinc-100">
+          <ul className="divide-y divide-zinc-100 border-y border-zinc-100 dark:border-zinc-800">
             {socialLinks.map((link, index) => (
               <li key={link.id} className="py-3">
                 <form
@@ -88,7 +88,7 @@ export default async function SettingsPage() {
                       formAction={moveSocialLink.bind(null, link.id, "up")}
                       disabled={index === 0}
                       aria-label="Monter"
-                      className="text-xs text-zinc-500 hover:text-black disabled:opacity-20"
+                      className="text-xs text-zinc-500 hover:text-black disabled:opacity-20 dark:hover:text-zinc-100"
                     >
                       ▲
                     </SubmitButton>
@@ -96,7 +96,7 @@ export default async function SettingsPage() {
                       formAction={moveSocialLink.bind(null, link.id, "down")}
                       disabled={index === socialLinks.length - 1}
                       aria-label="Descendre"
-                      className="text-xs text-zinc-500 hover:text-black disabled:opacity-20"
+                      className="text-xs text-zinc-500 hover:text-black disabled:opacity-20 dark:hover:text-zinc-100"
                     >
                       ▼
                     </SubmitButton>
@@ -104,7 +104,7 @@ export default async function SettingsPage() {
                   <select
                     name="platform"
                     defaultValue={link.platform}
-                    className="flex-none border border-zinc-300 px-2 py-2 text-sm focus:border-black focus:outline-none"
+                    className="flex-none border border-zinc-300 px-2 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
                   >
                     {SOCIAL_PLATFORMS.map((platform) => (
                       <option key={platform.key} value={platform.key}>
@@ -117,18 +117,18 @@ export default async function SettingsPage() {
                     type="url"
                     autoComplete="off"
                     defaultValue={link.url}
-                    className="min-w-0 flex-1 border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                    className="min-w-0 flex-1 border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
                   />
                   <SubmitButton
                     pendingText="Enregistrement…"
-                    className="flex-none text-sm text-zinc-600 hover:underline"
+                    className="flex-none text-sm text-zinc-600 hover:underline dark:text-zinc-400"
                   >
                     Enregistrer
                   </SubmitButton>
                   <SubmitButton
                     formAction={deleteSocialLink.bind(null, link.id)}
                     pendingText="Suppression…"
-                    className="flex-none text-sm text-red-600 hover:underline"
+                    className="flex-none text-sm text-red-600 hover:underline dark:text-red-400"
                   >
                     Supprimer
                   </SubmitButton>
@@ -152,7 +152,7 @@ export default async function SettingsPage() {
               name="shop_name"
               defaultValue={settings.shop_name}
               required
-              className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+              className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
             />
           </div>
           <div className="flex flex-col gap-1">
@@ -164,7 +164,7 @@ export default async function SettingsPage() {
               type="email"
               defaultValue={settings.contact_email}
               required
-              className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+              className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
             />
           </div>
           <div className="flex flex-col gap-2">
@@ -181,7 +181,7 @@ export default async function SettingsPage() {
             ) : null}
             <input type="file" name="logo" accept="image/*" className="text-sm" />
             {settings.header_logo_url ? (
-              <label className="flex items-center gap-2 text-sm text-red-600">
+              <label className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
                 <input type="checkbox" name="remove_logo" />
                 Supprimer le logo actuel
               </label>
@@ -205,7 +205,7 @@ export default async function SettingsPage() {
             <input
               disabled
               value={`1 € = ${EUR_XOF_RATE} FCFA`}
-              className="border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-500"
+              className="border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900"
             />
           </div>
           <div className="flex flex-col gap-1">
@@ -219,7 +219,7 @@ export default async function SettingsPage() {
               step="0.01"
               defaultValue={settings.usd_rate}
               required
-              className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+              className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
             />
           </div>
         </fieldset>
@@ -248,7 +248,7 @@ export default async function SettingsPage() {
 
         <SubmitButton
           pendingText="Enregistrement…"
-          className="self-start bg-black px-6 py-3 text-sm font-medium text-white hover:bg-zinc-800"
+          className="self-start bg-black px-6 py-3 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
         >
           Enregistrer
         </SubmitButton>

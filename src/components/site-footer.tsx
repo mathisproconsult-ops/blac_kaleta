@@ -10,7 +10,7 @@ export function SiteFooter({
   links: FooterLink[];
 }) {
   return (
-    <footer className="flex flex-col items-center gap-3 border-t border-zinc-100 px-4 py-6 text-center text-sm text-zinc-500 sm:flex-row sm:justify-between sm:px-6 sm:text-left lg:px-10">
+    <footer className="flex flex-col items-center gap-3 border-t border-zinc-100 px-4 py-6 text-center text-sm text-zinc-500 sm:flex-row sm:justify-between sm:px-6 sm:text-left lg:px-10 dark:border-zinc-800">
       <p>{copyrightText}</p>
       <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
         {links.map((link) => (

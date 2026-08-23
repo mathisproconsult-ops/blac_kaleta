@@ -10,7 +10,7 @@ export function CartIcon() {
     <Link href="/panier" aria-label="Panier" className="relative text-lg">
       🛒
       {totalCount > 0 ? (
-        <span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-black px-1 text-[10px] font-medium text-white">
+        <span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-black px-1 text-[10px] font-medium text-white dark:bg-zinc-100 dark:text-zinc-900">
           {totalCount}
         </span>
       ) : null}

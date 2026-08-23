@@ -53,14 +53,14 @@ export default async function OptionsPage() {
   return (
     <div>
       <h1 className="text-2xl font-semibold uppercase tracking-wide">Options</h1>
-      <p className="mt-2 max-w-2xl text-sm text-zinc-600">
+      <p className="mt-2 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
         Crée des groupes d&apos;options réutilisables (ex: Dimensions, Format,
         Encadrement) puis choisis lesquels s&apos;appliquent à chaque produit
         depuis sa fiche.
       </p>
 
       {error ? (
-        <p className="mt-4 text-sm text-red-600">Erreur de chargement : {error.message}</p>
+        <p className="mt-4 text-sm text-red-600 dark:text-red-400">Erreur de chargement : {error.message}</p>
       ) : null}
 
       <form action={createOptionGroup} className="mt-6 flex flex-wrap items-end gap-3">
@@ -72,7 +72,7 @@ export default async function OptionsPage() {
             name="name"
             placeholder="Ex: Dimensions"
             required
-            className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+            className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
           />
         </div>
         <div className="flex flex-col gap-1">
@@ -82,7 +82,7 @@ export default async function OptionsPage() {
           <select
             name="selection_type"
             defaultValue="single"
-            className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+            className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
           >
             <option value="single">Choix unique (liste déroulante)</option>
             <option value="multiple">Choix multiples (cases à cocher, prix cumulés)</option>
@@ -90,7 +90,7 @@ export default async function OptionsPage() {
         </div>
         <SubmitButton
           pendingText="Ajout…"
-          className="bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
+          className="bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
         >
           + Créer le groupe
         </SubmitButton>
@@ -101,14 +101,14 @@ export default async function OptionsPage() {
       ) : (
         <ul className="mt-8 flex flex-col gap-4">
           {groups.map((group, index) => (
-            <li key={group.id} className="border border-zinc-200 bg-white p-4">
+            <li key={group.id} className="border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
               <div className="flex flex-wrap items-center gap-3">
                 <div className="flex flex-col">
                   <SubmitButton
                     formAction={moveOptionGroup.bind(null, group.id, "up")}
                     disabled={index === 0}
                     aria-label="Monter"
-                    className="text-xs text-zinc-500 hover:text-black disabled:opacity-20"
+                    className="text-xs text-zinc-500 hover:text-black disabled:opacity-20 dark:hover:text-zinc-100"
                   >
                     ▲
                   </SubmitButton>
@@ -116,7 +116,7 @@ export default async function OptionsPage() {
                     formAction={moveOptionGroup.bind(null, group.id, "down")}
                     disabled={index === groups.length - 1}
                     aria-label="Descendre"
-                    className="text-xs text-zinc-500 hover:text-black disabled:opacity-20"
+                    className="text-xs text-zinc-500 hover:text-black disabled:opacity-20 dark:hover:text-zinc-100"
                   >
                     ▼
                   </SubmitButton>
@@ -128,19 +128,19 @@ export default async function OptionsPage() {
                   <input
                     name="name"
                     defaultValue={group.name}
-                    className="max-w-xs flex-1 border border-transparent px-2 py-1 text-sm font-medium hover:border-zinc-300 focus:border-black focus:outline-none"
+                    className="max-w-xs flex-1 border border-transparent px-2 py-1 text-sm font-medium hover:border-zinc-300 focus:border-black focus:outline-none dark:hover:border-zinc-600 dark:focus:border-zinc-100"
                   />
                   <select
                     name="selection_type"
                     defaultValue={group.selection_type}
-                    className="border border-zinc-300 px-2 py-1 text-xs focus:border-black focus:outline-none"
+                    className="border border-zinc-300 px-2 py-1 text-xs focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
                   >
                     <option value="single">Choix unique</option>
                     <option value="multiple">Choix multiples</option>
                   </select>
                   <SubmitButton
                     pendingText="Enregistrement…"
-                    className="text-sm text-zinc-600 hover:underline"
+                    className="text-sm text-zinc-600 hover:underline dark:text-zinc-400"
                   >
                     Enregistrer
                   </SubmitButton>
@@ -148,7 +148,7 @@ export default async function OptionsPage() {
                 <form action={deleteOptionGroup.bind(null, group.id)}>
                   <SubmitButton
                     pendingText="Suppression…"
-                    className="text-sm text-red-600 hover:underline"
+                    className="text-sm text-red-600 hover:underline dark:text-red-400"
                   >
                     Supprimer le groupe
                   </SubmitButton>
@@ -159,7 +159,7 @@ export default async function OptionsPage() {
                 {group.option_choices.length === 0 ? (
                   <p className="text-sm text-zinc-500">Aucun choix dans ce groupe.</p>
                 ) : (
-                  <ul className="divide-y divide-zinc-100 border-y border-zinc-100">
+                  <ul className="divide-y divide-zinc-100 border-y border-zinc-100 dark:border-zinc-800">
                     {group.option_choices.map((choice, choiceIndex) => (
                       <li key={choice.id} className="py-3">
                         <form
@@ -171,7 +171,7 @@ export default async function OptionsPage() {
                               formAction={moveOptionChoice.bind(null, group.id, choice.id, "up")}
                               disabled={choiceIndex === 0}
                               aria-label="Monter"
-                              className="text-xs text-zinc-500 hover:text-black disabled:opacity-20"
+                              className="text-xs text-zinc-500 hover:text-black disabled:opacity-20 dark:hover:text-zinc-100"
                             >
                               ▲
                             </SubmitButton>
@@ -179,7 +179,7 @@ export default async function OptionsPage() {
                               formAction={moveOptionChoice.bind(null, group.id, choice.id, "down")}
                               disabled={choiceIndex === group.option_choices.length - 1}
                               aria-label="Descendre"
-                              className="text-xs text-zinc-500 hover:text-black disabled:opacity-20"
+                              className="text-xs text-zinc-500 hover:text-black disabled:opacity-20 dark:hover:text-zinc-100"
                             >
                               ▼
                             </SubmitButton>
@@ -189,7 +189,7 @@ export default async function OptionsPage() {
                             defaultValue={choice.label}
                             placeholder="Libellé (ex: 30x40 cm)"
                             required
-                            className="max-w-[180px] flex-1 border border-zinc-300 px-2 py-1 text-sm focus:border-black focus:outline-none"
+                            className="max-w-[180px] flex-1 border border-zinc-300 px-2 py-1 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
                           />
                           <input
                             name="price_delta"
@@ -197,26 +197,26 @@ export default async function OptionsPage() {
                             step="0.01"
                             defaultValue={choice.price_delta}
                             title="Impact sur le prix (FCFA)"
-                            className="w-28 border border-zinc-300 px-2 py-1 text-sm focus:border-black focus:outline-none"
+                            className="w-28 border border-zinc-300 px-2 py-1 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
                           />
                           <select
                             name="delivery_nature"
                             defaultValue={choice.delivery_nature}
-                            className="border border-zinc-300 px-2 py-1 text-xs focus:border-black focus:outline-none"
+                            className="border border-zinc-300 px-2 py-1 text-xs focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
                           >
                             <option value="physical">Physique</option>
                             <option value="digital">Numérique</option>
                           </select>
                           <SubmitButton
                             pendingText="Enregistrement…"
-                            className="text-sm text-zinc-600 hover:underline"
+                            className="text-sm text-zinc-600 hover:underline dark:text-zinc-400"
                           >
                             Enregistrer
                           </SubmitButton>
                           <SubmitButton
                             formAction={deleteOptionChoice.bind(null, choice.id)}
                             pendingText="Suppression…"
-                            className="text-sm text-red-600 hover:underline"
+                            className="text-sm text-red-600 hover:underline dark:text-red-400"
                           >
                             Supprimer
                           </SubmitButton>
@@ -232,7 +232,7 @@ export default async function OptionsPage() {
                                 >
                                   {choice.digital_file_name ?? "Fichier PDF"}
                                 </a>
-                                <label className="flex items-center gap-1 text-red-600">
+                                <label className="flex items-center gap-1 text-red-600 dark:text-red-400">
                                   <input type="checkbox" name="remove_digital_file" />
                                   Retirer
                                 </label>
@@ -257,7 +257,7 @@ export default async function OptionsPage() {
                 <Disclosure label="+ Ajouter un choix" closeLabel="Annuler" className="mt-3">
                   <form
                     action={createOptionChoice.bind(null, group.id)}
-                    className="flex flex-col gap-3 border border-zinc-200 bg-zinc-50 p-4"
+                    className="flex flex-col gap-3 border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900"
                   >
                     <div className="flex flex-wrap gap-3">
                       <div className="flex flex-col gap-1">
@@ -268,7 +268,7 @@ export default async function OptionsPage() {
                           name="label"
                           placeholder="Ex: 30x40 cm"
                           required
-                          className="border border-zinc-300 px-2 py-1 text-sm focus:border-black focus:outline-none"
+                          className="border border-zinc-300 px-2 py-1 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
                         />
                       </div>
                       <div className="flex flex-col gap-1">
@@ -280,7 +280,7 @@ export default async function OptionsPage() {
                           type="number"
                           step="0.01"
                           defaultValue={0}
-                          className="w-32 border border-zinc-300 px-2 py-1 text-sm focus:border-black focus:outline-none"
+                          className="w-32 border border-zinc-300 px-2 py-1 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
                         />
                       </div>
                       <div className="flex flex-col gap-1">
@@ -290,7 +290,7 @@ export default async function OptionsPage() {
                         <select
                           name="delivery_nature"
                           defaultValue="physical"
-                          className="border border-zinc-300 px-2 py-1 text-sm focus:border-black focus:outline-none"
+                          className="border border-zinc-300 px-2 py-1 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
                         >
                           <option value="physical">Physique</option>
                           <option value="digital">Numérique</option>
@@ -305,7 +305,7 @@ export default async function OptionsPage() {
                     </div>
                     <SubmitButton
                       pendingText="Ajout…"
-                      className="self-start bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
+                      className="self-start bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
                     >
                       Ajouter le choix
                     </SubmitButton>

@@ -131,7 +131,7 @@ export default async function EditProductPage({
                 <SubmitButton
                   pendingText="…"
                   aria-label="Supprimer la photo"
-                  className="flex h-5 w-5 items-center justify-center bg-black text-xs text-white"
+                  className="flex h-5 w-5 items-center justify-center bg-black text-xs text-white dark:bg-zinc-100 dark:text-zinc-900"
                 >
                   ×
                 </SubmitButton>
@@ -143,7 +143,7 @@ export default async function EditProductPage({
 
       <form
         action={updateProduct.bind(null, product.id)}
-        className="mt-6 flex flex-col gap-4 border border-zinc-200 bg-white p-6"
+        className="mt-6 flex flex-col gap-4 border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900"
       >
         <ProductFields
           categories={categories ?? []}
@@ -166,7 +166,7 @@ export default async function EditProductPage({
         />
         <SubmitButton
           pendingText="Enregistrement…"
-          className="self-start bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
+          className="self-start bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
         >
           Enregistrer les modifications
         </SubmitButton>

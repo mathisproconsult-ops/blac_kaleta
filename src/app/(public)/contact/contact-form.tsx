@@ -13,7 +13,7 @@ export function ContactForm() {
 
   if (state.success) {
     return (
-      <p className="mt-6 border border-zinc-300 px-4 py-3 text-sm">
+      <p className="mt-6 border border-zinc-300 px-4 py-3 text-sm dark:border-zinc-700">
         Merci, votre message a bien été envoyé.
       </p>
     );
@@ -25,27 +25,27 @@ export function ContactForm() {
         name="name"
         placeholder="Nom"
         required
-        className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+        className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
       />
       <input
         name="email"
         type="email"
         placeholder="Email"
         required
-        className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+        className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
       />
       <textarea
         name="message"
         placeholder="Message"
         rows={5}
         required
-        className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+        className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
       />
-      {state.error ? <p className="text-sm text-red-600">{state.error}</p> : null}
+      {state.error ? <p className="text-sm text-red-600 dark:text-red-400">{state.error}</p> : null}
       <button
         type="submit"
         disabled={pending}
-        className="self-start bg-black px-6 py-3 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
+        className="self-start bg-black px-6 py-3 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
       >
         {pending ? "Envoi..." : "Envoyer"}
       </button>

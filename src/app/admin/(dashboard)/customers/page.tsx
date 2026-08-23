@@ -61,7 +61,7 @@ export default async function CustomersPage() {
       </h1>
 
       {error ? (
-        <p className="mt-4 text-sm text-red-600">
+        <p className="mt-4 text-sm text-red-600 dark:text-red-400">
           Erreur de chargement : {error.message}
         </p>
       ) : null}
@@ -72,7 +72,7 @@ export default async function CustomersPage() {
         <div className="mt-8 overflow-x-auto">
           <table className="w-full min-w-[480px] text-left text-sm">
             <thead>
-              <tr className="border-b border-zinc-200 text-xs uppercase tracking-wide text-zinc-500">
+              <tr className="border-b border-zinc-200 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800">
                 <th className="py-2 pr-4">Nom</th>
                 <th className="py-2 pr-4">Email</th>
                 <th className="py-2 pr-4">Commandes</th>
@@ -81,9 +81,9 @@ export default async function CustomersPage() {
             </thead>
             <tbody>
               {customers.map((customer) => (
-                <tr key={customer.email} className="border-b border-zinc-100">
+                <tr key={customer.email} className="border-b border-zinc-100 dark:border-zinc-800">
                   <td className="py-3 pr-4">{customer.name}</td>
-                  <td className="py-3 pr-4 text-zinc-600">{customer.email}</td>
+                  <td className="py-3 pr-4 text-zinc-600 dark:text-zinc-400">{customer.email}</td>
                   <td className="py-3 pr-4">{customer.orderCount}</td>
                   <td className="py-3">{formatPrice(customer.totalSpent)}</td>
                 </tr>

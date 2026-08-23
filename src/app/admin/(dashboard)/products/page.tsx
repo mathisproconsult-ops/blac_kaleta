@@ -127,7 +127,7 @@ export default async function ProductsPage({
           {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- téléchargement de fichier, pas une navigation */}
           <a
             href="/admin/products/export"
-            className="border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-50"
+            className="border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
           >
             Exporter en CSV
           </a>
@@ -136,7 +136,7 @@ export default async function ProductsPage({
           </Disclosure>
           <Link
             href="/admin/products/nouveau"
-            className="bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
+            className="bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
           >
             + Ajouter un produit
           </Link>
@@ -146,19 +146,19 @@ export default async function ProductsPage({
       <div className="mt-4 flex flex-wrap items-center gap-4 text-sm">
         <Link
           href="/admin/products"
-          className={!isTrashView ? "font-semibold underline" : "text-zinc-600 hover:underline"}
+          className={!isTrashView ? "font-semibold underline" : "text-zinc-600 hover:underline dark:text-zinc-400"}
         >
           Tous ({allCount ?? 0})
         </Link>
         <Link
           href="/admin/products"
-          className={!isTrashView ? "font-semibold underline" : "text-zinc-600 hover:underline"}
+          className={!isTrashView ? "font-semibold underline" : "text-zinc-600 hover:underline dark:text-zinc-400"}
         >
           Publiés ({allCount ?? 0})
         </Link>
         <Link
           href="/admin/products?statut=corbeille"
-          className={isTrashView ? "font-semibold underline" : "text-zinc-600 hover:underline"}
+          className={isTrashView ? "font-semibold underline" : "text-zinc-600 hover:underline dark:text-zinc-400"}
         >
           Corbeille ({trashCount ?? 0})
         </Link>
@@ -174,7 +174,7 @@ export default async function ProductsPage({
       </div>
 
       {error ? (
-        <p className="mt-4 text-sm text-red-600">Erreur de chargement : {error.message}</p>
+        <p className="mt-4 text-sm text-red-600 dark:text-red-400">Erreur de chargement : {error.message}</p>
       ) : null}
 
       {productList.length === 0 ? (
@@ -187,7 +187,7 @@ export default async function ProductsPage({
               name="bulk_action"
               form="bulk-products-form"
               defaultValue=""
-              className="border border-zinc-300 px-2 py-2 text-sm"
+              className="border border-zinc-300 px-2 py-2 text-sm dark:border-zinc-700"
             >
               <option value="" disabled>
                 Actions groupées
@@ -204,7 +204,7 @@ export default async function ProductsPage({
             <button
               type="submit"
               form="bulk-products-form"
-              className="border border-zinc-300 px-3 py-2 text-sm hover:bg-zinc-50"
+              className="border border-zinc-300 px-3 py-2 text-sm hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
             >
               Appliquer
             </button>
@@ -213,7 +213,7 @@ export default async function ProductsPage({
           <div className="mt-4 overflow-x-auto">
             <table className="w-full min-w-[720px] text-left text-sm">
               <thead>
-                <tr className="border-b border-zinc-200 text-xs uppercase tracking-wide text-zinc-500">
+                <tr className="border-b border-zinc-200 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800">
                   <th className="py-2 pr-2">
                     <SelectAllCheckbox formId="bulk-products-form" />
                   </th>
@@ -239,8 +239,8 @@ export default async function ProductsPage({
                     key={product.id}
                     className={
                       product.is_visible
-                        ? "group border-b border-zinc-100 align-top"
-                        : "group border-b border-zinc-100 align-top opacity-50"
+                        ? "group border-b border-zinc-100 align-top dark:border-zinc-800"
+                        : "group border-b border-zinc-100 align-top opacity-50 dark:border-zinc-800"
                     }
                   >
                     <td className="py-3 pr-2">
@@ -262,7 +262,7 @@ export default async function ProductsPage({
                           className="h-12 w-12 object-cover"
                         />
                       ) : (
-                        <div className="h-12 w-12 bg-zinc-100" />
+                        <div className="h-12 w-12 bg-zinc-100 dark:bg-zinc-800" />
                       )}
                     </td>
                     <td className="py-3 pr-4">
@@ -333,7 +333,7 @@ function QuickEditForm({ product }: { product: ProductRow }) {
   return (
     <form
       action={quickUpdateProduct.bind(null, product.id)}
-      className="flex flex-wrap items-end gap-3 border border-zinc-200 bg-white p-4"
+      className="flex flex-wrap items-end gap-3 border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
     >
       <div className="flex flex-col gap-1">
         <label className="text-xs uppercase tracking-wide text-zinc-500">Titre</label>
@@ -341,7 +341,7 @@ function QuickEditForm({ product }: { product: ProductRow }) {
           name="title"
           defaultValue={product.title}
           required
-          className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+          className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
         />
       </div>
       <div className="flex flex-col gap-1">
@@ -354,7 +354,7 @@ function QuickEditForm({ product }: { product: ProductRow }) {
           min="0"
           step="0.01"
           defaultValue={product.price ?? undefined}
-          className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+          className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
         />
       </div>
       <div className="flex flex-col gap-1">
@@ -365,7 +365,7 @@ function QuickEditForm({ product }: { product: ProductRow }) {
           min="0"
           step="1"
           defaultValue={product.stock}
-          className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+          className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
         />
       </div>
       <div className="flex flex-col gap-1">
@@ -373,7 +373,7 @@ function QuickEditForm({ product }: { product: ProductRow }) {
         <select
           name="status"
           defaultValue={product.status}
-          className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+          className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
         >
           {STATUS_ORDER.map((status) => (
             <option key={status} value={status}>
@@ -384,7 +384,7 @@ function QuickEditForm({ product }: { product: ProductRow }) {
       </div>
       <SubmitButton
         pendingText="Enregistrement…"
-        className="self-start bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
+        className="self-start bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
       >
         Enregistrer
       </SubmitButton>

@@ -134,43 +134,43 @@ export default async function MediaPage({
         <Disclosure label="+ Ajouter un fichier média" closeLabel="Fermer">
           <form
             action={attachUploadedMedia}
-            className="flex flex-wrap items-center gap-3 border border-zinc-200 bg-white p-4"
+            className="flex flex-wrap items-center gap-3 border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
           >
             <MediaUploadField />
             <SubmitButton
               pendingText="Ajout…"
-              className="bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
+              className="bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
             >
               Ajouter à la Médiathèque
             </SubmitButton>
           </form>
         </Disclosure>
       </div>
-      <p className="mt-2 text-sm text-zinc-600">
+      <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
         Tous les fichiers uploadés (images, gifs, pdf), réutilisables pour
         n&apos;importe quel produit.
       </p>
 
-      <div className="mt-4 border border-zinc-200 bg-white p-4">
+      <div className="mt-4 border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
         <MigrateImagesButton />
       </div>
 
       <div className="mt-6 flex flex-wrap items-center gap-4 text-sm">
         <Link
           href="/admin/media"
-          className={!isTrashView ? "font-semibold underline" : "text-zinc-600 hover:underline"}
+          className={!isTrashView ? "font-semibold underline" : "text-zinc-600 hover:underline dark:text-zinc-400"}
         >
           Tous ({allCount ?? 0})
         </Link>
         <Link
           href="/admin/media"
-          className={!isTrashView ? "font-semibold underline" : "text-zinc-600 hover:underline"}
+          className={!isTrashView ? "font-semibold underline" : "text-zinc-600 hover:underline dark:text-zinc-400"}
         >
           Publiés ({allCount ?? 0})
         </Link>
         <Link
           href="/admin/media?statut=corbeille"
-          className={isTrashView ? "font-semibold underline" : "text-zinc-600 hover:underline"}
+          className={isTrashView ? "font-semibold underline" : "text-zinc-600 hover:underline dark:text-zinc-400"}
         >
           Corbeille ({trashCount ?? 0})
         </Link>
@@ -187,7 +187,7 @@ export default async function MediaPage({
       </div>
 
       {error ? (
-        <p className="mt-4 text-sm text-red-600">
+        <p className="mt-4 text-sm text-red-600 dark:text-red-400">
           Erreur de chargement : {error.message}
         </p>
       ) : null}
@@ -206,7 +206,7 @@ export default async function MediaPage({
               name="bulk_action"
               form="bulk-media-form"
               defaultValue=""
-              className="border border-zinc-300 px-2 py-2 text-sm"
+              className="border border-zinc-300 px-2 py-2 text-sm dark:border-zinc-700"
             >
               <option value="" disabled>
                 Actions groupées
@@ -223,7 +223,7 @@ export default async function MediaPage({
             <button
               type="submit"
               form="bulk-media-form"
-              className="border border-zinc-300 px-3 py-2 text-sm hover:bg-zinc-50"
+              className="border border-zinc-300 px-3 py-2 text-sm hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
             >
               Appliquer
             </button>
@@ -232,7 +232,7 @@ export default async function MediaPage({
           {view === "grille" ? (
             <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
               {mediaList.map((media) => (
-                <div key={media.id} className="border border-zinc-200 bg-white p-3">
+                <div key={media.id} className="border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
                   <div className="flex items-center justify-between">
                     <input
                       type="checkbox"
@@ -242,7 +242,7 @@ export default async function MediaPage({
                       aria-label={`Sélectionner ${media.filename}`}
                     />
                   </div>
-                  <div className="mt-2 flex aspect-square items-center justify-center bg-zinc-50">
+                  <div className="mt-2 flex aspect-square items-center justify-center bg-zinc-50 dark:bg-zinc-900">
                     {media.kind === "image" || media.kind === "gif" ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
@@ -256,7 +256,7 @@ export default async function MediaPage({
                       </span>
                     )}
                   </div>
-                  <p className="mt-2 truncate text-xs text-zinc-600" title={media.filename}>
+                  <p className="mt-2 truncate text-xs text-zinc-600 dark:text-zinc-400" title={media.filename}>
                     {media.filename}
                   </p>
                   <p className="truncate text-xs text-zinc-400">
@@ -268,7 +268,7 @@ export default async function MediaPage({
               ))}
             </div>
           ) : (
-            <ul className="mt-4 divide-y divide-zinc-100 border-t border-zinc-100">
+            <ul className="mt-4 divide-y divide-zinc-100 border-t border-zinc-100 dark:border-zinc-800">
               {mediaList.map((media) => (
                 <li key={media.id} className="flex flex-wrap items-center gap-3 py-3">
                   <input
@@ -278,7 +278,7 @@ export default async function MediaPage({
                     form="bulk-media-form"
                     aria-label={`Sélectionner ${media.filename}`}
                   />
-                  <div className="flex h-12 w-12 flex-none items-center justify-center bg-zinc-50">
+                  <div className="flex h-12 w-12 flex-none items-center justify-center bg-zinc-50 dark:bg-zinc-900">
                     {media.kind === "image" || media.kind === "gif" ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
@@ -325,7 +325,7 @@ function MediaRowActions({ media, isTrash }: { media: MediaRow; isTrash: boolean
           </SubmitButton>
         </form>
         <form action={deleteMedia.bind(null, media.id, media.path)}>
-          <SubmitButton pendingText="…" className="text-xs text-red-600 hover:underline">
+          <SubmitButton pendingText="…" className="text-xs text-red-600 hover:underline dark:text-red-400">
             Supprimer définitivement
           </SubmitButton>
         </form>
@@ -335,7 +335,7 @@ function MediaRowActions({ media, isTrash }: { media: MediaRow; isTrash: boolean
 
   return (
     <form action={trashMedia.bind(null, media.id)} className="mt-2">
-      <SubmitButton pendingText="…" className="text-xs text-red-600 hover:underline">
+      <SubmitButton pendingText="…" className="text-xs text-red-600 hover:underline dark:text-red-400">
         Corbeille
       </SubmitButton>
     </form>
@@ -374,8 +374,8 @@ function RecentWorksToggle({
             pendingText="…"
             className={
               media.products.show_in_recent_works
-                ? "rounded bg-[#eef4ec] px-2 py-1 text-xs font-medium text-[#3a6b3a]"
-                : "rounded bg-zinc-100 px-2 py-1 text-xs font-medium text-zinc-500"
+                ? "rounded bg-[#eef4ec] px-2 py-1 text-xs font-medium text-[#3a6b3a] dark:bg-[#16241a] dark:text-[#8fd18f]"
+                : "rounded bg-zinc-100 px-2 py-1 text-xs font-medium text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
             }
           >
             {media.products.show_in_recent_works
@@ -384,7 +384,7 @@ function RecentWorksToggle({
           </SubmitButton>
         </form>
       ) : (
-        <span className="rounded bg-zinc-100 px-2 py-1 text-xs text-zinc-400">
+        <span className="rounded bg-zinc-100 px-2 py-1 text-xs text-zinc-400 dark:bg-zinc-800">
           Œuvres récentes
         </span>
       )}

@@ -87,12 +87,12 @@ export default async function AdminOverviewPage() {
       {recentOrders.length === 0 ? (
         <p className="mt-4 text-sm text-zinc-500">Aucune commande pour l&apos;instant.</p>
       ) : (
-        <ul className="mt-4 divide-y divide-zinc-100 border-t border-zinc-100">
+        <ul className="mt-4 divide-y divide-zinc-100 border-t border-zinc-100 dark:border-zinc-800">
           {recentOrders.map((order) => (
             <li key={order.id} className="flex flex-wrap items-center gap-3 py-3">
               <p className="text-sm text-zinc-500">#{order.id}</p>
               <p className="min-w-[120px] flex-1 text-sm font-medium">{order.customer_name}</p>
-              <p className="text-sm text-zinc-600">
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
                 {dateFormatter.format(new Date(order.created_at))}
               </p>
               <p className="text-sm">{formatPrice(orderTotal(order))}</p>
@@ -111,7 +111,7 @@ export default async function AdminOverviewPage() {
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="border border-zinc-200 bg-white p-4">
+    <div className="border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
       <p className="text-xs uppercase tracking-wide text-zinc-500">{label}</p>
       <p className="mt-2 text-2xl font-semibold">{value}</p>
     </div>

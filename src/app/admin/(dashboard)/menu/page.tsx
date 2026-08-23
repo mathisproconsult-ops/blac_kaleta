@@ -24,13 +24,13 @@ export default async function MenuPage() {
   return (
     <div>
       <h1 className="text-2xl font-semibold uppercase tracking-wide">Menu</h1>
-      <p className="mt-2 text-sm text-zinc-600">
+      <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
         Ces éléments s&apos;affichent dans la navigation du site public, dans
         cet ordre.
       </p>
 
       {error ? (
-        <p className="mt-4 text-sm text-red-600">
+        <p className="mt-4 text-sm text-red-600 dark:text-red-400">
           Erreur de chargement : {error.message}
         </p>
       ) : null}
@@ -40,17 +40,17 @@ export default async function MenuPage() {
           name="label"
           placeholder="Libellé (ex: Boutique)"
           required
-          className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+          className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
         />
         <input
           name="href"
           placeholder="Lien (ex: /boutique)"
           required
-          className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+          className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
         />
         <SubmitButton
           pendingText="Ajout…"
-          className="bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
+          className="bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
         >
           + Ajouter
         </SubmitButton>
@@ -59,7 +59,7 @@ export default async function MenuPage() {
       {menuItems.length === 0 ? (
         <p className="mt-8 text-sm text-zinc-500">Aucun élément de menu.</p>
       ) : (
-        <ul className="mt-8 divide-y divide-zinc-100 border-t border-zinc-100">
+        <ul className="mt-8 divide-y divide-zinc-100 border-t border-zinc-100 dark:border-zinc-800">
           {menuItems.map((item, index) => (
             <li key={item.id} className="flex flex-wrap items-center gap-3 py-3">
               <form
@@ -71,7 +71,7 @@ export default async function MenuPage() {
                     formAction={moveMenuItem.bind(null, item.id, "up")}
                     disabled={index === 0}
                     aria-label="Monter"
-                    className="text-xs text-zinc-500 hover:text-black disabled:opacity-20"
+                    className="text-xs text-zinc-500 hover:text-black disabled:opacity-20 dark:hover:text-zinc-100"
                   >
                     ▲
                   </SubmitButton>
@@ -79,7 +79,7 @@ export default async function MenuPage() {
                     formAction={moveMenuItem.bind(null, item.id, "down")}
                     disabled={index === menuItems.length - 1}
                     aria-label="Descendre"
-                    className="text-xs text-zinc-500 hover:text-black disabled:opacity-20"
+                    className="text-xs text-zinc-500 hover:text-black disabled:opacity-20 dark:hover:text-zinc-100"
                   >
                     ▼
                   </SubmitButton>
@@ -87,23 +87,23 @@ export default async function MenuPage() {
                 <input
                   name="label"
                   defaultValue={item.label}
-                  className="flex-1 max-w-[220px] border border-transparent px-2 py-1 text-sm hover:border-zinc-300 focus:border-black focus:outline-none"
+                  className="flex-1 max-w-[220px] border border-transparent px-2 py-1 text-sm hover:border-zinc-300 focus:border-black focus:outline-none dark:hover:border-zinc-600 dark:focus:border-zinc-100"
                 />
                 <input
                   name="href"
                   defaultValue={item.href}
-                  className="flex-1 max-w-[220px] border border-transparent px-2 py-1 text-sm text-zinc-600 hover:border-zinc-300 focus:border-black focus:outline-none"
+                  className="flex-1 max-w-[220px] border border-transparent px-2 py-1 text-sm text-zinc-600 hover:border-zinc-300 focus:border-black focus:outline-none dark:text-zinc-400 dark:hover:border-zinc-600 dark:focus:border-zinc-100"
                 />
                 <SubmitButton
                   pendingText="Enregistrement…"
-                  className="text-sm text-zinc-600 hover:underline"
+                  className="text-sm text-zinc-600 hover:underline dark:text-zinc-400"
                 >
                   Enregistrer
                 </SubmitButton>
                 <SubmitButton
                   formAction={deleteMenuItem.bind(null, item.id)}
                   pendingText="Suppression…"
-                  className="text-sm text-red-600 hover:underline"
+                  className="text-sm text-red-600 hover:underline dark:text-red-400"
                 >
                   Supprimer
                 </SubmitButton>

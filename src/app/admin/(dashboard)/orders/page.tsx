@@ -48,7 +48,7 @@ export default async function OrdersPage() {
   return (
     <div>
       {unreadCount > 0 ? (
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-2 bg-black px-4 py-3 text-sm text-white">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-2 bg-black px-4 py-3 text-sm text-white dark:bg-zinc-100 dark:text-zinc-900">
           <p>
             ● {unreadCount} nouvelle{unreadCount > 1 ? "s" : ""} commande
             {unreadCount > 1 ? "s" : ""} reçue{unreadCount > 1 ? "s" : ""}
@@ -66,7 +66,7 @@ export default async function OrdersPage() {
       </h1>
 
       {error ? (
-        <p className="mt-4 text-sm text-red-600">
+        <p className="mt-4 text-sm text-red-600 dark:text-red-400">
           Erreur de chargement : {error.message}
         </p>
       ) : null}
@@ -74,7 +74,7 @@ export default async function OrdersPage() {
       {orders.length === 0 ? (
         <p className="mt-8 text-sm text-zinc-500">Aucune commande pour l&apos;instant.</p>
       ) : (
-        <ul className="mt-8 divide-y divide-zinc-100 border-t border-zinc-100">
+        <ul className="mt-8 divide-y divide-zinc-100 border-t border-zinc-100 dark:border-zinc-800">
           {orders.map((order) => {
             const total = order.order_items.reduce(
               (sum, item) => sum + item.unit_price * item.quantity,
@@ -97,7 +97,7 @@ export default async function OrdersPage() {
                     {order.customer_email} — {items}
                   </p>
                 </div>
-                <p className="text-sm text-zinc-600">
+                <p className="text-sm text-zinc-600 dark:text-zinc-400">
                   {dateFormatter.format(new Date(order.created_at))}
                 </p>
                 <p className="text-sm">{formatPrice(total)}</p>

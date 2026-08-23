@@ -59,7 +59,7 @@ export default async function PageEditorPage({
           Contenu — {page.title}
         </h1>
         <form action={deletePage.bind(null, page.id, slug)}>
-          <SubmitButton pendingText="Suppression…" className="text-sm text-red-600 hover:underline">
+          <SubmitButton pendingText="Suppression…" className="text-sm text-red-600 hover:underline dark:text-red-400">
             Supprimer la page
           </SubmitButton>
         </form>
@@ -67,7 +67,7 @@ export default async function PageEditorPage({
 
       <form
         action={updatePageMeta.bind(null, page.id, slug)}
-        className="mt-6 flex flex-wrap items-end gap-3 border border-zinc-200 bg-white p-4"
+        className="mt-6 flex flex-wrap items-end gap-3 border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
       >
         <div className="flex flex-col gap-1">
           <label className="text-xs uppercase tracking-wide text-zinc-500">
@@ -77,7 +77,7 @@ export default async function PageEditorPage({
             name="title"
             defaultValue={page.title}
             required
-            className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+            className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
           />
         </div>
         <label className="flex items-center gap-2 pb-2 text-sm">
@@ -90,7 +90,7 @@ export default async function PageEditorPage({
         </label>
         <SubmitButton
           pendingText="Enregistrement…"
-          className="bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
+          className="bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
         >
           Enregistrer
         </SubmitButton>
@@ -101,7 +101,7 @@ export default async function PageEditorPage({
           <form key={type} action={addBlock.bind(null, slug, type)}>
             <SubmitButton
               pendingText="Ajout…"
-              className="border border-zinc-300 px-3 py-2 text-sm hover:bg-zinc-50"
+              className="border border-zinc-300 px-3 py-2 text-sm hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
             >
               + {BLOCK_LABELS[type]}
             </SubmitButton>
@@ -114,7 +114,7 @@ export default async function PageEditorPage({
       ) : (
         <ul className="mt-8 flex flex-col gap-4">
           {blockList.map((block, index) => (
-            <li key={block.id} className="border border-zinc-200 bg-white p-4">
+            <li key={block.id} className="border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-xs uppercase tracking-wide text-zinc-500">
                   {BLOCK_LABELS[block.type]}
@@ -124,7 +124,7 @@ export default async function PageEditorPage({
                     <SubmitButton
                       disabled={index === 0}
                       aria-label="Monter"
-                      className="text-xs text-zinc-500 hover:text-black disabled:opacity-20"
+                      className="text-xs text-zinc-500 hover:text-black disabled:opacity-20 dark:hover:text-zinc-100"
                     >
                       ▲
                     </SubmitButton>
@@ -133,7 +133,7 @@ export default async function PageEditorPage({
                     <SubmitButton
                       disabled={index === blockList.length - 1}
                       aria-label="Descendre"
-                      className="text-xs text-zinc-500 hover:text-black disabled:opacity-20"
+                      className="text-xs text-zinc-500 hover:text-black disabled:opacity-20 dark:hover:text-zinc-100"
                     >
                       ▼
                     </SubmitButton>
@@ -146,7 +146,7 @@ export default async function PageEditorPage({
                       block.type === "image" ? block.content.path ?? null : null,
                     )}
                   >
-                    <SubmitButton pendingText="Suppression…" className="text-sm text-red-600 hover:underline">
+                    <SubmitButton pendingText="Suppression…" className="text-sm text-red-600 hover:underline dark:text-red-400">
                       Supprimer
                     </SubmitButton>
                   </form>
@@ -178,11 +178,11 @@ export default async function PageEditorPage({
                     name="alt"
                     placeholder="Texte alternatif (optionnel)"
                     defaultValue={block.content.alt ?? ""}
-                    className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                    className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
                   />
                   <SubmitButton
                     pendingText="Enregistrement…"
-                    className="self-start bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
+                    className="self-start bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
                   >
                     Enregistrer
                   </SubmitButton>
@@ -196,11 +196,11 @@ export default async function PageEditorPage({
                     name="text"
                     rows={block.type === "titre" ? 1 : 5}
                     defaultValue={block.content.text ?? ""}
-                    className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                    className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
                   />
                   <SubmitButton
                     pendingText="Enregistrement…"
-                    className="self-start bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
+                    className="self-start bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
                   >
                     Enregistrer
                   </SubmitButton>
