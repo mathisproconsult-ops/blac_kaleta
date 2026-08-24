@@ -4,9 +4,12 @@ import { createClient } from "@/lib/supabase/server";
 import { formatPrice } from "@/lib/currency";
 import { SubmitButton } from "@/components/submit-button";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
+import { Disclosure } from "@/components/disclosure";
+import { getAggregatedCustomers } from "../customers/get-customers";
 import { deleteOrder, markOrdersAsRead } from "./actions";
 import { OrderStatusSelect } from "./order-status-select";
 import { OrderFilters } from "./order-filters";
+import { ManualOrderForm } from "./manual-order-form";
 import { ORDER_STATUS_ORDER, type OrderStatus } from "./status";
 
 export const metadata: Metadata = {
@@ -32,6 +35,65 @@ type OrderRow = {
   }[];
 };
 
+type ProductOptionRow = {
+  id: number;
+  title: string;
+  price: number | null;
+  stock: number;
+  product_option_groups: {
+    option_groups: {
+      id: number;
+      name: string;
+      selection_type: "single" | "multiple";
+      option_choices: { id: number; label: string; price_delta: number }[];
+    } | null;
+  }[];
+};
+
+async function getManualOrderFormData() {
+  const supabase = await createClient();
+
+  const [{ customers }, { data: products }] = await Promise.all([
+    getAggregatedCustomers(),
+    supabase
+      .from("products")
+      .select(
+        "id, title, price, stock, product_option_groups(option_groups(id, name, selection_type, option_choices(id, label, price_delta)))",
+      )
+      .eq("is_for_sale", true)
+      .eq("is_visible", true)
+      .is("deleted_at", null)
+      .not("price", "is", null)
+      .order("title", { ascending: true })
+      .returns<ProductOptionRow[]>(),
+  ]);
+
+  const productOptions = (products ?? []).map((product) => ({
+    id: product.id,
+    title: product.title,
+    price: product.price ?? 0,
+    stock: product.stock,
+    groups: product.product_option_groups
+      .map((row) => row.option_groups)
+      .filter((group): group is NonNullable<typeof group> => group !== null)
+      .map((group) => ({
+        id: group.id,
+        name: group.name,
+        selectionType: group.selection_type,
+        choices: group.option_choices.map((choice) => ({
+          id: choice.id,
+          label: choice.label,
+          priceDelta: choice.price_delta,
+        })),
+      })),
+  }));
+
+  return {
+    customers: customers.map((customer) => ({ key: customer.key, name: customer.name, email: customer.email })),
+    products: productOptions,
+  };
+}
+
 export default async function OrdersPage({
   searchParams,
 }: {
@@ -50,12 +112,28 @@ export default async function OrdersPage({
     query = query.eq("status", statut);
   }
 
-  const [{ data, error }, { count: unreadCount }] = await Promise.all([
+  const [{ data, error }, { count: unreadCount }, manualOrderFormData] = await Promise.all([
     query.order("created_at", { ascending: false }).returns<OrderRow[]>(),
     supabase.from("orders").select("id", { count: "exact", head: true }).eq("read", false),
+    getManualOrderFormData(),
   ]);
 
   let orders = data ?? [];
+
+  // Requête séparée et best-effort : la colonne source peut ne pas encore
+  // exister si la migration 0030 n'a pas été appliquée.
+  const orderIds = orders.map((order) => order.id);
+  let manualOrderIds = new Set<number>();
+  if (orderIds.length > 0) {
+    const { data: sourceRows } = await supabase.from("orders").select("id, source").in("id", orderIds);
+    if (sourceRows) {
+      manualOrderIds = new Set(
+        (sourceRows as { id: number; source: string }[])
+          .filter((row) => row.source === "manual")
+          .map((row) => row.id),
+      );
+    }
+  }
 
   const withTotal = orders.map((order) => ({
     order,
@@ -92,9 +170,14 @@ export default async function OrdersPage({
         </div>
       ) : null}
 
-      <h1 className="text-2xl font-semibold uppercase tracking-wide">
-        Commandes
-      </h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold uppercase tracking-wide">
+          Commandes
+        </h1>
+        <Disclosure label="+ Ajouter une commande" closeLabel="Fermer">
+          <ManualOrderForm customers={manualOrderFormData.customers} products={manualOrderFormData.products} />
+        </Disclosure>
+      </div>
 
       <div className="mt-4">
         <OrderFilters statut={statut} tri={tri} />
@@ -124,7 +207,14 @@ export default async function OrdersPage({
               <li key={order.id} className="flex flex-wrap items-center gap-3 py-3">
                 <p className="text-sm text-zinc-500">#{order.id}</p>
                 <Link href={`/admin/orders/${order.id}`} className="min-w-[160px] flex-1 hover:underline">
-                  <p className="text-sm font-medium">{order.customer_name}</p>
+                  <p className="flex items-center gap-2 text-sm font-medium">
+                    {order.customer_name}
+                    {manualOrderIds.has(order.id) ? (
+                      <span className="rounded bg-zinc-900 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white dark:bg-zinc-100 dark:text-zinc-900">
+                        Manuelle
+                      </span>
+                    ) : null}
+                  </p>
                   <p className="text-xs text-zinc-500">
                     {order.customer_email} — {items}
                   </p>

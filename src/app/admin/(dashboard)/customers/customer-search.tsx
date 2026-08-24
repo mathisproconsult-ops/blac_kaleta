@@ -5,15 +5,9 @@ import Link from "next/link";
 import { formatPrice } from "@/lib/currency";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { deleteCustomer } from "./actions";
+import type { AggregatedCustomer } from "./get-customers";
 
-type Customer = {
-  name: string;
-  email: string;
-  orderCount: number;
-  totalSpent: number;
-};
-
-export function CustomerSearch({ customers }: { customers: Customer[] }) {
+export function CustomerSearch({ customers }: { customers: AggregatedCustomer[] }) {
   const [search, setSearch] = useState("");
 
   const filtered = useMemo(() => {
@@ -22,7 +16,7 @@ export function CustomerSearch({ customers }: { customers: Customer[] }) {
     return customers.filter(
       (customer) =>
         customer.name.toLowerCase().includes(query) ||
-        customer.email.toLowerCase().includes(query),
+        (customer.email ?? "").toLowerCase().includes(query),
     );
   }, [customers, search]);
 
@@ -51,22 +45,28 @@ export function CustomerSearch({ customers }: { customers: Customer[] }) {
             </thead>
             <tbody>
               {filtered.map((customer) => (
-                <tr key={customer.email} className="border-b border-zinc-100 dark:border-zinc-800">
+                <tr key={customer.key} className="border-b border-zinc-100 dark:border-zinc-800">
                   <td className="py-3 pr-4">
                     <Link
-                      href={`/admin/customers/${encodeURIComponent(customer.email)}`}
+                      href={`/admin/customers/${encodeURIComponent(customer.key)}`}
                       className="hover:underline"
                     >
                       {customer.name}
                     </Link>
                   </td>
-                  <td className="py-3 pr-4 text-zinc-600 dark:text-zinc-400">{customer.email}</td>
+                  <td className="py-3 pr-4 text-zinc-600 dark:text-zinc-400">
+                    {customer.email ?? "—"}
+                  </td>
                   <td className="py-3 pr-4">{customer.orderCount}</td>
                   <td className="py-3 pr-4">{formatPrice(customer.totalSpent)}</td>
                   <td className="py-3">
-                    <form action={deleteCustomer.bind(null, customer.email)}>
+                    <form action={deleteCustomer.bind(null, customer.key)}>
                       <ConfirmSubmitButton
-                        confirmMessage={`Es-tu sûr de vouloir supprimer ${customer.name} ? Cela supprimera aussi toutes ses commandes (${customer.orderCount}). Cette action est irréversible.`}
+                        confirmMessage={
+                          customer.orderCount > 0
+                            ? `Es-tu sûr de vouloir supprimer ${customer.name} ? Cela supprimera aussi toutes ses commandes (${customer.orderCount}). Cette action est irréversible.`
+                            : `Es-tu sûr de vouloir supprimer ${customer.name} ? Cette action est irréversible.`
+                        }
                         pendingText="…"
                         className="text-xs text-red-600 hover:underline dark:text-red-400"
                       >

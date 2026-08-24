@@ -34,6 +34,9 @@ type OrderDetail = {
   status: OrderStatus;
   created_at: string;
   order_items: OrderItem[];
+  customer_id: number | null;
+  source: string;
+  note: string | null;
 };
 
 async function getOrder(id: string) {
@@ -50,6 +53,17 @@ async function getOrder(id: string) {
   if (!data) return null;
 
   const order = data as unknown as OrderDetail;
+
+  // Requête séparée et best-effort : les colonnes ajoutées par la
+  // migration 0030 (commandes manuelles) peuvent ne pas encore exister.
+  const { data: manualFields } = await supabase
+    .from("orders")
+    .select("customer_id, source, note")
+    .eq("id", order.id)
+    .maybeSingle();
+  order.customer_id = (manualFields as { customer_id: number | null } | null)?.customer_id ?? null;
+  order.source = (manualFields as { source: string } | null)?.source ?? "online";
+  order.note = (manualFields as { note: string | null } | null)?.note ?? null;
 
   // Requête séparée et best-effort : une vignette manquante ne doit jamais
   // empêcher l'affichage du détail de la commande.
@@ -104,8 +118,13 @@ export default async function OrderDetailPage({
       </Link>
 
       <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold uppercase tracking-wide">
+        <h1 className="flex items-center gap-2 text-2xl font-semibold uppercase tracking-wide">
           Commande #{order.id}
+          {order.source === "manual" ? (
+            <span className="rounded bg-zinc-900 px-2 py-1 align-middle text-xs font-medium uppercase tracking-wide text-white dark:bg-zinc-100 dark:text-zinc-900">
+              Manuelle
+            </span>
+          ) : null}
         </h1>
         <div className="flex items-center gap-3">
           <OrderStatusSelect
@@ -181,7 +200,9 @@ export default async function OrderDetailPage({
               <p className="text-sm text-zinc-500">{order.customer_phone}</p>
             ) : null}
             <Link
-              href={`/admin/customers/${encodeURIComponent(order.customer_email)}`}
+              href={`/admin/customers/${encodeURIComponent(
+                order.customer_id ? `id:${order.customer_id}` : `email:${order.customer_email}`,
+              )}`}
               className="mt-2 inline-block text-xs text-zinc-500 hover:underline"
             >
               Voir la fiche client →
@@ -194,6 +215,15 @@ export default async function OrderDetailPage({
               {order.shipping_address || "Non renseignée"}
             </p>
           </div>
+
+          {order.note ? (
+            <div>
+              <h2 className="text-sm font-semibold uppercase tracking-wide">Note</h2>
+              <p className="mt-2 whitespace-pre-line text-sm text-zinc-600 dark:text-zinc-400">
+                {order.note}
+              </p>
+            </div>
+          ) : null}
         </div>
       </div>
     </div>
