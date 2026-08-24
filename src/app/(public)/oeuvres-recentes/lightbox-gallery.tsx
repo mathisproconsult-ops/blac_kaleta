@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { ProtectedImage } from "@/components/protected-image";
 
 type Work = {
   id: number;
@@ -66,8 +67,11 @@ export function LightboxGallery({ works }: { works: Work[] }) {
           >
             <div className="w-full bg-zinc-50 dark:bg-zinc-900">
               {work.imageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={work.imageUrl} alt={work.title} className="block h-auto w-full" />
+                <ProtectedImage
+                  src={work.imageUrl}
+                  alt={work.title}
+                  className="block h-auto w-full"
+                />
               ) : (
                 <div
                   className="aspect-square w-full"
@@ -123,8 +127,7 @@ export function LightboxGallery({ works }: { works: Work[] }) {
           ) : null}
 
           {current.imageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <ProtectedImage
               src={current.imageUrl}
               alt={current.title}
               className="max-h-[80vh] max-w-full object-contain"

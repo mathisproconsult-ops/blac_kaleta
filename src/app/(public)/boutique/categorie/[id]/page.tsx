@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getSettings } from "@/lib/settings";
 import { formatPrice, formatIndicativeConversion } from "@/lib/currency";
 import type { ProductStatus } from "@/app/admin/(dashboard)/products/status";
+import { ProtectedImage } from "@/components/protected-image";
 import { SortSelect } from "../../sort-select";
 import { AddToCartControls } from "../../add-to-cart-controls";
 
@@ -86,6 +87,25 @@ export default async function BoutiqueCategoryPage({
     );
   }
 
+  // Requête séparée et best-effort : la colonne source peut ne pas encore
+  // exister (migration Printify 0028 pas appliquée) — les produits Printify
+  // n'ont pas la protection anti-téléchargement (images hébergées ailleurs,
+  // pas la propriété intellectuelle de l'artiste).
+  let printifySourceIds = new Set<number>();
+  if (productList.length > 0) {
+    const { data: sourceRows } = await supabase
+      .from("products")
+      .select("id, source")
+      .in("id", productList.map((product) => product.id));
+    if (sourceRows) {
+      printifySourceIds = new Set(
+        (sourceRows as { id: number; source: string }[])
+          .filter((row) => row.source === "printify")
+          .map((row) => row.id),
+      );
+    }
+  }
+
   if (tri === "prix-asc") {
     productList = [...productList].sort(
       (a, b) => (a.price ?? Infinity) - (b.price ?? Infinity),
@@ -127,12 +147,16 @@ export default async function BoutiqueCategoryPage({
                 <Link href={`/boutique/${product.id}`}>
                   <div className="relative w-full bg-zinc-50 dark:bg-zinc-900">
                     {image ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={image.url}
-                        alt={product.title}
-                        className="block h-auto w-full"
-                      />
+                      printifySourceIds.has(product.id) ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={image.url} alt={product.title} className="block h-auto w-full" />
+                      ) : (
+                        <ProtectedImage
+                          src={image.url}
+                          alt={product.title}
+                          className="block h-auto w-full"
+                        />
+                      )
                     ) : (
                       <div
                         className="aspect-square w-full"

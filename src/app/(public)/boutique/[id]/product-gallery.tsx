@@ -1,13 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import { ProtectedImage } from "@/components/protected-image";
 
 export function ProductGallery({
   images,
   alt,
+  protectImages = true,
 }: {
   images: { url: string }[];
   alt: string;
+  protectImages?: boolean;
 }) {
   const [selected, setSelected] = useState(0);
   const main = images[selected];
@@ -16,8 +19,12 @@ export function ProductGallery({
     <div>
       <div className="aspect-[3/4] w-full bg-zinc-50 dark:bg-zinc-900">
         {main ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={main.url} alt={alt} className="h-full w-full object-cover" />
+          protectImages ? (
+            <ProtectedImage src={main.url} alt={alt} className="h-full w-full object-cover" />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={main.url} alt={alt} className="h-full w-full object-cover" />
+          )
         ) : (
           <div
             className="h-full w-full"

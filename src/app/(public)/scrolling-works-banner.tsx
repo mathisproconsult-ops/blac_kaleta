@@ -111,12 +111,17 @@ export function ScrollingWorksBanner({ works }: { works: BannerWork[] }) {
           className="h-[320px] flex-none sm:h-[420px] lg:h-[520px]"
         >
           {work.image ? (
+            // Pas de ProtectedImage ici : ce carrousel a son propre
+            // glisser pointeur (défilement au clic-glissé), une couche
+            // superposée bloquerait cette interaction. draggable=false +
+            // blocage du clic droit suffisent pour cette bannière.
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={work.image}
               alt={work.title}
               draggable={false}
-              className="h-full w-auto"
+              onContextMenu={(event) => event.preventDefault()}
+              className="h-full w-auto select-none"
             />
           ) : (
             <div

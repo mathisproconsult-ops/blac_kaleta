@@ -6,10 +6,17 @@ import { createClient } from "@/lib/supabase/server";
 import { SubmitButton } from "@/components/submit-button";
 import { ProductFields } from "../product-fields";
 import { deleteProductImage, updateProduct } from "../actions";
+import { DownloadOriginalButton } from "../download-original-button";
 
 export const maxDuration = 60;
 
-type ProductImage = { id: number; path: string; url: string; position: number };
+type ProductImage = {
+  id: number;
+  path: string;
+  url: string;
+  position: number;
+  original_path: string | null;
+};
 type ProductDetail = {
   id: number;
   title: string;
@@ -58,8 +65,31 @@ async function getProduct(id: string) {
     .eq("id", data.id)
     .maybeSingle();
 
+  // Idem pour original_path (migration protection des œuvres, 0029) : sans
+  // elle, le bouton « Télécharger l'original » reste simplement masqué.
+  const imageIds = (data.product_images as { id: number }[]).map((image) => image.id);
+  let originalPathById = new Map<number, string | null>();
+  if (imageIds.length > 0) {
+    const { data: originalPathRows } = await supabase
+      .from("product_images")
+      .select("id, original_path")
+      .in("id", imageIds);
+    if (originalPathRows) {
+      originalPathById = new Map(
+        (originalPathRows as { id: number; original_path: string | null }[]).map((row) => [
+          row.id,
+          row.original_path,
+        ]),
+      );
+    }
+  }
+
   return {
     ...data,
+    product_images: (data.product_images as { id: number }[]).map((image) => ({
+      ...image,
+      original_path: originalPathById.get(image.id) ?? null,
+    })),
     product_option_groups: optionGroupRows ?? [],
     source: (sourceRow as { source: string } | null)?.source ?? "original",
   } as unknown as ProductDetail;
@@ -142,7 +172,7 @@ export default async function EditProductPage({
                   className="h-24 w-24 object-cover"
                 />
                 <form
-                  action={deleteProductImage.bind(null, image.id, image.path)}
+                  action={deleteProductImage.bind(null, image.id, image.path, image.original_path)}
                   className="absolute -right-2 -top-2"
                 >
                   <SubmitButton
@@ -163,8 +193,11 @@ export default async function EditProductPage({
                   height={100}
                   className="h-24 w-24 object-cover"
                 />
+                {image.original_path ? (
+                  <DownloadOriginalButton originalPath={image.original_path} />
+                ) : null}
                 <form
-                  action={deleteProductImage.bind(null, image.id, image.path)}
+                  action={deleteProductImage.bind(null, image.id, image.path, image.original_path)}
                   className="absolute -right-2 -top-2"
                 >
                   <SubmitButton

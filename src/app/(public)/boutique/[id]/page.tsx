@@ -31,6 +31,7 @@ type ProductDetail = {
   product_images: { url: string; position: number }[];
   product_categories: { categories: { name: string } | null }[];
   product_option_groups: ProductOptionGroupJoin[];
+  source: string;
 };
 
 async function getProduct(id: string) {
@@ -60,9 +61,18 @@ async function getProduct(id: string) {
 
   if (optionsError) console.error("getProduct options", optionsError);
 
+  // Requête séparée et best-effort : la colonne source peut ne pas encore
+  // exister si la migration Printify (0028) n'a pas été appliquée.
+  const { data: sourceRow } = await supabase
+    .from("products")
+    .select("source")
+    .eq("id", data.id)
+    .maybeSingle();
+
   return {
     ...data,
     product_option_groups: optionGroupRows ?? [],
+    source: (sourceRow as { source: string } | null)?.source ?? "original",
   } as unknown as ProductDetail;
 }
 
@@ -113,7 +123,11 @@ export default async function ProductPage({
     <div className="px-4 py-8 sm:px-6 sm:py-10 lg:px-10 lg:py-12">
       <BackButton />
     <div className="mt-4 grid gap-8 lg:grid-cols-2 lg:gap-10">
-      <ProductGallery images={images} alt={product.title} />
+      <ProductGallery
+        images={images}
+        alt={product.title}
+        protectImages={product.source !== "printify"}
+      />
       <div>
         <h1 className="flex items-center gap-3 text-2xl font-semibold">
           {product.title}

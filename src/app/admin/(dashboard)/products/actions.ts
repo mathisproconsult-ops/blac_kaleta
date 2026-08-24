@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { protectArtworkImage } from "@/lib/image-protection";
 import { STATUS_ORDER, type ProductStatus } from "./status";
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
@@ -73,6 +74,90 @@ function parseUploadedImages(formData: FormData): UploadedImage[] {
 // (ImageUploadField), pour ne pas faire transiter le fichier par le corps
 // de la Server Action — limité côté plateforme d'hébergement. Cette
 // fonction se contente d'enregistrer les métadonnées déjà en ligne.
+type StoredArtworkImage = { path: string; url: string; originalPath: string | null };
+
+// Télécharge le fichier tel qu'envoyé (bucket "media", où atterrissent tous
+// les uploads bruts) puis produit la copie publique redimensionnée et
+// filigranée dans le bucket "products", en conservant l'original intact
+// dans le bucket privé "artwork-originals" (jamais exposé publiquement).
+// Les GIFs animés ne sont pas retraités (filigraner image par image est
+// hors scope) : ils restent servis tels quels, sans protection.
+async function protectAndStoreArtworkImage(
+  supabase: SupabaseClient,
+  productId: number,
+  sourcePath: string,
+  mimeType: string,
+): Promise<StoredArtworkImage | null> {
+  if (mimeType === "image/gif") {
+    const { data } = supabase.storage.from("media").getPublicUrl(sourcePath);
+    return { path: sourcePath, url: data.publicUrl, originalPath: null };
+  }
+
+  const { data: downloaded, error: downloadError } = await supabase.storage
+    .from("media")
+    .download(sourcePath);
+  if (downloadError || !downloaded) {
+    console.error("protectAndStoreArtworkImage download", sourcePath, downloadError);
+    return null;
+  }
+
+  const originalBuffer = Buffer.from(await downloaded.arrayBuffer());
+
+  let protectedImage;
+  try {
+    protectedImage = await protectArtworkImage(originalBuffer);
+  } catch (err) {
+    console.error("protectAndStoreArtworkImage process", sourcePath, err);
+    return null;
+  }
+
+  const destPath = `${productId}/${crypto.randomUUID()}.${protectedImage.extension}`;
+
+  const [publicUpload, originalUpload] = await Promise.all([
+    supabase.storage
+      .from("products")
+      .upload(destPath, protectedImage.buffer, { contentType: protectedImage.contentType }),
+    supabase.storage
+      .from("artwork-originals")
+      .upload(destPath, originalBuffer, { contentType: mimeType }),
+  ]);
+
+  if (publicUpload.error) {
+    console.error("protectAndStoreArtworkImage publicUpload", destPath, publicUpload.error);
+    return null;
+  }
+  if (originalUpload.error) {
+    console.error("protectAndStoreArtworkImage originalUpload", destPath, originalUpload.error);
+  }
+
+  const { data: publicUrlData } = supabase.storage.from("products").getPublicUrl(destPath);
+
+  return {
+    path: destPath,
+    url: publicUrlData.publicUrl,
+    // La copie publique protégée est déjà en ligne : si seul l'upload de
+    // l'original a échoué, on continue sans original téléchargeable plutôt
+    // que de perdre toute la photo.
+    originalPath: originalUpload.error ? null : destPath,
+  };
+}
+
+// La colonne original_path peut ne pas encore exister si la migration 0029
+// n'a pas été appliquée : on retente sans elle plutôt que de perdre la photo
+// (même filet de sécurité que pour les autres colonnes ajoutées après coup).
+async function insertProductImage(
+  supabase: SupabaseClient,
+  row: { product_id: number; path: string; url: string; original_path: string | null; position: number },
+) {
+  const { error } = await supabase.from("product_images").insert(row);
+  if (error) {
+    console.error("insertProductImage", error);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- extrait volontairement du reste pour le retirer de l'insert de repli
+    const { original_path: _originalPath, ...withoutOriginalPath } = row;
+    await supabase.from("product_images").insert(withoutOriginalPath);
+  }
+}
+
 async function attachUploadedImages(
   supabase: SupabaseClient,
   productId: number,
@@ -81,16 +166,20 @@ async function attachUploadedImages(
 ) {
   let position = startPosition;
   for (const image of images) {
-    await supabase.from("product_images").insert({
+    const stored = await protectAndStoreArtworkImage(supabase, productId, image.path, image.mimeType);
+
+    await insertProductImage(supabase, {
       product_id: productId,
-      path: image.path,
-      url: image.url,
+      path: stored?.path ?? image.path,
+      url: stored?.url ?? image.url,
+      original_path: stored?.originalPath ?? null,
       position,
     });
     position += 1;
 
-    // Toute nouvelle photo uploadée depuis le formulaire produit
-    // rejoint automatiquement la Médiathèque, déjà associée au produit.
+    // Toute nouvelle photo uploadée depuis le formulaire produit rejoint
+    // automatiquement la Médiathèque, déjà associée au produit — avec
+    // l'upload brut d'origine, pas la copie protégée.
     await supabase.from("media").insert({
       filename: image.filename,
       path: image.path,
@@ -112,17 +201,25 @@ async function attachLibraryMedia(
 
   const { data: mediaRows } = await supabase
     .from("media")
-    .select("id, path, url")
+    .select("id, path, url, mime_type")
     .in("id", mediaIds);
 
   if (!mediaRows) return;
 
   let position = startPosition;
   for (const media of mediaRows) {
-    await supabase.from("product_images").insert({
+    const stored = await protectAndStoreArtworkImage(
+      supabase,
+      productId,
+      media.path,
+      media.mime_type ?? "image/jpeg",
+    );
+
+    await insertProductImage(supabase, {
       product_id: productId,
-      path: media.path,
-      url: media.url,
+      path: stored?.path ?? media.path,
+      url: stored?.url ?? media.url,
+      original_path: stored?.originalPath ?? null,
       position,
     });
     position += 1;
@@ -249,6 +346,13 @@ export async function deleteProduct(id: number) {
       .remove(files.map((file) => `${id}/${file.name}`));
   }
 
+  const { data: originalFiles } = await supabase.storage.from("artwork-originals").list(String(id));
+  if (originalFiles && originalFiles.length > 0) {
+    await supabase.storage
+      .from("artwork-originals")
+      .remove(originalFiles.map((file) => `${id}/${file.name}`));
+  }
+
   await supabase.from("products").delete().eq("id", id);
   revalidatePath("/admin/products");
   revalidatePath("/");
@@ -256,9 +360,31 @@ export async function deleteProduct(id: number) {
   revalidatePath("/oeuvres-recentes");
 }
 
-export async function deleteProductImage(imageId: number, path: string) {
+// Le propriétaire du site doit pouvoir récupérer ses originaux haute
+// résolution, non filigranés — réservé à l'admin connecté : URL signée
+// courte plutôt qu'un accès public au bucket artwork-originals.
+export async function getOriginalImageDownloadUrl(
+  originalPath: string,
+): Promise<{ url: string | null; error: string | null }> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.storage
+    .from("artwork-originals")
+    .createSignedUrl(originalPath, 60);
+
+  if (error || !data) {
+    console.error("getOriginalImageDownloadUrl", error);
+    return { url: null, error: "Original introuvable." };
+  }
+
+  return { url: data.signedUrl, error: null };
+}
+
+export async function deleteProductImage(imageId: number, path: string, originalPath: string | null) {
   const supabase = await createClient();
   await supabase.storage.from("products").remove([path]);
+  if (originalPath) {
+    await supabase.storage.from("artwork-originals").remove([originalPath]);
+  }
   await supabase.from("product_images").delete().eq("id", imageId);
   revalidatePath("/admin/products");
   revalidatePath("/");
