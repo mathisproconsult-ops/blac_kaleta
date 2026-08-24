@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { protectArtworkImage } from "@/lib/image-protection";
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
 
@@ -94,6 +93,9 @@ export async function reprocessOneImage(imageId: number): Promise<ReprocessResul
     }
     const originalBuffer = Buffer.from(await downloaded.arrayBuffer());
 
+    // Import différé : sharp ne doit être chargé que lors d'un retraitement
+    // effectif, jamais au simple affichage de la Médiathèque.
+    const { protectArtworkImage } = await import("@/lib/image-protection");
     const protectedImage = await protectArtworkImage(originalBuffer);
     const destPath = `${image.product_id}/${imageId}-${Date.now()}.${protectedImage.extension}`;
 

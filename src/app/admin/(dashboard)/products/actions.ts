@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { protectArtworkImage } from "@/lib/image-protection";
 import { STATUS_ORDER, type ProductStatus } from "./status";
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
@@ -105,6 +104,10 @@ async function protectAndStoreArtworkImage(
 
   let protectedImage;
   try {
+    // Import différé : sharp ne doit être chargé que lors d'un ajout de
+    // photo, jamais au simple affichage d'une page qui importe ce fichier
+    // pour ses autres actions (liste des produits, etc.).
+    const { protectArtworkImage } = await import("@/lib/image-protection");
     protectedImage = await protectArtworkImage(originalBuffer);
   } catch (err) {
     console.error("protectAndStoreArtworkImage process", sourcePath, err);
