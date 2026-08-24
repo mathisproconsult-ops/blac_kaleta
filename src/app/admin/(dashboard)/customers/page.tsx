@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
-import { formatPrice } from "@/lib/currency";
+import { CustomerSearch } from "./customer-search";
 
 export const metadata: Metadata = {
   title: "Clients — Admin Blac_Kaleta",
@@ -69,28 +69,7 @@ export default async function CustomersPage() {
       {customers.length === 0 ? (
         <p className="mt-8 text-sm text-zinc-500">Aucun client pour l&apos;instant.</p>
       ) : (
-        <div className="mt-8 overflow-x-auto">
-          <table className="w-full min-w-[480px] text-left text-sm">
-            <thead>
-              <tr className="border-b border-zinc-200 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800">
-                <th className="py-2 pr-4">Nom</th>
-                <th className="py-2 pr-4">Email</th>
-                <th className="py-2 pr-4">Commandes</th>
-                <th className="py-2">Total dépensé</th>
-              </tr>
-            </thead>
-            <tbody>
-              {customers.map((customer) => (
-                <tr key={customer.email} className="border-b border-zinc-100 dark:border-zinc-800">
-                  <td className="py-3 pr-4">{customer.name}</td>
-                  <td className="py-3 pr-4 text-zinc-600 dark:text-zinc-400">{customer.email}</td>
-                  <td className="py-3 pr-4">{customer.orderCount}</td>
-                  <td className="py-3">{formatPrice(customer.totalSpent)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <CustomerSearch customers={customers} />
       )}
     </div>
   );
