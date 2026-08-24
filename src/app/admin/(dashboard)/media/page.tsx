@@ -7,6 +7,7 @@ import { SelectAllCheckbox } from "@/components/select-all-checkbox";
 import { MediaFilters, MediaViewToggle } from "./media-filters";
 import { MediaUploadField } from "./media-upload-field";
 import { MigrateImagesButton } from "./migrate-images-button";
+import { ReprocessImagesButton } from "./reprocess-images-button";
 import {
   attachUploadedMedia,
   bulkMediaAction,
@@ -151,8 +152,9 @@ export default async function MediaPage({
         n&apos;importe quel produit.
       </p>
 
-      <div className="mt-4 border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="mt-4 flex flex-col gap-4 border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
         <MigrateImagesButton />
+        <ReprocessImagesButton />
       </div>
 
       <div className="mt-6 flex flex-wrap items-center gap-4 text-sm">
