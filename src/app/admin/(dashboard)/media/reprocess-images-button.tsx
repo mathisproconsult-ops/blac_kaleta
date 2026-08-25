@@ -9,11 +9,14 @@ import {
 
 type Phase = "idle" | "running" | "done" | "error";
 
+type FailedImage = { id: number; productId: number; message: string };
+
 export function ReprocessImagesButton() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [total, setTotal] = useState(0);
   const [processed, setProcessed] = useState(0);
   const [tally, setTally] = useState({ done: 0, skipped: 0, error: 0 });
+  const [failures, setFailures] = useState<FailedImage[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   async function start() {
@@ -21,6 +24,7 @@ export function ReprocessImagesButton() {
     setPhase("running");
     setProcessed(0);
     setTally({ done: 0, skipped: 0, error: 0 });
+    setFailures([]);
 
     const { images, error: listError } = await listImagesNeedingReprocessing();
     if (listError) {
@@ -37,9 +41,18 @@ export function ReprocessImagesButton() {
     }
 
     const finalTally = { done: 0, skipped: 0, error: 0 };
+    const finalFailures: FailedImage[] = [];
     for (const [index, image] of images.entries()) {
       const result = await reprocessOneImage(image.id);
       finalTally[result.status] += 1;
+      if (result.status === "error") {
+        finalFailures.push({
+          id: image.id,
+          productId: image.productId,
+          message: result.message ?? "Erreur inconnue.",
+        });
+        setFailures([...finalFailures]);
+      }
       setTally({ ...finalTally });
       setProcessed(index + 1);
     }
@@ -87,6 +100,19 @@ export function ReprocessImagesButton() {
             ? "✓ Aucune photo à retraiter — tout est déjà protégé."
             : `✓ Terminé — ${tally.done} traitée${tally.done > 1 ? "s" : ""}, ${tally.skipped} ignorée${tally.skipped > 1 ? "s" : ""}, ${tally.error} échec${tally.error > 1 ? "s" : ""}.`}
         </p>
+      ) : null}
+
+      {failures.length > 0 ? (
+        <div className="border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300">
+          <p className="font-medium">Photos en échec :</p>
+          <ul className="mt-1 flex flex-col gap-1">
+            {failures.map((failure) => (
+              <li key={failure.id}>
+                Photo #{failure.id} (produit #{failure.productId}) — {failure.message}
+              </li>
+            ))}
+          </ul>
+        </div>
       ) : null}
 
       {phase === "error" && error ? (
