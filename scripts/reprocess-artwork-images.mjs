@@ -81,9 +81,20 @@ async function protectArtworkImage(input) {
   const targetWidth = Math.round(width * scale);
   const targetHeight = Math.round(height * scale);
 
-  const buffer = await rotated
+  // Redimensionne d'abord, puis relit les dimensions RÉELLES du résultat —
+  // l'arrondi interne de sharp pour fit:"inside" peut différer de notre
+  // calcul de 1px, et .composite() rejette un filigrane ne serait-ce qu'un
+  // pixel plus grand que l'image de base.
+  const resizedBuffer = await rotated
     .resize({ width: targetWidth, height: targetHeight, fit: "inside", withoutEnlargement: true })
-    .composite([{ input: buildWatermarkSvg(targetWidth, targetHeight) }])
+    .toBuffer();
+
+  const resizedMetadata = await sharp(resizedBuffer).metadata();
+  const actualWidth = resizedMetadata.width ?? targetWidth;
+  const actualHeight = resizedMetadata.height ?? targetHeight;
+
+  const buffer = await sharp(resizedBuffer)
+    .composite([{ input: buildWatermarkSvg(actualWidth, actualHeight) }])
     .withExifMerge({
       IFD0: {
         Artist: "Blac_Kaleta",
