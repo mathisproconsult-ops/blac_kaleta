@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef } from "react";
+import { ProtectedImage } from "@/components/protected-image";
 
 type BannerWork = {
   id: number;
@@ -46,7 +47,10 @@ export function ScrollingWorksBanner({ works }: { works: BannerWork[] }) {
   }, [works.length, wrapScroll]);
 
   function handlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
-    if (event.pointerType !== "mouse") return;
+    // button 0 = clic gauche uniquement — un clic droit ne doit pas
+    // démarrer le glisser-déposer (ni gêner l'affichage du menu contextuel
+    // que ProtectedImage utilise pour son message anti-copie).
+    if (event.pointerType !== "mouse" || event.button !== 0) return;
     const el = trackRef.current;
     if (!el) return;
     draggingRef.current = true;
@@ -111,18 +115,7 @@ export function ScrollingWorksBanner({ works }: { works: BannerWork[] }) {
           className="h-[320px] flex-none sm:h-[420px] lg:h-[520px]"
         >
           {work.image ? (
-            // Pas de ProtectedImage ici : ce carrousel a son propre
-            // glisser pointeur (défilement au clic-glissé), une couche
-            // superposée bloquerait cette interaction. draggable=false +
-            // blocage du clic droit suffisent pour cette bannière.
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={work.image}
-              alt={work.title}
-              draggable={false}
-              onContextMenu={(event) => event.preventDefault()}
-              className="h-full w-auto select-none"
-            />
+            <ProtectedImage src={work.image} alt={work.title} className="h-full w-auto" />
           ) : (
             <div
               className="flex h-full w-[320px] items-center justify-center text-xs uppercase tracking-widest text-zinc-400 sm:w-[420px] lg:w-[520px]"

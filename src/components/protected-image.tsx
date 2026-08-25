@@ -23,7 +23,7 @@ export function ProtectedImage({
   }
 
   return (
-    <div className="relative select-none" onContextMenu={handleContextMenu}>
+    <div className="relative h-full select-none" onContextMenu={handleContextMenu}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={src} alt={alt} draggable={false} className={className} />
       <div className="absolute inset-0" onDragStart={(event) => event.preventDefault()} />
