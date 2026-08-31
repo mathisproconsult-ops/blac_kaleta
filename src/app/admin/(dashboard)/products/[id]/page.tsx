@@ -32,6 +32,7 @@ type ProductDetail = {
   product_categories: { categories: { id: number; name: string } | null }[];
   product_option_groups: { group_id: number }[];
   source: string;
+  recent_work_category_id: number | null;
 };
 
 async function getProduct(id: string) {
@@ -84,6 +85,14 @@ async function getProduct(id: string) {
     }
   }
 
+  // Idem pour recent_work_category_id (migration 0031) : sans elle, le
+  // sélecteur de catégorie Œuvres récentes reste simplement masqué.
+  const { data: recentWorkCategoryRow } = await supabase
+    .from("products")
+    .select("recent_work_category_id")
+    .eq("id", data.id)
+    .maybeSingle();
+
   return {
     ...data,
     product_images: (data.product_images as { id: number }[]).map((image) => ({
@@ -92,6 +101,9 @@ async function getProduct(id: string) {
     })),
     product_option_groups: optionGroupRows ?? [],
     source: (sourceRow as { source: string } | null)?.source ?? "original",
+    recent_work_category_id:
+      (recentWorkCategoryRow as { recent_work_category_id: number | null } | null)
+        ?.recent_work_category_id ?? null,
   } as unknown as ProductDetail;
 }
 
@@ -119,6 +131,7 @@ export default async function EditProductPage({
     { data: techniques },
     { data: unclaimedMedia },
     { data: optionGroups },
+    { data: recentWorkCategories },
   ] = await Promise.all([
     getProduct(id),
     supabase.from("categories").select("id, name").order("position", { ascending: true }),
@@ -134,6 +147,8 @@ export default async function EditProductPage({
       .from("option_groups")
       .select("id, name, selection_type")
       .order("position", { ascending: true }),
+    // Best-effort : la table peut ne pas encore exister (migration 0031).
+    supabase.from("recent_work_categories").select("id, name").order("position", { ascending: true }),
   ]);
 
   if (!product) notFound();
@@ -221,6 +236,7 @@ export default async function EditProductPage({
         <ProductFields
           categories={categories ?? []}
           techniques={techniques ?? []}
+          recentWorkCategories={recentWorkCategories ?? []}
           defaultValues={{
             title: product.title,
             price: product.price,
@@ -231,6 +247,7 @@ export default async function EditProductPage({
             is_for_sale: product.is_for_sale,
             show_in_recent_works: product.show_in_recent_works,
             featured_home: product.featured_home,
+            recent_work_category_id: product.recent_work_category_id,
           }}
           selectedCategoryIds={selectedCategoryIds}
           availableMedia={unclaimedMedia ?? []}

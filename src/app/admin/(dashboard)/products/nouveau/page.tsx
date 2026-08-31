@@ -13,22 +13,29 @@ export const maxDuration = 60;
 
 export default async function NewProductPage() {
   const supabase = await createClient();
-  const [{ data: categories }, { data: techniques }, { data: unclaimedMedia }, { data: optionGroups }] =
-    await Promise.all([
-      supabase.from("categories").select("id, name").order("position", { ascending: true }),
-      supabase.from("techniques").select("id, name").order("position", { ascending: true }),
-      supabase
-        .from("media")
-        .select("id, filename, url")
-        .is("product_id", null)
-        .is("deleted_at", null)
-        .in("kind", ["image", "gif"])
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("option_groups")
-        .select("id, name, selection_type")
-        .order("position", { ascending: true }),
-    ]);
+  const [
+    { data: categories },
+    { data: techniques },
+    { data: unclaimedMedia },
+    { data: optionGroups },
+    { data: recentWorkCategories },
+  ] = await Promise.all([
+    supabase.from("categories").select("id, name").order("position", { ascending: true }),
+    supabase.from("techniques").select("id, name").order("position", { ascending: true }),
+    supabase
+      .from("media")
+      .select("id, filename, url")
+      .is("product_id", null)
+      .is("deleted_at", null)
+      .in("kind", ["image", "gif"])
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("option_groups")
+      .select("id, name, selection_type")
+      .order("position", { ascending: true }),
+    // Best-effort : la table peut ne pas encore exister (migration 0031).
+    supabase.from("recent_work_categories").select("id, name").order("position", { ascending: true }),
+  ]);
 
   return (
     <div>
@@ -46,6 +53,7 @@ export default async function NewProductPage() {
         <ProductFields
           categories={categories ?? []}
           techniques={techniques ?? []}
+          recentWorkCategories={recentWorkCategories ?? []}
           availableMedia={unclaimedMedia ?? []}
           optionGroups={optionGroups ?? []}
         />

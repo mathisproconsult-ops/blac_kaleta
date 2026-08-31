@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 
-function useUpdateParam() {
+function useUpdateParam(basePath: string) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -13,7 +13,7 @@ function useUpdateParam() {
     } else {
       params.set(key, value);
     }
-    router.push(`/oeuvres-recentes${params.toString() ? `?${params.toString()}` : ""}`);
+    router.push(`${basePath}${params.toString() ? `?${params.toString()}` : ""}`);
   };
 }
 
@@ -21,12 +21,14 @@ export function FiltersBar({
   years,
   techniques,
   current,
+  basePath = "/oeuvres-recentes",
 }: {
   years: number[];
   techniques: string[];
   current: { annee?: string; technique?: string };
+  basePath?: string;
 }) {
-  const updateParam = useUpdateParam();
+  const updateParam = useUpdateParam(basePath);
 
   return (
     <div className="flex flex-wrap items-center gap-3">

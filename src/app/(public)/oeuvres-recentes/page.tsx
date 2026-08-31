@@ -1,92 +1,60 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { FiltersBar } from "./filters-bar";
-import { LightboxGallery } from "./lightbox-gallery";
 
 export const metadata: Metadata = {
   title: "Œuvres récentes — Blac_Kaleta",
 };
 
-type Work = {
-  id: number;
-  title: string;
-  year: number | null;
-  techniques: { name: string } | null;
-  product_images: { url: string; position: number }[];
-};
+type Category = { id: number; name: string; cover_image_url: string | null };
 
-export default async function RecentWorksPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ annee?: string; technique?: string }>;
-}) {
-  const { annee, technique } = await searchParams;
+export default async function RecentWorksPage() {
   const supabase = await createClient();
+  // Best-effort : la table peut ne pas encore exister (migration 0031).
+  const { data: categories } = await supabase
+    .from("recent_work_categories")
+    .select("id, name, cover_image_url")
+    .order("position", { ascending: true })
+    .returns<Category[]>();
 
-  const { data } = await supabase
-    .from("products")
-    .select("id, title, year, techniques(name), product_images(url, position)")
-    .eq("show_in_recent_works", true)
-    .eq("is_visible", true)
-    .is("deleted_at", null)
-    .order("year", { ascending: false })
-    .returns<Work[]>();
-
-  const works = data ?? [];
-
-  const years = Array.from(
-    new Set(works.map((work) => work.year).filter((year): year is number => year !== null)),
-  ).sort((a, b) => b - a);
-  const techniques = Array.from(
-    new Set(
-      works.map((work) => work.techniques?.name).filter((name): name is string => Boolean(name)),
-    ),
-  ).sort();
-
-  let filtered = works;
-  if (annee) filtered = filtered.filter((work) => String(work.year) === annee);
-  if (technique) filtered = filtered.filter((work) => work.techniques?.name === technique);
-
-  const hasFilters = Boolean(annee || technique);
+  const categoryList = categories ?? [];
 
   return (
     <div className="px-4 py-8 sm:px-6 sm:py-10 lg:px-10 lg:py-12">
-      <h1 className="text-2xl font-semibold uppercase tracking-wide">
-        Œuvres récentes
-      </h1>
+      <h1 className="text-2xl font-semibold uppercase tracking-wide">Œuvres récentes</h1>
 
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
-        <FiltersBar
-          years={years}
-          techniques={techniques}
-          current={{ annee, technique }}
-        />
-        <div className="flex items-center gap-4">
-          {hasFilters ? (
-            <Link href="/oeuvres-recentes" className="text-sm text-zinc-500 underline">
-              Reset
-            </Link>
-          ) : null}
-          <p className="text-sm text-zinc-500">
-            {filtered.length} œuvre{filtered.length !== 1 ? "s" : ""}
-          </p>
-        </div>
-      </div>
-
-      {filtered.length === 0 ? (
-        <p className="mt-12 text-sm text-zinc-500">Aucune œuvre ne correspond à ces filtres.</p>
+      {categoryList.length === 0 ? (
+        <p className="mt-12 text-sm text-zinc-500">Rien à afficher pour l&apos;instant.</p>
       ) : (
-        <LightboxGallery
-          works={filtered.map((work) => ({
-            id: work.id,
-            title: work.title,
-            year: work.year,
-            technique: work.techniques?.name ?? null,
-            imageUrl:
-              [...work.product_images].sort((a, b) => a.position - b.position)[0]?.url ?? null,
-          }))}
-        />
+        <div className="mt-10 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+          {categoryList.map((category) => (
+            <Link key={category.id} href={`/oeuvres-recentes/categorie/${category.id}`} className="group">
+              <div className="relative aspect-square w-full overflow-hidden bg-zinc-50 dark:bg-zinc-900">
+                {category.cover_image_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={category.cover_image_url}
+                    alt={category.name}
+                    className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+                  />
+                ) : (
+                  <div
+                    className="h-full w-full"
+                    style={{
+                      backgroundImage:
+                        "repeating-linear-gradient(45deg, #f0f0ee 0, #f0f0ee 2px, #ffffff 2px, #ffffff 12px)",
+                    }}
+                  />
+                )}
+                <div className="absolute inset-0 flex items-center justify-center bg-black/10">
+                  <p className="bg-white px-4 py-2 text-center text-sm font-medium uppercase tracking-wide dark:bg-zinc-900">
+                    {category.name}
+                  </p>
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
       )}
     </div>
   );

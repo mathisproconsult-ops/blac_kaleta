@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { protectAndStoreArtworkImage } from "@/lib/artwork-storage";
 import { STATUS_ORDER, type ProductStatus } from "./status";
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
@@ -73,77 +74,8 @@ function parseUploadedImages(formData: FormData): UploadedImage[] {
 // (ImageUploadField), pour ne pas faire transiter le fichier par le corps
 // de la Server Action — limité côté plateforme d'hébergement. Cette
 // fonction se contente d'enregistrer les métadonnées déjà en ligne.
-type StoredArtworkImage = { path: string; url: string; originalPath: string | null };
-
-// Télécharge le fichier tel qu'envoyé (bucket "media", où atterrissent tous
-// les uploads bruts) puis produit la copie publique redimensionnée et
-// filigranée dans le bucket "products", en conservant l'original intact
-// dans le bucket privé "artwork-originals" (jamais exposé publiquement).
-// Les GIFs animés ne sont pas retraités (filigraner image par image est
-// hors scope) : ils restent servis tels quels, sans protection.
-async function protectAndStoreArtworkImage(
-  supabase: SupabaseClient,
-  productId: number,
-  sourcePath: string,
-  mimeType: string,
-): Promise<StoredArtworkImage | null> {
-  if (mimeType === "image/gif") {
-    const { data } = supabase.storage.from("media").getPublicUrl(sourcePath);
-    return { path: sourcePath, url: data.publicUrl, originalPath: null };
-  }
-
-  const { data: downloaded, error: downloadError } = await supabase.storage
-    .from("media")
-    .download(sourcePath);
-  if (downloadError || !downloaded) {
-    console.error("protectAndStoreArtworkImage download", sourcePath, downloadError);
-    return null;
-  }
-
-  const originalBuffer = Buffer.from(await downloaded.arrayBuffer());
-
-  let protectedImage;
-  try {
-    // Import différé : sharp ne doit être chargé que lors d'un ajout de
-    // photo, jamais au simple affichage d'une page qui importe ce fichier
-    // pour ses autres actions (liste des produits, etc.).
-    const { protectArtworkImage } = await import("@/lib/image-protection");
-    protectedImage = await protectArtworkImage(originalBuffer);
-  } catch (err) {
-    console.error("protectAndStoreArtworkImage process", sourcePath, err);
-    return null;
-  }
-
-  const destPath = `${productId}/${crypto.randomUUID()}.${protectedImage.extension}`;
-
-  const [publicUpload, originalUpload] = await Promise.all([
-    supabase.storage
-      .from("products")
-      .upload(destPath, protectedImage.buffer, { contentType: protectedImage.contentType }),
-    supabase.storage
-      .from("artwork-originals")
-      .upload(destPath, originalBuffer, { contentType: mimeType }),
-  ]);
-
-  if (publicUpload.error) {
-    console.error("protectAndStoreArtworkImage publicUpload", destPath, publicUpload.error);
-    return null;
-  }
-  if (originalUpload.error) {
-    console.error("protectAndStoreArtworkImage originalUpload", destPath, originalUpload.error);
-  }
-
-  const { data: publicUrlData } = supabase.storage.from("products").getPublicUrl(destPath);
-
-  return {
-    path: destPath,
-    url: publicUrlData.publicUrl,
-    // La copie publique protégée est déjà en ligne : si seul l'upload de
-    // l'original a échoué, on continue sans original téléchargeable plutôt
-    // que de perdre toute la photo.
-    originalPath: originalUpload.error ? null : destPath,
-  };
-}
+// (protectAndStoreArtworkImage vit dans @/lib/artwork-storage — partagée
+// avec les entrées Photo d'Œuvres récentes.)
 
 // La colonne original_path peut ne pas encore exister si la migration 0029
 // n'a pas été appliquée : on retente sans elle plutôt que de perdre la photo
@@ -169,7 +101,12 @@ async function attachUploadedImages(
 ) {
   let position = startPosition;
   for (const image of images) {
-    const stored = await protectAndStoreArtworkImage(supabase, productId, image.path, image.mimeType);
+    const stored = await protectAndStoreArtworkImage(
+      supabase,
+      String(productId),
+      image.path,
+      image.mimeType,
+    );
 
     await insertProductImage(supabase, {
       product_id: productId,
@@ -213,7 +150,7 @@ async function attachLibraryMedia(
   for (const media of mediaRows) {
     const stored = await protectAndStoreArtworkImage(
       supabase,
-      productId,
+      String(productId),
       media.path,
       media.mime_type ?? "image/jpeg",
     );
@@ -271,6 +208,26 @@ async function syncOptionGroups(
   }
 }
 
+// Appel indépendant du reste des champs produit : recent_work_category_id
+// peut ne pas encore exister si la migration 0031 n'a pas été appliquée, et
+// ne doit pas faire échouer toute la sauvegarde du produit (même filet de
+// sécurité que pour le logo dans les paramètres).
+async function syncRecentWorkCategory(
+  supabase: SupabaseClient,
+  productId: number,
+  formData: FormData,
+) {
+  const raw = formData.get("recent_work_category_id");
+  const categoryId = typeof raw === "string" && raw ? Number(raw) : null;
+
+  const { error } = await supabase
+    .from("products")
+    .update({ recent_work_category_id: categoryId })
+    .eq("id", productId);
+
+  if (error) console.error("syncRecentWorkCategory", error);
+}
+
 export async function createProduct(formData: FormData) {
   const fields = productFieldsFromFormData(formData);
   if (!fields) return;
@@ -286,6 +243,7 @@ export async function createProduct(formData: FormData) {
 
   await syncCategories(supabase, product.id, parseCategoryIds(formData));
   await syncOptionGroups(supabase, product.id, parseOptionGroupIds(formData));
+  await syncRecentWorkCategory(supabase, product.id, formData);
 
   const uploadedImages = parseUploadedImages(formData);
   await attachUploadedImages(supabase, product.id, uploadedImages, 0);
@@ -314,6 +272,7 @@ export async function updateProduct(id: number, formData: FormData) {
 
   await syncCategories(supabase, id, parseCategoryIds(formData));
   await syncOptionGroups(supabase, id, parseOptionGroupIds(formData));
+  await syncRecentWorkCategory(supabase, id, formData);
 
   const { count } = await supabase
     .from("product_images")

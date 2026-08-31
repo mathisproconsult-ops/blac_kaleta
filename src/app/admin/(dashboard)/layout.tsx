@@ -29,6 +29,7 @@ export default async function AdminDashboardLayout({
         { label: "Options", href: "/admin/options" },
       ],
     },
+    { type: "link", label: "Œuvres récentes", href: "/admin/oeuvres-recentes" },
     { type: "link", label: "Médias", href: "/admin/media" },
     { type: "link", label: "Clients", href: "/admin/customers" },
     { type: "link", label: "Messages", href: "/admin/messages" },

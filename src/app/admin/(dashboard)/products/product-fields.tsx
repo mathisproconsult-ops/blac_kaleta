@@ -2,12 +2,14 @@ import { ImageUploadField } from "./image-upload-field";
 
 type Category = { id: number; name: string };
 type Technique = { id: number; name: string };
+type RecentWorkCategory = { id: number; name: string };
 type AvailableMedia = { id: number; filename: string; url: string };
 type OptionGroup = { id: number; name: string; selection_type: "single" | "multiple" };
 
 export function ProductFields({
   categories,
   techniques,
+  recentWorkCategories,
   defaultValues,
   selectedCategoryIds,
   availableMedia,
@@ -16,6 +18,7 @@ export function ProductFields({
 }: {
   categories: Category[];
   techniques: Technique[];
+  recentWorkCategories?: RecentWorkCategory[];
   defaultValues?: {
     title: string;
     price: number | null;
@@ -26,6 +29,7 @@ export function ProductFields({
     is_for_sale: boolean;
     show_in_recent_works: boolean;
     featured_home: boolean;
+    recent_work_category_id?: number | null;
   };
   selectedCategoryIds?: number[];
   availableMedia?: AvailableMedia[];
@@ -136,6 +140,25 @@ export function ProductFields({
           </p>
         ) : null}
       </div>
+      {recentWorkCategories && recentWorkCategories.length > 0 ? (
+        <div className="flex flex-col gap-1">
+          <label className="text-xs uppercase tracking-wide text-zinc-500">
+            Catégorie Œuvres récentes
+          </label>
+          <select
+            name="recent_work_category_id"
+            defaultValue={defaultValues?.recent_work_category_id ?? ""}
+            className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
+          >
+            <option value="">—</option>
+            {recentWorkCategories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
       <ImageUploadField />
       {availableMedia && availableMedia.length > 0 ? (
         <fieldset className="flex flex-col gap-1 sm:col-span-2">
