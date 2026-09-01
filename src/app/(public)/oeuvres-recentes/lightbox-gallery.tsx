@@ -12,6 +12,9 @@ type Work = {
   kind: "oeuvre" | "photo" | "video";
   videoUrl?: string | null;
   videoEmbedUrl?: string | null;
+  // Instagram et TikTok intègrent des formats verticaux (reels/stories) :
+  // la lightbox leur donne un cadre portrait plutôt que le 16:9 habituel.
+  videoEmbedPortrait?: boolean;
 };
 
 export function LightboxGallery({ works }: { works: Work[] }) {
@@ -66,7 +69,13 @@ export function LightboxGallery({ works }: { works: Work[] }) {
             <button type="button" onClick={showNext} aria-label="Élément suivant" className="absolute right-2 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center text-3xl text-white/80 hover:text-white sm:right-6">›</button>
           </>) : null}
           {current.kind === "video" && current.videoEmbedUrl ? (
-            <div className="aspect-video w-full max-w-4xl">
+            <div
+              className={
+                current.videoEmbedPortrait
+                  ? "aspect-[9/16] w-full max-w-sm"
+                  : "aspect-video w-full max-w-4xl"
+              }
+            >
               <iframe
                 src={current.videoEmbedUrl}
                 title={current.title}

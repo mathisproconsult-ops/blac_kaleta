@@ -66,7 +66,7 @@ export function AddRecentWorkForm({
             checked={mode === "video-link"}
             onChange={() => setMode("video-link")}
           />
-          Vidéo — lien YouTube/Vimeo
+          Vidéo — lien externe
         </label>
       </div>
 
@@ -111,17 +111,18 @@ export function AddRecentWorkForm({
       ) : (
         <div className="flex flex-col gap-1">
           <label className="text-xs uppercase tracking-wide text-zinc-500">
-            Lien YouTube ou Vimeo
+            Lien YouTube, Vimeo, Instagram ou TikTok
           </label>
           <input
             name="externalUrl"
             type="url"
             autoComplete="off"
-            placeholder="https://youtube.com/watch?v=... ou https://vimeo.com/..."
+            placeholder="https://youtube.com/watch?v=... , https://vimeo.com/... , https://instagram.com/reel/... ou https://tiktok.com/@.../video/..."
             className="max-w-md border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
           />
           <p className="text-xs text-zinc-400">
-            La vignette est récupérée automatiquement depuis la plateforme.
+            La vignette est récupérée automatiquement depuis la plateforme. Ne fonctionne que pour
+            un post public (les comptes ou publications privés ne peuvent pas être récupérés).
           </p>
         </div>
       )}

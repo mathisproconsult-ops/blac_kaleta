@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { SubmitButton } from "@/components/submit-button";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
+import type { VideoProvider } from "@/lib/video-embed";
 import { AddRecentWorkForm } from "./add-recent-work-form";
 import { deleteRecentWorkMedia, moveRecentWorkMedia } from "./actions";
 
@@ -14,7 +15,7 @@ type MediaRow = {
   kind: "photo" | "video";
   image_url: string | null;
   video_url: string | null;
-  video_provider: "youtube" | "vimeo" | null;
+  video_provider: VideoProvider | null;
   video_external_url: string | null;
   position: number;
 };

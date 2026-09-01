@@ -1,9 +1,15 @@
 // Parsing partagé entre l'admin (identification du lien collé par l'artiste)
 // et le site public (construction de l'URL d'intégration pour la lightbox).
-// Ni clé API ni authentification nécessaires : la vignette YouTube suit un
-// schéma d'URL public et stable, Vimeo expose la sienne via son oEmbed public.
+// YouTube/Vimeo/Instagram/TikTok exposent tous une vignette accessible sans
+// authentification pour du contenu public (oEmbed pour Vimeo/Instagram/
+// TikTok, schéma d'URL stable pour YouTube).
 
-export type VideoRef = { provider: "youtube" | "vimeo"; id: string };
+export type VideoProvider = "youtube" | "vimeo" | "instagram" | "tiktok";
+
+// `id` peut être vide pour TikTok quand le lien collé est un lien court
+// (vm.tiktok.com, vt.tiktok.com, tiktok.com/t/...) : l'ID réel n'est alors
+// connu qu'après résolution côté serveur via l'oEmbed (voir actions.ts).
+export type VideoRef = { provider: VideoProvider; id: string };
 
 export function parseVideoUrl(url: string): VideoRef | null {
   let parsed: URL;
@@ -29,11 +35,32 @@ export function parseVideoUrl(url: string): VideoRef | null {
     const match = parsed.pathname.match(/^\/(\d+)/);
     return match ? { provider: "vimeo", id: match[1] } : null;
   }
+  if (host === "instagram.com") {
+    const match = parsed.pathname.match(/^\/(?:p|reel|reels|tv)\/([\w-]+)/);
+    return match ? { provider: "instagram", id: match[1] } : null;
+  }
+  if (host === "tiktok.com") {
+    const match = parsed.pathname.match(/\/video\/(\d+)/);
+    if (match) return { provider: "tiktok", id: match[1] };
+    // Lien court du type tiktok.com/t/XXXXXXXXX : ID à résoudre via oEmbed.
+    if (/^\/t\//.test(parsed.pathname)) return { provider: "tiktok", id: "" };
+    return null;
+  }
+  if (host === "vm.tiktok.com" || host === "vt.tiktok.com") {
+    return { provider: "tiktok", id: "" };
+  }
   return null;
 }
 
 export function embedUrl(video: VideoRef): string {
-  return video.provider === "youtube"
-    ? `https://www.youtube.com/embed/${video.id}?autoplay=1`
-    : `https://player.vimeo.com/video/${video.id}?autoplay=1`;
+  switch (video.provider) {
+    case "youtube":
+      return `https://www.youtube.com/embed/${video.id}?autoplay=1`;
+    case "vimeo":
+      return `https://player.vimeo.com/video/${video.id}?autoplay=1`;
+    case "instagram":
+      return `https://www.instagram.com/p/${video.id}/embed`;
+    case "tiktok":
+      return `https://www.tiktok.com/embed/v2/${video.id}`;
+  }
 }

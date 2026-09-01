@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { parseVideoUrl, embedUrl } from "@/lib/video-embed";
+import { parseVideoUrl, embedUrl, type VideoProvider } from "@/lib/video-embed";
 import { FiltersBar } from "../../filters-bar";
 import { LightboxGallery } from "../../lightbox-gallery";
 
@@ -22,7 +22,7 @@ type MediaWork = {
   kind: "photo" | "video";
   image_url: string | null;
   video_url: string | null;
-  video_provider: "youtube" | "vimeo" | null;
+  video_provider: VideoProvider | null;
   video_external_url: string | null;
 };
 
@@ -89,6 +89,7 @@ export default async function RecentWorksCategoryPage({
     kind: "oeuvre" | "photo" | "video";
     videoUrl?: string | null;
     videoEmbedUrl?: string | null;
+    videoEmbedPortrait?: boolean;
   };
 
   const productWorks: UnifiedWork[] = (products ?? []).map((product) => ({
@@ -115,6 +116,7 @@ export default async function RecentWorksCategoryPage({
       kind: item.kind,
       videoUrl: item.video_url,
       videoEmbedUrl,
+      videoEmbedPortrait: item.video_provider === "instagram" || item.video_provider === "tiktok",
     };
   });
 
