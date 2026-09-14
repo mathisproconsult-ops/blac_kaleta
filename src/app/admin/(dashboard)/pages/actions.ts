@@ -131,3 +131,22 @@ export async function deletePage(pageId: number, slug: string) {
   revalidatePath("/admin/pages");
   revalidatePublic(slug);
 }
+
+// Champ décorrélé du reste (table settings, colonne à part) : une mise à
+// jour ici ne doit jamais dépendre de ni bloquer le système de pages/blocs
+// ci-dessus, ni l'inverse.
+export async function updateHomeWelcomeText(formData: FormData) {
+  const text = formData.get("home_welcome_text");
+  if (typeof text !== "string") return;
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("settings")
+    .update({ home_welcome_text: text.trim() })
+    .eq("id", true);
+
+  if (error) console.error("updateHomeWelcomeText", error);
+
+  revalidatePath("/admin/pages");
+  revalidatePath("/", "layout");
+}

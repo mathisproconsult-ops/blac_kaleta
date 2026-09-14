@@ -2,6 +2,9 @@ import { createClient } from "@/lib/supabase/server";
 import { getSocialPlatform } from "@/lib/social-platforms";
 import { ScrollingWorksBanner } from "./scrolling-works-banner";
 
+const DEFAULT_WELCOME_TEXT =
+  "Bienvenue dans mon univers. Ici, chaque trait, chaque image, chaque couleur porte un morceau de moi.";
+
 type SocialLink = { id: number; platform: string; url: string };
 
 async function getSocialLinks() {
@@ -36,10 +39,24 @@ async function getFeaturedWorks() {
   return data ?? [];
 }
 
+// Requête séparée et best-effort : la colonne peut ne pas encore exister si
+// la migration 0033 n'a pas été appliquée — la page d'accueil doit quand
+// même s'afficher, avec la phrase par défaut.
+async function getHomeWelcomeText() {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("settings")
+    .select("home_welcome_text")
+    .eq("id", true)
+    .maybeSingle();
+  return (data as { home_welcome_text: string | null } | null)?.home_welcome_text || DEFAULT_WELCOME_TEXT;
+}
+
 export default async function HomePage() {
-  const [featuredWorks, socialLinks] = await Promise.all([
+  const [featuredWorks, socialLinks, welcomeText] = await Promise.all([
     getFeaturedWorks(),
     getSocialLinks(),
+    getHomeWelcomeText(),
   ]);
 
   const bannerWorks = featuredWorks.map((work) => {
@@ -49,6 +66,11 @@ export default async function HomePage() {
 
   return (
     <div className="flex flex-col items-center gap-8 py-10 sm:py-16">
+      {welcomeText ? (
+        <p className="max-w-xl px-4 text-center text-sm leading-relaxed text-zinc-600 sm:px-6 sm:text-base dark:text-zinc-400">
+          {welcomeText}
+        </p>
+      ) : null}
       {bannerWorks.length > 0 ? (
         <ScrollingWorksBanner works={bannerWorks} />
       ) : (
