@@ -3,6 +3,22 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
+// Mise à jour décorrélée de la création/du renommage : si la migration 0034
+// n'est pas encore appliquée, la colonne age_restricted n'existe pas encore
+// et cette étape best-effort échoue silencieusement plutôt que de faire
+// échouer la création/le renommage de la catégorie elle-même.
+async function applyAgeRestricted(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  categoryId: number,
+  formData: FormData,
+) {
+  const { error } = await supabase
+    .from("recent_work_categories")
+    .update({ age_restricted: formData.get("age_restricted") === "on" })
+    .eq("id", categoryId);
+  if (error) console.error("applyAgeRestricted", error);
+}
+
 export async function createRecentWorkCategory(formData: FormData) {
   const name = formData.get("name");
   if (typeof name !== "string" || !name.trim()) return;
@@ -17,9 +33,13 @@ export async function createRecentWorkCategory(formData: FormData) {
 
   const nextPosition = (last?.position ?? -1) + 1;
 
-  await supabase
+  const { data: inserted } = await supabase
     .from("recent_work_categories")
-    .insert({ name: name.trim(), position: nextPosition });
+    .insert({ name: name.trim(), position: nextPosition })
+    .select("id")
+    .single();
+
+  if (inserted) await applyAgeRestricted(supabase, inserted.id, formData);
 
   revalidatePath("/admin/oeuvres-recentes");
   revalidatePath("/oeuvres-recentes");
@@ -31,6 +51,7 @@ export async function renameRecentWorkCategory(id: number, formData: FormData) {
 
   const supabase = await createClient();
   await supabase.from("recent_work_categories").update({ name: name.trim() }).eq("id", id);
+  await applyAgeRestricted(supabase, id, formData);
 
   revalidatePath("/admin/oeuvres-recentes");
   revalidatePath("/oeuvres-recentes");

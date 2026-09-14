@@ -15,6 +15,10 @@ type Work = {
   // Instagram et TikTok intègrent des formats verticaux (reels/stories) :
   // la lightbox leur donne un cadre portrait plutôt que le 16:9 habituel.
   videoEmbedPortrait?: boolean;
+  // Catégorie +18 non encore vérifiée : imageUrl pointe déjà vers la
+  // vignette floutée (ou est nulle) — ce indicateur n'ajoute qu'un repère
+  // visuel « verrouillé », il ne floute rien lui-même.
+  locked?: boolean;
 };
 
 export function LightboxGallery({ works }: { works: Work[] }) {
@@ -50,9 +54,16 @@ export function LightboxGallery({ works }: { works: Work[] }) {
           <button key={work.id} type="button" onClick={() => setOpenIndex(index)} className="group mb-8 block w-full break-inside-avoid text-left">
             <div className="relative w-full bg-zinc-50 dark:bg-zinc-900">
               {work.imageUrl ? <ProtectedImage src={work.imageUrl} alt={work.title} className="block h-auto w-full" /> : <div className="aspect-square w-full" style={{ backgroundImage: "repeating-linear-gradient(45deg, #f0f0ee 0, #f0f0ee 2px, #ffffff 2px, #ffffff 12px)" }} />}
-              {work.kind === "video" ? (
+              {work.kind === "video" && !work.locked ? (
                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
                   <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/60 text-xl text-white">▶</span>
+                </div>
+              ) : null}
+              {work.locked ? (
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                  <span className="flex items-center gap-1.5 rounded-full bg-black/70 px-3 py-1.5 text-xs font-medium uppercase tracking-wide text-white">
+                    🔒 +18
+                  </span>
                 </div>
               ) : null}
             </div>
@@ -97,7 +108,20 @@ export function LightboxGallery({ works }: { works: Work[] }) {
               className="max-h-[80vh] max-w-full"
             />
           ) : current.imageUrl ? (
-            <ProtectedImage src={current.imageUrl} alt={current.title} className="max-h-[80vh] max-w-full object-contain" />
+            <div className="relative">
+              <ProtectedImage src={current.imageUrl} alt={current.title} className="max-h-[80vh] max-w-full object-contain" />
+              {current.locked ? (
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                  <span className="flex items-center gap-1.5 rounded-full bg-black/70 px-4 py-2 text-sm font-medium uppercase tracking-wide text-white">
+                    🔒 Contenu +18 — vérifie ton âge
+                  </span>
+                </div>
+              ) : null}
+            </div>
+          ) : current.locked ? (
+            <div className="flex h-64 w-64 items-center justify-center border border-white/20 bg-zinc-900 text-sm text-white/70">
+              🔒 Contenu +18
+            </div>
           ) : null}
           <div className="mt-4 text-center">
             <p className="text-sm font-medium text-white">{current.title}</p>

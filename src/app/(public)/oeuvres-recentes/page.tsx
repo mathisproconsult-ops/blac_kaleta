@@ -19,6 +19,18 @@ export default async function RecentWorksPage() {
 
   const categoryList = categories ?? [];
 
+  // Requête séparée et best-effort : la colonne peut ne pas encore exister
+  // si la migration 0034 n'a pas été appliquée — dans ce cas, aucun badge
+  // +18 ne s'affiche plutôt que de faire échouer toute la page.
+  const { data: ageRestrictedRows } = await supabase
+    .from("recent_work_categories")
+    .select("id, age_restricted");
+  const ageRestrictedIds = new Set(
+    ((ageRestrictedRows ?? []) as { id: number; age_restricted: boolean }[])
+      .filter((row) => row.age_restricted)
+      .map((row) => row.id),
+  );
+
   return (
     <div className="px-4 py-8 sm:px-6 sm:py-10 lg:px-10 lg:py-12">
       <h1 className="text-2xl font-semibold uppercase tracking-wide">Œuvres récentes</h1>
@@ -51,6 +63,11 @@ export default async function RecentWorksPage() {
                     {category.name}
                   </p>
                 </div>
+                {ageRestrictedIds.has(category.id) ? (
+                  <span className="absolute right-2 top-2 rounded bg-black/80 px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-white">
+                    +18 · Contenu sensible
+                  </span>
+                ) : null}
               </div>
             </Link>
           ))}

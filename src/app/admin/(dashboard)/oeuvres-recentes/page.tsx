@@ -17,21 +17,31 @@ export const metadata: Metadata = {
 
 export default async function RecentWorkCategoriesPage() {
   const supabase = await createClient();
-  const [{ data: categories, error }, { data: media }] = await Promise.all([
-    supabase
-      .from("recent_work_categories")
-      .select("id, name, position, cover_image_url")
-      .order("position", { ascending: true }),
-    supabase
-      .from("media")
-      .select("id, filename, url")
-      .is("deleted_at", null)
-      .in("kind", ["image", "gif"])
-      .order("created_at", { ascending: false }),
-  ]);
+  const [{ data: categories, error }, { data: media }, { data: ageRestrictedRows }] =
+    await Promise.all([
+      supabase
+        .from("recent_work_categories")
+        .select("id, name, position, cover_image_url")
+        .order("position", { ascending: true }),
+      supabase
+        .from("media")
+        .select("id, filename, url")
+        .is("deleted_at", null)
+        .in("kind", ["image", "gif"])
+        .order("created_at", { ascending: false }),
+      // Requête séparée et best-effort : la colonne peut ne pas encore
+      // exister si la migration 0034 n'a pas été appliquée.
+      supabase.from("recent_work_categories").select("id, age_restricted"),
+    ]);
 
   const list = categories ?? [];
   const mediaList = media ?? [];
+  const ageRestrictedById = new Map(
+    ((ageRestrictedRows ?? []) as { id: number; age_restricted: boolean }[]).map((row) => [
+      row.id,
+      row.age_restricted,
+    ]),
+  );
 
   return (
     <div>
@@ -51,13 +61,17 @@ export default async function RecentWorkCategoriesPage() {
         </p>
       ) : null}
 
-      <form action={createRecentWorkCategory} className="mt-6 flex gap-2">
+      <form action={createRecentWorkCategory} className="mt-6 flex flex-wrap items-center gap-3">
         <input
           name="name"
           placeholder="Nom de la catégorie"
           required
           className="flex-1 max-w-sm border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
         />
+        <label className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
+          <input type="checkbox" name="age_restricted" />
+          Catégorie sensible (+18)
+        </label>
         <SubmitButton
           pendingText="Ajout…"
           className="bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
@@ -65,6 +79,11 @@ export default async function RecentWorkCategoriesPage() {
           + Ajouter
         </SubmitButton>
       </form>
+      <p className="mt-2 text-xs text-zinc-500">
+        Une catégorie sensible affiche un badge « +18 » sur sa vignette, et
+        toutes ses photos/vidéos sont floutées côté serveur tant que l&apos;âge
+        du visiteur n&apos;est pas vérifié.
+      </p>
 
       {list.length === 0 ? (
         <p className="mt-8 text-sm text-zinc-500">Aucune catégorie pour l&apos;instant.</p>
@@ -110,6 +129,19 @@ export default async function RecentWorkCategoriesPage() {
                     defaultValue={category.name}
                     className="flex-1 max-w-sm border border-transparent px-2 py-1 text-sm hover:border-zinc-300 focus:border-black focus:outline-none dark:hover:border-zinc-600 dark:focus:border-zinc-100"
                   />
+                  {ageRestrictedById.get(category.id) ? (
+                    <span className="rounded bg-zinc-900 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white dark:bg-zinc-100 dark:text-zinc-900">
+                      +18
+                    </span>
+                  ) : null}
+                  <label className="flex items-center gap-1.5 text-xs text-zinc-500">
+                    <input
+                      type="checkbox"
+                      name="age_restricted"
+                      defaultChecked={ageRestrictedById.get(category.id) ?? false}
+                    />
+                    Sensible (+18)
+                  </label>
                   <SubmitButton
                     pendingText="Enregistrement…"
                     className="text-sm text-zinc-600 hover:underline dark:text-zinc-400"

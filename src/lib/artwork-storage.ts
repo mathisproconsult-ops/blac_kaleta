@@ -78,3 +78,36 @@ export async function protectAndStoreArtworkImage(
     originalPath: originalUpload.error ? null : destPath,
   };
 }
+
+// Produit et stocke la vignette floutée servie par défaut pour le contenu
+// +18 tant que l'âge n'est pas vérifié (voir age-gate.tsx). Prend le buffer
+// source directement (déjà en mémoire, quelle que soit sa provenance :
+// fichier uploadé, vignette vidéo déjà en stockage, ou vignette externe
+// YouTube/Vimeo/Instagram/TikTok téléchargée pour l'occasion).
+export async function createBlurredArtworkPreview(
+  supabase: SupabaseClient,
+  destFolder: string,
+  sourceBuffer: Buffer,
+): Promise<{ path: string; url: string } | null> {
+  let blurred;
+  try {
+    const { blurArtworkImage } = await import("@/lib/image-protection");
+    blurred = await blurArtworkImage(sourceBuffer);
+  } catch (err) {
+    console.error("createBlurredArtworkPreview process", err);
+    return null;
+  }
+
+  const destPath = `${destFolder}/${crypto.randomUUID()}-blur.${blurred.extension}`;
+  const { error } = await supabase.storage
+    .from("products")
+    .upload(destPath, blurred.buffer, { contentType: blurred.contentType });
+
+  if (error) {
+    console.error("createBlurredArtworkPreview upload", destPath, error);
+    return null;
+  }
+
+  const { data: publicUrlData } = supabase.storage.from("products").getPublicUrl(destPath);
+  return { path: destPath, url: publicUrlData.publicUrl };
+}

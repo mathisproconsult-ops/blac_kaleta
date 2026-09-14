@@ -2,12 +2,45 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { protectAndStoreArtworkImage } from "@/lib/artwork-storage";
+import { createBlurredArtworkPreview, protectAndStoreArtworkImage } from "@/lib/artwork-storage";
 import { parseVideoUrl, type VideoRef } from "@/lib/video-embed";
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
 
 export type RecentWorkFormState = { success: boolean; error: string | null };
+
+// Requête séparée et best-effort : la colonne age_restricted peut ne pas
+// encore exister si la migration 0034 n'a pas été appliquée — dans ce cas,
+// aucune catégorie n'est traitée comme sensible plutôt que de faire
+// échouer tout ajout de contenu.
+async function isCategoryAgeRestricted(supabase: SupabaseClient, categoryId: number) {
+  const { data } = await supabase
+    .from("recent_work_categories")
+    .select("age_restricted")
+    .eq("id", categoryId)
+    .maybeSingle();
+  return (data as { age_restricted: boolean } | null)?.age_restricted ?? false;
+}
+
+const BLUR_GENERATION_ERROR =
+  "Impossible de générer l'aperçu flouté requis pour cette catégorie +18/sensible — réessaie ou choisis un autre fichier/lien.";
+
+// Mise à jour décorrélée de l'insertion principale : si la migration 0034
+// n'est pas encore appliquée, les colonnes image_blurred_* n'existent pas
+// encore et cette étape best-effort échoue silencieusement plutôt que de
+// faire échouer l'ajout de la photo/vidéo elle-même.
+async function applyBlurredFields(
+  supabase: SupabaseClient,
+  mediaId: number,
+  blurred: { path: string; url: string } | null,
+) {
+  if (!blurred) return;
+  const { error } = await supabase
+    .from("recent_work_media")
+    .update({ image_blurred_path: blurred.path, image_blurred_url: blurred.url })
+    .eq("id", mediaId);
+  if (error) console.error("applyBlurredFields", error);
+}
 
 function parseCommonFields(formData: FormData) {
   const title = formData.get("title");
@@ -74,21 +107,40 @@ export async function createRecentWorkPhoto(
     uploadedImage.mimeType,
   );
 
-  const { error } = await supabase.from("recent_work_media").insert({
-    recent_work_category_id: categoryId,
-    kind: "photo",
-    title: fields.title,
-    year: fields.year,
-    technique_id: fields.technique_id,
-    image_path: stored?.path ?? uploadedImage.path,
-    image_url: stored?.url ?? uploadedImage.url,
-    position: await nextPosition(supabase, categoryId),
-  });
-
-  if (error) {
-    console.error("createRecentWorkPhoto", error);
-    return { success: false, error: "Erreur base de données : " + error.message };
+  let blurred: { path: string; url: string } | null = null;
+  if (await isCategoryAgeRestricted(supabase, categoryId)) {
+    const { data: downloaded } = await supabase.storage.from("media").download(uploadedImage.path);
+    blurred = downloaded
+      ? await createBlurredArtworkPreview(
+          supabase,
+          `recent-works/${categoryId}`,
+          Buffer.from(await downloaded.arrayBuffer()),
+        )
+      : null;
+    if (!blurred) return { success: false, error: BLUR_GENERATION_ERROR };
   }
+
+  const { data: inserted, error } = await supabase
+    .from("recent_work_media")
+    .insert({
+      recent_work_category_id: categoryId,
+      kind: "photo",
+      title: fields.title,
+      year: fields.year,
+      technique_id: fields.technique_id,
+      image_path: stored?.path ?? uploadedImage.path,
+      image_url: stored?.url ?? uploadedImage.url,
+      position: await nextPosition(supabase, categoryId),
+    })
+    .select("id")
+    .single();
+
+  if (error || !inserted) {
+    console.error("createRecentWorkPhoto", error);
+    return { success: false, error: "Erreur base de données : " + error?.message };
+  }
+
+  await applyBlurredFields(supabase, inserted.id, blurred);
 
   revalidatePath(`/admin/oeuvres-recentes/${categoryId}`);
   revalidatePath("/oeuvres-recentes");
@@ -133,23 +185,45 @@ export async function createRecentWorkVideoUpload(
   if (!uploadedVideo) return { success: false, error: "Ajoute un fichier vidéo." };
 
   const supabase = await createClient();
-  const { error } = await supabase.from("recent_work_media").insert({
-    recent_work_category_id: categoryId,
-    kind: "video",
-    title: fields.title,
-    year: fields.year,
-    technique_id: fields.technique_id,
-    video_path: uploadedVideo.videoPath,
-    video_url: uploadedVideo.videoUrl,
-    image_path: uploadedVideo.thumbnailPath,
-    image_url: uploadedVideo.thumbnailUrl,
-    position: await nextPosition(supabase, categoryId),
-  });
 
-  if (error) {
-    console.error("createRecentWorkVideoUpload", error);
-    return { success: false, error: "Erreur base de données : " + error.message };
+  let blurred: { path: string; url: string } | null = null;
+  if (await isCategoryAgeRestricted(supabase, categoryId)) {
+    const { data: downloaded } = await supabase.storage
+      .from("media")
+      .download(uploadedVideo.thumbnailPath);
+    blurred = downloaded
+      ? await createBlurredArtworkPreview(
+          supabase,
+          `recent-works/${categoryId}`,
+          Buffer.from(await downloaded.arrayBuffer()),
+        )
+      : null;
+    if (!blurred) return { success: false, error: BLUR_GENERATION_ERROR };
   }
+
+  const { data: inserted, error } = await supabase
+    .from("recent_work_media")
+    .insert({
+      recent_work_category_id: categoryId,
+      kind: "video",
+      title: fields.title,
+      year: fields.year,
+      technique_id: fields.technique_id,
+      video_path: uploadedVideo.videoPath,
+      video_url: uploadedVideo.videoUrl,
+      image_path: uploadedVideo.thumbnailPath,
+      image_url: uploadedVideo.thumbnailUrl,
+      position: await nextPosition(supabase, categoryId),
+    })
+    .select("id")
+    .single();
+
+  if (error || !inserted) {
+    console.error("createRecentWorkVideoUpload", error);
+    return { success: false, error: "Erreur base de données : " + error?.message };
+  }
+
+  await applyBlurredFields(supabase, inserted.id, blurred);
 
   revalidatePath(`/admin/oeuvres-recentes/${categoryId}`);
   revalidatePath("/oeuvres-recentes");
@@ -258,22 +332,44 @@ export async function createRecentWorkVideoLink(
       : trimmedUrl;
 
   const supabase = await createClient();
-  const { error } = await supabase.from("recent_work_media").insert({
-    recent_work_category_id: categoryId,
-    kind: "video",
-    title: fields.title,
-    year: fields.year,
-    technique_id: fields.technique_id,
-    video_provider: video.provider,
-    video_external_url: storedExternalUrl,
-    image_url: metadata.thumbnailUrl,
-    position: await nextPosition(supabase, categoryId),
-  });
 
-  if (error) {
-    console.error("createRecentWorkVideoLink", error);
-    return { success: false, error: "Erreur base de données : " + error.message };
+  let blurred: { path: string; url: string } | null = null;
+  if (await isCategoryAgeRestricted(supabase, categoryId)) {
+    try {
+      const response = await fetch(metadata.thumbnailUrl);
+      const sourceBuffer = response.ok ? Buffer.from(await response.arrayBuffer()) : null;
+      blurred = sourceBuffer
+        ? await createBlurredArtworkPreview(supabase, `recent-works/${categoryId}`, sourceBuffer)
+        : null;
+    } catch (err) {
+      console.error("createRecentWorkVideoLink fetch thumbnail", err);
+      blurred = null;
+    }
+    if (!blurred) return { success: false, error: BLUR_GENERATION_ERROR };
   }
+
+  const { data: inserted, error } = await supabase
+    .from("recent_work_media")
+    .insert({
+      recent_work_category_id: categoryId,
+      kind: "video",
+      title: fields.title,
+      year: fields.year,
+      technique_id: fields.technique_id,
+      video_provider: video.provider,
+      video_external_url: storedExternalUrl,
+      image_url: metadata.thumbnailUrl,
+      position: await nextPosition(supabase, categoryId),
+    })
+    .select("id")
+    .single();
+
+  if (error || !inserted) {
+    console.error("createRecentWorkVideoLink", error);
+    return { success: false, error: "Erreur base de données : " + error?.message };
+  }
+
+  await applyBlurredFields(supabase, inserted.id, blurred);
 
   revalidatePath(`/admin/oeuvres-recentes/${categoryId}`);
   revalidatePath("/oeuvres-recentes");
@@ -294,6 +390,18 @@ export async function deleteRecentWorkMedia(id: number, categoryId: number) {
   }
   if (entry?.video_path) {
     await supabase.storage.from("media").remove([entry.video_path]);
+  }
+
+  // Requête séparée et best-effort : la colonne peut ne pas encore exister
+  // si la migration 0034 n'a pas été appliquée.
+  const { data: blurredRow } = await supabase
+    .from("recent_work_media")
+    .select("image_blurred_path")
+    .eq("id", id)
+    .maybeSingle();
+  const blurredPath = (blurredRow as { image_blurred_path: string | null } | null)?.image_blurred_path;
+  if (blurredPath) {
+    await supabase.storage.from("products").remove([blurredPath]);
   }
 
   await supabase.from("recent_work_media").delete().eq("id", id);

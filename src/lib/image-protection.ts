@@ -95,3 +95,43 @@ export async function protectArtworkImage(input: Buffer): Promise<ProtectedImage
 
   return { buffer, contentType: "image/webp", extension: "webp" };
 }
+
+const BLUR_TINY_DIMENSION = 24;
+const BLUR_OUTPUT_DIMENSION = 600;
+const BLUR_SIGMA = 12;
+
+// Aperçu flouté servi par défaut pour le contenu +18 tant que l'âge n'est
+// pas vérifié. Contrairement à un flou CSS (appliqué côté navigateur sur
+// l'image pleine résolution — contournable en inspectant le code pour
+// récupérer l'URL d'origine, et partiellement réversible par
+// déconvolution), l'information est ici réellement détruite : l'image est
+// d'abord réduite à une résolution minuscule (24px), puis floutée — remonter
+// en résolution ensuite ne peut pas restituer un détail qui n'existe plus
+// dans les pixels sources.
+export async function blurArtworkImage(input: Buffer): Promise<ProtectedImage> {
+  const rotated = sharp(input).rotate();
+  const metadata = await rotated.metadata();
+  const width = metadata.width ?? BLUR_OUTPUT_DIMENSION;
+  const height = metadata.height ?? BLUR_OUTPUT_DIMENSION;
+
+  const tinyBuffer = await rotated
+    .resize({
+      width: BLUR_TINY_DIMENSION,
+      height: BLUR_TINY_DIMENSION,
+      fit: "inside",
+      withoutEnlargement: true,
+    })
+    .toBuffer();
+
+  const scale = Math.min(1, BLUR_OUTPUT_DIMENSION / Math.max(width, height));
+  const targetWidth = Math.max(1, Math.round(width * scale));
+  const targetHeight = Math.max(1, Math.round(height * scale));
+
+  const buffer = await sharp(tinyBuffer)
+    .resize({ width: targetWidth, height: targetHeight, fit: "fill" })
+    .blur(BLUR_SIGMA)
+    .webp({ quality: 60 })
+    .toBuffer();
+
+  return { buffer, contentType: "image/webp", extension: "webp" };
+}
