@@ -34,6 +34,8 @@ type ProductDetail = {
   source: string;
   recent_work_category_id: number | null;
   age_restricted: boolean;
+  is_digital_book: boolean;
+  digital_file_name: string | null;
 };
 
 async function getProduct(id: string) {
@@ -102,6 +104,13 @@ async function getProduct(id: string) {
     .eq("id", data.id)
     .maybeSingle();
 
+  // Idem pour is_digital_book/digital_file_name (migration 0036).
+  const { data: digitalBookRow } = await supabase
+    .from("products")
+    .select("is_digital_book, digital_file_name")
+    .eq("id", data.id)
+    .maybeSingle();
+
   return {
     ...data,
     product_images: (data.product_images as { id: number }[]).map((image) => ({
@@ -114,6 +123,10 @@ async function getProduct(id: string) {
       (recentWorkCategoryRow as { recent_work_category_id: number | null } | null)
         ?.recent_work_category_id ?? null,
     age_restricted: (ageRestrictedRow as { age_restricted: boolean } | null)?.age_restricted ?? false,
+    is_digital_book:
+      (digitalBookRow as { is_digital_book: boolean } | null)?.is_digital_book ?? false,
+    digital_file_name:
+      (digitalBookRow as { digital_file_name: string | null } | null)?.digital_file_name ?? null,
   } as unknown as ProductDetail;
 }
 
@@ -259,6 +272,8 @@ export default async function EditProductPage({
             featured_home: product.featured_home,
             recent_work_category_id: product.recent_work_category_id,
             age_restricted: product.age_restricted,
+            is_digital_book: product.is_digital_book,
+            digital_file_name: product.digital_file_name,
           }}
           selectedCategoryIds={selectedCategoryIds}
           availableMedia={unclaimedMedia ?? []}

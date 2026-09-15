@@ -31,6 +31,8 @@ export function ProductFields({
     featured_home: boolean;
     recent_work_category_id?: number | null;
     age_restricted?: boolean;
+    is_digital_book?: boolean;
+    digital_file_name?: string | null;
   };
   selectedCategoryIds?: number[];
   availableMedia?: AvailableMedia[];
@@ -223,6 +225,30 @@ export function ProductFields({
           </div>
         </fieldset>
       ) : null}
+      <fieldset className="flex flex-col gap-2 sm:col-span-2">
+        <legend className="text-xs uppercase tracking-wide text-zinc-500">
+          Livre numérique
+        </legend>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            name="is_digital_book"
+            defaultChecked={defaultValues?.is_digital_book ?? false}
+          />
+          Ce produit est un livre numérique (PDF)
+        </label>
+        <p className="text-xs text-zinc-500">
+          Le fichier n&apos;est jamais accessible par une URL publique. Une fois la commande créée,
+          il reste verrouillé pour le client jusqu&apos;à ce que tu coches « Paiement vérifié » sur
+          la commande.
+        </p>
+        {defaultValues?.digital_file_name ? (
+          <p className="text-xs text-zinc-600 dark:text-zinc-400">
+            Fichier actuel : {defaultValues.digital_file_name}
+          </p>
+        ) : null}
+        <input type="file" name="digital_file" accept="application/pdf" className="text-sm" />
+      </fieldset>
       <fieldset className="flex flex-col gap-1 sm:col-span-2">
         <legend className="text-xs uppercase tracking-wide text-zinc-500">
           Catégories

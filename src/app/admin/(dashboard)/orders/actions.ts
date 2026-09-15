@@ -17,6 +17,19 @@ export async function updateOrderStatus(id: number, status: OrderStatus) {
   revalidatePath("/admin");
 }
 
+// Décorrélé du reste : la colonne peut ne pas encore exister si la
+// migration 0036 n'a pas été appliquée. Architecture prête pour un futur
+// paiement automatique (CinetPay, FedaPay, Kkiapay...) : un webhook n'aura
+// qu'à appeler la même mise à jour, sans toucher à la logique de
+// déblocage du fichier (voir /commande/[token]).
+export async function togglePaymentVerified(id: number, formData: FormData) {
+  const paymentVerified = formData.get("payment_verified") === "on";
+  const supabase = await createClient();
+  const { error } = await supabase.from("orders").update({ payment_verified: paymentVerified }).eq("id", id);
+  if (error) console.error("togglePaymentVerified", error);
+  revalidatePath(`/admin/orders/${id}`);
+}
+
 export async function markOrdersAsRead() {
   const supabase = await createClient();
   await supabase.from("orders").update({ read: true }).eq("read", false);

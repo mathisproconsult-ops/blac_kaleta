@@ -6,7 +6,7 @@ import { useCart } from "@/lib/cart-context";
 import { formatPrice } from "@/lib/currency";
 import { createCartOrder, type CheckoutState } from "./actions";
 
-const initialState: CheckoutState = { success: false, error: null };
+const initialState: CheckoutState = { success: false, error: null, accessToken: null };
 
 export function CheckoutView() {
   const { items, subtotal, clear } = useCart();
@@ -19,10 +19,22 @@ export function CheckoutView() {
 
   if (state.success) {
     return (
-      <p className="mt-8 border border-zinc-300 px-4 py-3 text-sm dark:border-zinc-700">
-        Votre commande a bien été reçue, nous vous recontactons pour le
-        paiement.
-      </p>
+      <div className="mt-8 flex flex-col gap-3 border border-zinc-300 px-4 py-3 text-sm dark:border-zinc-700">
+        <p>
+          Votre commande a bien été reçue, nous vous recontactons pour le
+          paiement.
+        </p>
+        {state.accessToken ? (
+          <p>
+            Gardez ce lien pour suivre votre commande{" "}
+            {"—"} il vous servira aussi à récupérer un éventuel livre numérique une fois le
+            paiement vérifié :{" "}
+            <Link href={`/commande/${state.accessToken}`} className="underline">
+              /commande/{state.accessToken}
+            </Link>
+          </p>
+        ) : null}
+      </div>
     );
   }
 

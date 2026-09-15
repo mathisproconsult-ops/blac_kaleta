@@ -6,6 +6,7 @@ export const RESERVED_SLUGS = [
   "contact",
   "oeuvres-recentes",
   "panier",
+  "commande",
   "admin",
   "api",
 ];

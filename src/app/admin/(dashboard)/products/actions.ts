@@ -272,6 +272,45 @@ async function syncAgeRestricted(supabase: SupabaseClient, productId: number, fo
   if (error) console.error("syncAgeRestricted", error);
 }
 
+// Appel indépendant du reste des champs produit : is_digital_book et
+// digital_file_* peuvent ne pas encore exister si la migration 0036 n'a
+// pas été appliquée. Le PDF part dans le bucket privé "artwork-originals"
+// (jamais d'URL publique directe) — le même que pour les originaux haute
+// résolution des images, déjà hors de portée du public.
+async function syncDigitalBook(supabase: SupabaseClient, productId: number, formData: FormData) {
+  const isDigitalBook = formData.get("is_digital_book") === "on";
+  const file = formData.get("digital_file");
+
+  const updates: Record<string, unknown> = { is_digital_book: isDigitalBook };
+
+  if (file instanceof File && file.size > 0) {
+    const { data: existing } = await supabase
+      .from("products")
+      .select("digital_file_path")
+      .eq("id", productId)
+      .maybeSingle();
+    const previousPath = (existing as { digital_file_path: string | null } | null)?.digital_file_path;
+
+    const path = `digital-books/${productId}/${crypto.randomUUID()}-${file.name}`;
+    const { error: uploadError } = await supabase.storage
+      .from("artwork-originals")
+      .upload(path, file, { contentType: file.type || "application/pdf" });
+
+    if (uploadError) {
+      console.error("syncDigitalBook upload", uploadError);
+    } else {
+      updates.digital_file_path = path;
+      updates.digital_file_name = file.name;
+      if (previousPath) {
+        await supabase.storage.from("artwork-originals").remove([previousPath]);
+      }
+    }
+  }
+
+  const { error } = await supabase.from("products").update(updates).eq("id", productId);
+  if (error) console.error("syncDigitalBook", error);
+}
+
 export async function createProduct(formData: FormData) {
   const fields = productFieldsFromFormData(formData);
   if (!fields) return;
@@ -298,6 +337,7 @@ export async function createProduct(formData: FormData) {
     uploadedImages.length,
   );
   await syncAgeRestricted(supabase, product.id, formData);
+  await syncDigitalBook(supabase, product.id, formData);
 
   revalidatePath("/admin/products");
   revalidatePath("/admin/media");
@@ -333,6 +373,7 @@ export async function updateProduct(id: number, formData: FormData) {
     (count ?? 0) + uploadedImages.length,
   );
   await syncAgeRestricted(supabase, id, formData);
+  await syncDigitalBook(supabase, id, formData);
 
   revalidatePath("/admin/products");
   revalidatePath(`/admin/products/${id}`);
@@ -359,6 +400,19 @@ export async function deleteProduct(id: number) {
     await supabase.storage
       .from("artwork-originals")
       .remove(originalFiles.map((file) => `${id}/${file.name}`));
+  }
+
+  // Requête séparée et best-effort : la colonne peut ne pas encore exister
+  // si la migration 0036 n'a pas été appliquée.
+  const { data: digitalBookRow } = await supabase
+    .from("products")
+    .select("digital_file_path")
+    .eq("id", id)
+    .maybeSingle();
+  const digitalFilePath = (digitalBookRow as { digital_file_path: string | null } | null)
+    ?.digital_file_path;
+  if (digitalFilePath) {
+    await supabase.storage.from("artwork-originals").remove([digitalFilePath]);
   }
 
   await supabase.from("products").delete().eq("id", id);

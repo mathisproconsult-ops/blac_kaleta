@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { formatPrice } from "@/lib/currency";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
-import { deleteOrder } from "../actions";
+import { deleteOrder, togglePaymentVerified } from "../actions";
 import { OrderStatusSelect } from "../order-status-select";
 import { ORDER_STATUS_LABELS, type OrderStatus } from "../status";
 
@@ -37,6 +37,8 @@ type OrderDetail = {
   customer_id: number | null;
   source: string;
   note: string | null;
+  payment_verified: boolean;
+  access_token: string | null;
 };
 
 async function getOrder(id: string) {
@@ -87,7 +89,35 @@ async function getOrder(id: string) {
     }
   }
 
-  return { order, imageByProductId };
+  // Requête séparée et best-effort : les colonnes ajoutées par la migration
+  // 0036 (livres numériques) peuvent ne pas encore exister.
+  const { data: digitalFields } = await supabase
+    .from("orders")
+    .select("payment_verified, access_token")
+    .eq("id", order.id)
+    .maybeSingle();
+  order.payment_verified =
+    (digitalFields as { payment_verified: boolean } | null)?.payment_verified ?? false;
+  order.access_token = (digitalFields as { access_token: string | null } | null)?.access_token ?? null;
+
+  // Idem : est-ce que l'un des articles commandés est un livre numérique ?
+  const digitalBookProductIds = new Set<number>();
+  if (productIds.length > 0) {
+    const { data: digitalBookRows } = await supabase
+      .from("products")
+      .select("id, is_digital_book")
+      .in("id", productIds);
+    if (digitalBookRows) {
+      for (const row of digitalBookRows as { id: number; is_digital_book: boolean }[]) {
+        if (row.is_digital_book) digitalBookProductIds.add(row.id);
+      }
+    }
+  }
+  const hasDigitalBook = order.order_items.some(
+    (item) => item.product_id !== null && digitalBookProductIds.has(item.product_id),
+  );
+
+  return { order, imageByProductId, hasDigitalBook };
 }
 
 export async function generateMetadata({
@@ -107,7 +137,7 @@ export default async function OrderDetailPage({
   const { id } = await params;
   const result = await getOrder(id);
   if (!result) notFound();
-  const { order, imageByProductId } = result;
+  const { order, imageByProductId, hasDigitalBook } = result;
 
   const total = order.order_items.reduce((sum, item) => sum + item.unit_price * item.quantity, 0);
 
@@ -208,6 +238,36 @@ export default async function OrderDetailPage({
               Voir la fiche client →
             </Link>
           </div>
+
+          {hasDigitalBook ? (
+            <div>
+              <h2 className="text-sm font-semibold uppercase tracking-wide">Livre numérique</h2>
+              <form action={togglePaymentVerified.bind(null, order.id)} className="mt-2">
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    name="payment_verified"
+                    defaultChecked={order.payment_verified}
+                    onChange={(event) => event.currentTarget.form?.requestSubmit()}
+                  />
+                  Paiement vérifié manuellement
+                </label>
+              </form>
+              <p className="mt-2 text-xs text-zinc-500">
+                {order.payment_verified
+                  ? "Le fichier est débloqué : le client peut le télécharger depuis son lien de suivi."
+                  : "Tant que cette case n'est pas cochée, le fichier reste verrouillé pour le client."}
+              </p>
+              {order.access_token ? (
+                <p className="mt-2 text-xs text-zinc-500">
+                  Lien de suivi à transmettre si besoin :{" "}
+                  <Link href={`/commande/${order.access_token}`} className="underline">
+                    /commande/{order.access_token}
+                  </Link>
+                </p>
+              ) : null}
+            </div>
+          ) : null}
 
           <div>
             <h2 className="text-sm font-semibold uppercase tracking-wide">Livraison</h2>

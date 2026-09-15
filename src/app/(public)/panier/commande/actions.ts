@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 export type CheckoutState = {
   success: boolean;
   error: string | null;
+  accessToken: string | null;
 };
 
 type CartLine = { productId: number; quantity: number; optionChoiceIds: number[] };
@@ -44,13 +45,13 @@ export async function createCartOrder(
   const cartLines = parseCart(formData);
 
   if (typeof name !== "string" || !name.trim()) {
-    return { success: false, error: "Merci de renseigner ton nom." };
+    return { success: false, error: "Merci de renseigner ton nom.", accessToken: null };
   }
   if (typeof email !== "string" || !email.trim()) {
-    return { success: false, error: "Merci de renseigner ton email." };
+    return { success: false, error: "Merci de renseigner ton email.", accessToken: null };
   }
   if (cartLines.length === 0) {
-    return { success: false, error: "Ton panier est vide." };
+    return { success: false, error: "Ton panier est vide.", accessToken: null };
   }
 
   const supabase = await createClient();
@@ -122,6 +123,7 @@ export async function createCartOrder(
     return {
       success: false,
       error: `Ton panier a besoin d'être ajusté avant de continuer : ${problems.join(" ")}`,
+      accessToken: null,
     };
   }
 
@@ -137,7 +139,7 @@ export async function createCartOrder(
     .single();
 
   if (orderError || !order) {
-    return { success: false, error: "Impossible d'enregistrer la commande, réessaie." };
+    return { success: false, error: "Impossible d'enregistrer la commande, réessaie.", accessToken: null };
   }
 
   for (const line of cartLines) {
@@ -177,5 +179,18 @@ export async function createCartOrder(
   revalidatePath("/oeuvres-recentes");
   revalidatePath("/", "layout");
 
-  return { success: true, error: null };
+  // Requête séparée et best-effort : la colonne peut ne pas encore exister
+  // si la migration 0036 n'a pas été appliquée — dans ce cas, la commande
+  // est quand même confirmée, simplement sans lien de suivi affiché.
+  const { data: tokenRow } = await supabase
+    .from("orders")
+    .select("access_token")
+    .eq("id", order.id)
+    .maybeSingle();
+
+  return {
+    success: true,
+    error: null,
+    accessToken: (tokenRow as { access_token: string | null } | null)?.access_token ?? null,
+  };
 }
