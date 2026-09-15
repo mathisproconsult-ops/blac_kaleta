@@ -30,6 +30,7 @@ export function ProductFields({
     show_in_recent_works: boolean;
     featured_home: boolean;
     recent_work_category_id?: number | null;
+    age_restricted?: boolean;
   };
   selectedCategoryIds?: number[];
   availableMedia?: AvailableMedia[];
@@ -65,6 +66,14 @@ export function ProductFields({
             defaultChecked={defaultValues?.featured_home ?? false}
           />
           Mettre en avant sur l&apos;accueil
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            name="age_restricted"
+            defaultChecked={defaultValues?.age_restricted ?? false}
+          />
+          Contenu +18 (s&apos;affiche flouté dans Œuvres récentes jusqu&apos;à vérification d&apos;âge)
         </label>
       </fieldset>
       <div className="flex flex-col gap-1">

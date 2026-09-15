@@ -33,6 +33,7 @@ type ProductDetail = {
   product_option_groups: { group_id: number }[];
   source: string;
   recent_work_category_id: number | null;
+  age_restricted: boolean;
 };
 
 async function getProduct(id: string) {
@@ -93,6 +94,14 @@ async function getProduct(id: string) {
     .eq("id", data.id)
     .maybeSingle();
 
+  // Idem pour age_restricted (migration 0035) : sans elle, la case +18
+  // reste simplement masquée/décochée.
+  const { data: ageRestrictedRow } = await supabase
+    .from("products")
+    .select("age_restricted")
+    .eq("id", data.id)
+    .maybeSingle();
+
   return {
     ...data,
     product_images: (data.product_images as { id: number }[]).map((image) => ({
@@ -104,6 +113,7 @@ async function getProduct(id: string) {
     recent_work_category_id:
       (recentWorkCategoryRow as { recent_work_category_id: number | null } | null)
         ?.recent_work_category_id ?? null,
+    age_restricted: (ageRestrictedRow as { age_restricted: boolean } | null)?.age_restricted ?? false,
   } as unknown as ProductDetail;
 }
 
@@ -248,6 +258,7 @@ export default async function EditProductPage({
             show_in_recent_works: product.show_in_recent_works,
             featured_home: product.featured_home,
             recent_work_category_id: product.recent_work_category_id,
+            age_restricted: product.age_restricted,
           }}
           selectedCategoryIds={selectedCategoryIds}
           availableMedia={unclaimedMedia ?? []}

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { protectAndStoreArtworkImage } from "@/lib/artwork-storage";
+import { blurStoredImage, protectAndStoreArtworkImage } from "@/lib/artwork-storage";
 import { STATUS_ORDER, type ProductStatus } from "./status";
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
@@ -228,6 +228,50 @@ async function syncRecentWorkCategory(
   if (error) console.error("syncRecentWorkCategory", error);
 }
 
+// Appel indépendant du reste des champs produit : age_restricted et
+// image_blurred_* peuvent ne pas encore exister si la migration 0035 n'a
+// pas été appliquée. À l'activation, génère un aperçu flouté de la
+// première image (celle utilisée dans la grille Œuvres récentes) à partir
+// de la copie déjà protégée (filigranée) — jamais depuis l'original.
+async function syncAgeRestricted(supabase: SupabaseClient, productId: number, formData: FormData) {
+  const ageRestricted = formData.get("age_restricted") === "on";
+
+  let blurred: { path: string; url: string } | null = null;
+  if (ageRestricted) {
+    const { data: existing } = await supabase
+      .from("products")
+      .select("image_blurred_path")
+      .eq("id", productId)
+      .maybeSingle();
+
+    if (!(existing as { image_blurred_path?: string | null } | null)?.image_blurred_path) {
+      const { data: firstImage } = await supabase
+        .from("product_images")
+        .select("path")
+        .eq("product_id", productId)
+        .order("position", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      if (firstImage?.path) {
+        blurred = await blurStoredImage(supabase, String(productId), "products", firstImage.path);
+      }
+    }
+  }
+
+  const updates: Record<string, unknown> = { age_restricted: ageRestricted };
+  if (blurred) {
+    updates.image_blurred_path = blurred.path;
+    updates.image_blurred_url = blurred.url;
+  } else if (!ageRestricted) {
+    updates.image_blurred_path = null;
+    updates.image_blurred_url = null;
+  }
+
+  const { error } = await supabase.from("products").update(updates).eq("id", productId);
+  if (error) console.error("syncAgeRestricted", error);
+}
+
 export async function createProduct(formData: FormData) {
   const fields = productFieldsFromFormData(formData);
   if (!fields) return;
@@ -253,6 +297,7 @@ export async function createProduct(formData: FormData) {
     parseMediaIds(formData),
     uploadedImages.length,
   );
+  await syncAgeRestricted(supabase, product.id, formData);
 
   revalidatePath("/admin/products");
   revalidatePath("/admin/media");
@@ -287,6 +332,7 @@ export async function updateProduct(id: number, formData: FormData) {
     parseMediaIds(formData),
     (count ?? 0) + uploadedImages.length,
   );
+  await syncAgeRestricted(supabase, id, formData);
 
   revalidatePath("/admin/products");
   revalidatePath(`/admin/products/${id}`);

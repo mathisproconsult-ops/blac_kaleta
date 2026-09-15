@@ -111,3 +111,20 @@ export async function createBlurredArtworkPreview(
   const { data: publicUrlData } = supabase.storage.from("products").getPublicUrl(destPath);
   return { path: destPath, url: publicUrlData.publicUrl };
 }
+
+// Variante pratique de createBlurredArtworkPreview quand la source est déjà
+// dans un bucket Supabase (image produit déjà protégée, vignette vidéo déjà
+// uploadée) plutôt qu'un buffer déjà en mémoire — télécharge puis délègue.
+export async function blurStoredImage(
+  supabase: SupabaseClient,
+  destFolder: string,
+  sourceBucket: string,
+  sourcePath: string,
+): Promise<{ path: string; url: string } | null> {
+  const { data: downloaded, error } = await supabase.storage.from(sourceBucket).download(sourcePath);
+  if (error || !downloaded) {
+    console.error("blurStoredImage download", sourceBucket, sourcePath, error);
+    return null;
+  }
+  return createBlurredArtworkPreview(supabase, destFolder, Buffer.from(await downloaded.arrayBuffer()));
+}

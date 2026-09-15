@@ -91,31 +91,45 @@ export default async function RecentWorksCategoryPage({
 
   if (!category) notFound();
 
-  const ageRestricted =
+  const categoryAgeRestricted =
     (ageRestrictedRow as { age_restricted: boolean } | null)?.age_restricted ?? false;
 
   const cookieStore = await cookies();
   const verified = cookieStore.get(`av_cat_${categoryId}`)?.value === "1";
-  const locked = ageRestricted && !verified;
+  const locked = categoryAgeRestricted && !verified;
 
-  // Requête séparée et best-effort : les colonnes image_blurred_* peuvent
-  // ne pas encore exister si la migration 0034 n'a pas été appliquée — sans
-  // elles, une catégorie +18 pas encore migrée affiche un cadenas générique
-  // plutôt que l'image nette (jamais l'inverse).
+  // Requêtes séparées et best-effort : ces colonnes peuvent ne pas encore
+  // exister si la migration 0035 n'a pas été appliquée — dans ce cas,
+  // aucune œuvre individuelle n'est traitée comme sensible.
+  const productIds = (products ?? []).map((product) => product.id);
+  const productAgeRestrictedById = new Map<number, boolean>();
+  const productBlurredUrlById = new Map<number, string | null>();
+  if (productIds.length > 0) {
+    const { data: rows } = await supabase
+      .from("products")
+      .select("id, age_restricted, image_blurred_url")
+      .in("id", productIds);
+    if (rows) {
+      for (const row of rows as { id: number; age_restricted: boolean; image_blurred_url: string | null }[]) {
+        productAgeRestrictedById.set(row.id, row.age_restricted);
+        productBlurredUrlById.set(row.id, row.image_blurred_url);
+      }
+    }
+  }
+
   const mediaIds = (media ?? []).map((item) => item.id);
-  let blurredUrlById = new Map<number, string | null>();
-  if (locked && mediaIds.length > 0) {
-    const { data: blurredRows } = await supabase
+  const mediaAgeRestrictedById = new Map<number, boolean>();
+  const mediaBlurredUrlById = new Map<number, string | null>();
+  if (mediaIds.length > 0) {
+    const { data: rows } = await supabase
       .from("recent_work_media")
-      .select("id, image_blurred_url")
+      .select("id, age_restricted, image_blurred_url")
       .in("id", mediaIds);
-    if (blurredRows) {
-      blurredUrlById = new Map(
-        (blurredRows as { id: number; image_blurred_url: string | null }[]).map((row) => [
-          row.id,
-          row.image_blurred_url,
-        ]),
-      );
+    if (rows) {
+      for (const row of rows as { id: number; age_restricted: boolean; image_blurred_url: string | null }[]) {
+        mediaAgeRestrictedById.set(row.id, row.age_restricted);
+        mediaBlurredUrlById.set(row.id, row.image_blurred_url);
+      }
     }
   }
 
@@ -130,24 +144,33 @@ export default async function RecentWorksCategoryPage({
     videoEmbedUrl?: string | null;
     videoEmbedPortrait?: boolean;
     locked?: boolean;
+    ageRestricted?: boolean;
   };
 
-  const productWorks: UnifiedWork[] = (products ?? []).map((product) => ({
-    id: `product-${product.id}`,
-    title: product.title,
-    year: product.year,
-    technique: product.techniques?.name ?? null,
-    // Pas de variante floutée pour les images produit : tant que l'âge
-    // n'est pas vérifié, on ne renvoie jamais l'URL réelle plutôt que de
-    // servir une image non protégée.
-    imageUrl: locked ? null : [...product.product_images].sort((a, b) => a.position - b.position)[0]?.url ?? null,
-    kind: "oeuvre",
-    locked,
-  }));
+  const productWorks: UnifiedWork[] = (products ?? []).map((product) => {
+    const itemAgeRestricted = productAgeRestrictedById.get(product.id) ?? false;
+    // Cache réel dès que la catégorie est verrouillée OU que l'œuvre est
+    // elle-même marquée +18 : jamais l'URL réelle envoyée dans ces deux cas.
+    const hide = locked || itemAgeRestricted;
+    return {
+      id: `product-${product.id}`,
+      title: product.title,
+      year: product.year,
+      technique: product.techniques?.name ?? null,
+      imageUrl: hide
+        ? productBlurredUrlById.get(product.id) ?? null
+        : [...product.product_images].sort((a, b) => a.position - b.position)[0]?.url ?? null,
+      kind: "oeuvre",
+      locked,
+      ageRestricted: itemAgeRestricted,
+    };
+  });
 
   const mediaWorks: UnifiedWork[] = (media ?? []).map((item) => {
+    const itemAgeRestricted = mediaAgeRestrictedById.get(item.id) ?? false;
+    const hide = locked || itemAgeRestricted;
     let videoEmbedUrl: string | null = null;
-    if (!locked && item.kind === "video" && item.video_provider && item.video_external_url) {
+    if (!hide && item.kind === "video" && item.video_provider && item.video_external_url) {
       const ref = parseVideoUrl(item.video_external_url);
       videoEmbedUrl = ref ? embedUrl(ref) : null;
     }
@@ -156,12 +179,13 @@ export default async function RecentWorksCategoryPage({
       title: item.title,
       year: item.year,
       technique: item.techniques?.name ?? null,
-      imageUrl: locked ? blurredUrlById.get(item.id) ?? null : item.image_url,
+      imageUrl: hide ? mediaBlurredUrlById.get(item.id) ?? null : item.image_url,
       kind: item.kind,
-      videoUrl: locked ? null : item.video_url,
+      videoUrl: hide ? null : item.video_url,
       videoEmbedUrl,
       videoEmbedPortrait: item.video_provider === "instagram" || item.video_provider === "tiktok",
       locked,
+      ageRestricted: itemAgeRestricted,
     };
   });
 
@@ -189,7 +213,7 @@ export default async function RecentWorksCategoryPage({
       </Link>
       <h1 className="mt-2 flex items-center gap-2 text-2xl font-semibold uppercase tracking-wide">
         {category.name}
-        {ageRestricted ? (
+        {categoryAgeRestricted ? (
           <span className="rounded bg-zinc-900 px-2 py-1 align-middle text-xs font-medium uppercase tracking-wide text-white dark:bg-zinc-100 dark:text-zinc-900">
             +18
           </span>
@@ -218,7 +242,7 @@ export default async function RecentWorksCategoryPage({
     </div>
   );
 
-  if (!ageRestricted) return content;
+  if (!categoryAgeRestricted) return content;
 
   return (
     <AgeGate categoryId={categoryId} locked={locked}>

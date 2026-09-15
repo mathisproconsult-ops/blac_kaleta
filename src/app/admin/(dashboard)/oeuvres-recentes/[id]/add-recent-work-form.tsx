@@ -104,6 +104,11 @@ export function AddRecentWorkForm({
         </div>
       </div>
 
+      <label className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
+        <input type="checkbox" name="age_restricted" />
+        Contenu +18 — s&apos;affiche flouté dans la grille jusqu&apos;à vérification d&apos;âge au clic
+      </label>
+
       {mode === "photo" ? (
         <SinglePhotoUploadField />
       ) : mode === "video-upload" ? (

@@ -2,7 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { createBlurredArtworkPreview, protectAndStoreArtworkImage } from "@/lib/artwork-storage";
+import {
+  blurStoredImage,
+  createBlurredArtworkPreview,
+  protectAndStoreArtworkImage,
+} from "@/lib/artwork-storage";
 import { parseVideoUrl, type VideoRef } from "@/lib/video-embed";
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
@@ -22,22 +26,27 @@ async function isCategoryAgeRestricted(supabase: SupabaseClient, categoryId: num
   return (data as { age_restricted: boolean } | null)?.age_restricted ?? false;
 }
 
-const BLUR_GENERATION_ERROR =
-  "Impossible de générer l'aperçu flouté requis pour cette catégorie +18/sensible — réessaie ou choisis un autre fichier/lien.";
-
-// Mise à jour décorrélée de l'insertion principale : si la migration 0034
-// n'est pas encore appliquée, les colonnes image_blurred_* n'existent pas
-// encore et cette étape best-effort échoue silencieusement plutôt que de
-// faire échouer l'ajout de la photo/vidéo elle-même.
+// Mise à jour décorrélée de l'insertion principale : si la migration
+// n'est pas encore appliquée, les colonnes image_blurred_*/age_restricted
+// n'existent pas encore et cette étape best-effort échoue silencieusement
+// plutôt que de faire échouer l'ajout de la photo/vidéo elle-même. Un aperçu
+// flouté qui échoue à se générer (fichier illisible, lien externe temporai-
+// rement injoignable...) ne bloque pas non plus l'ajout : l'élément reste
+// affiché derrière un cadenas générique côté public plutôt que via l'image
+// nette — jamais l'inverse, voir categorie/[id]/page.tsx.
 async function applyBlurredFields(
   supabase: SupabaseClient,
   mediaId: number,
+  ageRestricted: boolean,
   blurred: { path: string; url: string } | null,
 ) {
-  if (!blurred) return;
   const { error } = await supabase
     .from("recent_work_media")
-    .update({ image_blurred_path: blurred.path, image_blurred_url: blurred.url })
+    .update({
+      age_restricted: ageRestricted,
+      image_blurred_path: blurred?.path ?? null,
+      image_blurred_url: blurred?.url ?? null,
+    })
     .eq("id", mediaId);
   if (error) console.error("applyBlurredFields", error);
 }
@@ -53,6 +62,7 @@ function parseCommonFields(formData: FormData) {
     title: title.trim(),
     year: typeof year === "string" && year ? Number(year) : null,
     technique_id: typeof techniqueId === "string" && techniqueId ? Number(techniqueId) : null,
+    ageRestricted: formData.get("age_restricted") === "on",
   };
 }
 
@@ -107,8 +117,9 @@ export async function createRecentWorkPhoto(
     uploadedImage.mimeType,
   );
 
+  const shouldBlur = fields.ageRestricted || (await isCategoryAgeRestricted(supabase, categoryId));
   let blurred: { path: string; url: string } | null = null;
-  if (await isCategoryAgeRestricted(supabase, categoryId)) {
+  if (shouldBlur) {
     const { data: downloaded } = await supabase.storage.from("media").download(uploadedImage.path);
     blurred = downloaded
       ? await createBlurredArtworkPreview(
@@ -117,7 +128,6 @@ export async function createRecentWorkPhoto(
           Buffer.from(await downloaded.arrayBuffer()),
         )
       : null;
-    if (!blurred) return { success: false, error: BLUR_GENERATION_ERROR };
   }
 
   const { data: inserted, error } = await supabase
@@ -140,7 +150,7 @@ export async function createRecentWorkPhoto(
     return { success: false, error: "Erreur base de données : " + error?.message };
   }
 
-  await applyBlurredFields(supabase, inserted.id, blurred);
+  await applyBlurredFields(supabase, inserted.id, fields.ageRestricted, blurred);
 
   revalidatePath(`/admin/oeuvres-recentes/${categoryId}`);
   revalidatePath("/oeuvres-recentes");
@@ -186,8 +196,9 @@ export async function createRecentWorkVideoUpload(
 
   const supabase = await createClient();
 
+  const shouldBlur = fields.ageRestricted || (await isCategoryAgeRestricted(supabase, categoryId));
   let blurred: { path: string; url: string } | null = null;
-  if (await isCategoryAgeRestricted(supabase, categoryId)) {
+  if (shouldBlur) {
     const { data: downloaded } = await supabase.storage
       .from("media")
       .download(uploadedVideo.thumbnailPath);
@@ -198,7 +209,6 @@ export async function createRecentWorkVideoUpload(
           Buffer.from(await downloaded.arrayBuffer()),
         )
       : null;
-    if (!blurred) return { success: false, error: BLUR_GENERATION_ERROR };
   }
 
   const { data: inserted, error } = await supabase
@@ -223,7 +233,7 @@ export async function createRecentWorkVideoUpload(
     return { success: false, error: "Erreur base de données : " + error?.message };
   }
 
-  await applyBlurredFields(supabase, inserted.id, blurred);
+  await applyBlurredFields(supabase, inserted.id, fields.ageRestricted, blurred);
 
   revalidatePath(`/admin/oeuvres-recentes/${categoryId}`);
   revalidatePath("/oeuvres-recentes");
@@ -333,8 +343,9 @@ export async function createRecentWorkVideoLink(
 
   const supabase = await createClient();
 
+  const shouldBlur = fields.ageRestricted || (await isCategoryAgeRestricted(supabase, categoryId));
   let blurred: { path: string; url: string } | null = null;
-  if (await isCategoryAgeRestricted(supabase, categoryId)) {
+  if (shouldBlur) {
     try {
       const response = await fetch(metadata.thumbnailUrl);
       const sourceBuffer = response.ok ? Buffer.from(await response.arrayBuffer()) : null;
@@ -345,7 +356,6 @@ export async function createRecentWorkVideoLink(
       console.error("createRecentWorkVideoLink fetch thumbnail", err);
       blurred = null;
     }
-    if (!blurred) return { success: false, error: BLUR_GENERATION_ERROR };
   }
 
   const { data: inserted, error } = await supabase
@@ -369,7 +379,7 @@ export async function createRecentWorkVideoLink(
     return { success: false, error: "Erreur base de données : " + error?.message };
   }
 
-  await applyBlurredFields(supabase, inserted.id, blurred);
+  await applyBlurredFields(supabase, inserted.id, fields.ageRestricted, blurred);
 
   revalidatePath(`/admin/oeuvres-recentes/${categoryId}`);
   revalidatePath("/oeuvres-recentes");
@@ -429,6 +439,58 @@ export async function moveRecentWorkMedia(id: number, categoryId: number, direct
 
   await supabase.from("recent_work_media").update({ position: target.position }).eq("id", current.id);
   await supabase.from("recent_work_media").update({ position: current.position }).eq("id", target.id);
+
+  revalidatePath(`/admin/oeuvres-recentes/${categoryId}`);
+  revalidatePath("/oeuvres-recentes");
+}
+
+// Bascule le marquage +18 d'une entrée déjà existante. À l'activation, la
+// vignette floutée est (re)générée à partir de l'image déjà en place
+// (image_path pour une photo/vignette vidéo uploadée, image_url pour une
+// vignette externe YouTube/Vimeo/Instagram/TikTok) — pas besoin de
+// ré-uploader quoi que ce soit.
+export async function toggleRecentWorkMediaAgeRestricted(
+  id: number,
+  categoryId: number,
+  formData: FormData,
+) {
+  const ageRestricted = formData.get("age_restricted") === "on";
+  const supabase = await createClient();
+
+  let blurred: { path: string; url: string } | null = null;
+  if (ageRestricted) {
+    const { data: row } = await supabase
+      .from("recent_work_media")
+      .select("image_path, image_url, image_blurred_path")
+      .eq("id", id)
+      .maybeSingle();
+
+    if ((row as { image_blurred_path?: string | null } | null)?.image_blurred_path) {
+      // Déjà généré précédemment (ex : catégorie déjà sensible) — rien à refaire.
+      blurred = null;
+    } else if (row?.image_path) {
+      blurred = await blurStoredImage(supabase, `recent-works/${categoryId}`, "products", row.image_path);
+    } else if (row?.image_url) {
+      try {
+        const response = await fetch(row.image_url);
+        const sourceBuffer = response.ok ? Buffer.from(await response.arrayBuffer()) : null;
+        blurred = sourceBuffer
+          ? await createBlurredArtworkPreview(supabase, `recent-works/${categoryId}`, sourceBuffer)
+          : null;
+      } catch (err) {
+        console.error("toggleRecentWorkMediaAgeRestricted fetch thumbnail", err);
+      }
+    }
+  }
+
+  const updates: Record<string, unknown> = { age_restricted: ageRestricted };
+  if (blurred) {
+    updates.image_blurred_path = blurred.path;
+    updates.image_blurred_url = blurred.url;
+  }
+
+  const { error } = await supabase.from("recent_work_media").update(updates).eq("id", id);
+  if (error) console.error("toggleRecentWorkMediaAgeRestricted", error);
 
   revalidatePath(`/admin/oeuvres-recentes/${categoryId}`);
   revalidatePath("/oeuvres-recentes");
