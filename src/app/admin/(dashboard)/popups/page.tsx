@@ -43,15 +43,24 @@ const FREQUENCY_LABELS: Record<Popup["frequency"], string> = {
 
 export default async function PopupsPage() {
   const supabase = await createClient();
-  const { data: popups, error } = await supabase
-    .from("popups")
-    .select(
-      "id, title, body, button_text, button_url, scope, scope_page_path, frequency, is_active, image_url, position",
-    )
-    .order("position", { ascending: true })
-    .returns<Popup[]>();
+  const [{ data: popups, error }, { data: media }] = await Promise.all([
+    supabase
+      .from("popups")
+      .select(
+        "id, title, body, button_text, button_url, scope, scope_page_path, frequency, is_active, image_url, position",
+      )
+      .order("position", { ascending: true })
+      .returns<Popup[]>(),
+    supabase
+      .from("media")
+      .select("id, filename, url")
+      .is("deleted_at", null)
+      .in("kind", ["image", "gif"])
+      .order("created_at", { ascending: false }),
+  ]);
 
   const list = popups ?? [];
+  const mediaList = media ?? [];
 
   return (
     <div>
@@ -72,7 +81,7 @@ export default async function PopupsPage() {
           action={createPopup}
           className="flex flex-col gap-4 border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
         >
-          <PopupFormFields />
+          <PopupFormFields mediaList={mediaList} />
           <SubmitButton
             pendingText="Création…"
             className="self-start bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
@@ -160,6 +169,7 @@ export default async function PopupsPage() {
                   className="flex flex-col gap-4 border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
                 >
                   <PopupFormFields
+                    mediaList={mediaList}
                     defaultValues={{
                       title: popup.title,
                       body: popup.body,

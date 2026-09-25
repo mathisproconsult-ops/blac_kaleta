@@ -14,7 +14,15 @@ type DefaultValues = {
   image_url: string | null;
 };
 
-export function PopupFormFields({ defaultValues }: { defaultValues?: DefaultValues }) {
+type MediaItem = { id: number; filename: string; url: string };
+
+export function PopupFormFields({
+  defaultValues,
+  mediaList = [],
+}: {
+  defaultValues?: DefaultValues;
+  mediaList?: MediaItem[];
+}) {
   const [scope, setScope] = useState<"all" | "home" | "page">(defaultValues?.scope ?? "all");
 
   return (
@@ -112,7 +120,32 @@ export function PopupFormFields({ defaultValues }: { defaultValues?: DefaultValu
             </label>
           </div>
         ) : null}
-        <input type="file" name="image_file" accept="image/*" className="text-sm" />
+        <div className="flex flex-col gap-1">
+          <label className="text-xs uppercase tracking-wide text-zinc-500">
+            Nouvelle image
+          </label>
+          <input type="file" name="image_file" accept="image/*" className="text-sm" />
+        </div>
+        {mediaList.length > 0 ? (
+          <fieldset className="flex flex-col gap-1">
+            <legend className="text-xs uppercase tracking-wide text-zinc-500">
+              Ou choisir depuis la Médiathèque
+            </legend>
+            <div className="flex max-h-48 flex-wrap gap-3 overflow-y-auto">
+              {mediaList.map((media) => (
+                <label key={media.id} className="flex flex-col items-center gap-1 text-xs">
+                  <input type="radio" name="mediaId" value={media.id} />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={media.url}
+                    alt={media.filename}
+                    className="h-16 w-16 object-cover"
+                  />
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        ) : null}
       </div>
     </div>
   );
