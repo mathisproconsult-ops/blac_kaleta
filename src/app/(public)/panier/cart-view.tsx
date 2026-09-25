@@ -50,7 +50,12 @@ export function CartView() {
                 </p>
               ) : null}
               <p className="text-xs text-zinc-500">
-                {item.price !== null ? formatPrice(item.price) : "Sur demande"} / unité
+                {item.price !== null ? (
+                  <span data-no-translate>{formatPrice(item.price)}</span>
+                ) : (
+                  "Sur demande"
+                )}{" "}
+                / unité
               </p>
             </div>
             {item.stock > 1 ? (
@@ -67,7 +72,7 @@ export function CartView() {
             ) : (
               <p className="text-sm text-zinc-600 dark:text-zinc-400">Qté : 1</p>
             )}
-            <p className="w-24 text-right text-sm font-medium">
+            <p className="w-24 text-right text-sm font-medium" data-no-translate>
               {item.price !== null
                 ? formatPrice(item.price * item.quantity)
                 : "—"}
@@ -84,7 +89,9 @@ export function CartView() {
       </ul>
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-zinc-200 pt-6 dark:border-zinc-800">
-        <p className="text-lg font-semibold">Total : {formatPrice(subtotal)}</p>
+        <p className="text-lg font-semibold">
+          Total : <span data-no-translate>{formatPrice(subtotal)}</span>
+        </p>
         <Link
           href="/panier/commande"
           className="bg-black px-6 py-3 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"

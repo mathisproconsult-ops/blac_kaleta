@@ -73,7 +73,8 @@ export default async function OrderTrackingPage({
               <div>
                 <p className="text-sm font-medium">{item.product_title}</p>
                 <p className="mt-1 text-xs text-zinc-500">
-                  Quantité : {item.quantity} × {formatPrice(item.unit_price)}
+                  Quantité : {item.quantity} ×{" "}
+                  <span data-no-translate>{formatPrice(item.unit_price)}</span>
                 </p>
                 {isDigitalBook ? (
                   order.payment_verified ? (
@@ -88,14 +89,16 @@ export default async function OrderTrackingPage({
                   )
                 ) : null}
               </div>
-              <p className="text-sm font-medium">{formatPrice(item.unit_price * item.quantity)}</p>
+              <p className="text-sm font-medium" data-no-translate>
+                {formatPrice(item.unit_price * item.quantity)}
+              </p>
             </li>
           );
         })}
       </ul>
 
       <p className="mt-4 flex items-center justify-end gap-3 text-sm font-semibold">
-        Total <span className="text-base">{formatPrice(total)}</span>
+        Total <span className="text-base" data-no-translate>{formatPrice(total)}</span>
       </p>
 
       <p className="mt-8 text-xs text-zinc-500">

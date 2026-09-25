@@ -118,8 +118,8 @@ export function ProductOptionsPurchase({
 
   return (
     <div>
-      <p className="text-lg">{formatPrice(finalPrice)}</p>
-      <p className="mt-1 text-sm text-zinc-400">
+      <p className="text-lg" data-no-translate>{formatPrice(finalPrice)}</p>
+      <p className="mt-1 text-sm text-zinc-400" data-no-translate>
         {formatIndicativeConversion(finalPrice, usdRate)}
       </p>
 

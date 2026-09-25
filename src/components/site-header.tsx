@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CartIcon } from "@/components/cart-icon";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { LanguageSelector } from "@/components/language-selector";
 
 type MenuItem = { id: number; label: string; href: string };
 
@@ -27,6 +28,7 @@ export function SiteHeader({
           href="/"
           onClick={() => setOpen(false)}
           className="flex items-center text-base font-bold tracking-wide dark:text-zinc-100"
+          data-no-translate
         >
           {logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -56,10 +58,12 @@ export function SiteHeader({
           <span className="h-5 w-px bg-zinc-200 dark:bg-zinc-700" aria-hidden />
           <CartIcon />
           <ThemeToggle />
+          <LanguageSelector />
         </nav>
 
         <div className="flex items-center gap-4 lg:hidden">
           <ThemeToggle />
+          <LanguageSelector />
           <CartIcon />
           <button
             type="button"

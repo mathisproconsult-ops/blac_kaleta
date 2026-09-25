@@ -127,7 +127,7 @@ export function CheckoutView() {
                 ) : null}
                 <p className="text-xs text-zinc-500">Qté : {item.quantity}</p>
               </div>
-              <p className="text-sm">
+              <p className="text-sm" data-no-translate>
                 {item.price !== null
                   ? formatPrice(item.price * item.quantity)
                   : "—"}
@@ -137,7 +137,7 @@ export function CheckoutView() {
         </ul>
         <div className="mt-4 flex items-center justify-between border-t border-zinc-200 pt-4 dark:border-zinc-800">
           <p className="text-sm font-semibold uppercase tracking-wide">Total</p>
-          <p className="text-lg font-semibold">{formatPrice(subtotal)}</p>
+          <p className="text-lg font-semibold" data-no-translate>{formatPrice(subtotal)}</p>
         </div>
       </div>
     </form>

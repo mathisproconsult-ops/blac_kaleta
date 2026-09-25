@@ -199,10 +199,14 @@ export default async function BoutiqueCategoryPage({
                 <div className="mt-1 flex items-center justify-between gap-2">
                   <div className="flex flex-col">
                     <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                      {product.price !== null ? formatPrice(product.price) : "Sur demande"}
+                      {product.price !== null ? (
+                        <span data-no-translate>{formatPrice(product.price)}</span>
+                      ) : (
+                        "Sur demande"
+                      )}
                     </p>
                     {product.price !== null ? (
-                      <p className="text-xs text-zinc-400">
+                      <p className="text-xs text-zinc-400" data-no-translate>
                         {formatIndicativeConversion(product.price, usdRate)}
                       </p>
                     ) : null}
