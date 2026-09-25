@@ -1,8 +1,8 @@
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
-import { createClient } from "@/lib/supabase/server";
 import { getSettings } from "@/lib/settings";
 import { getActivePopups } from "@/lib/popups";
+import { getMenuItems, getFooterLinks } from "@/lib/site-nav";
 import { CartProvider } from "@/lib/cart-context";
 import { PopupManager } from "./popup-manager";
 
@@ -11,16 +11,9 @@ export default async function PublicLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
-  const [{ data: menuItems }, { data: footerLinks }, settings, popups] = await Promise.all([
-    supabase
-      .from("menu_items")
-      .select("id, label, href")
-      .order("position", { ascending: true }),
-    supabase
-      .from("footer_links")
-      .select("id, label, href")
-      .order("position", { ascending: true }),
+  const [menuItems, footerLinks, settings, popups] = await Promise.all([
+    getMenuItems(),
+    getFooterLinks(),
     getSettings(),
     getActivePopups(),
   ]);
@@ -29,14 +22,14 @@ export default async function PublicLayout({
     <CartProvider>
       <div className="flex flex-col">
         <SiteHeader
-          items={menuItems ?? []}
+          items={menuItems}
           siteName={settings.shop_name}
           logoUrl={settings.header_logo_url}
         />
         <main className="flex-1">{children}</main>
         <SiteFooter
           copyrightText={settings.footer_copyright_text}
-          links={footerLinks ?? []}
+          links={footerLinks}
         />
       </div>
       <PopupManager popups={popups} />

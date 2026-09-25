@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { optimizeAndStoreDecorImage } from "@/lib/artwork-storage";
 
 // Mise à jour décorrélée de la création/du renommage : si la migration 0034
 // n'est pas encore appliquée, la colonne age_restricted n'existe pas encore
@@ -72,25 +73,25 @@ export async function updateRecentWorkCategoryCover(id: number, formData: FormDa
   const removeCover = formData.get("remove_cover") === "on";
 
   if (file instanceof File && file.size > 0) {
-    const path = `recent-work-categories/${id}/${crypto.randomUUID()}-${file.name}`;
-    const { error: uploadError } = await supabase.storage
-      .from("media")
-      .upload(path, file, { contentType: file.type });
+    const uploaded = await optimizeAndStoreDecorImage(
+      supabase,
+      "media",
+      `recent-work-categories/${id}`,
+      file,
+    );
 
-    if (!uploadError) {
-      const { data: publicUrlData } = supabase.storage.from("media").getPublicUrl(path);
-
+    if (uploaded) {
       await supabase.from("media").insert({
         filename: file.name,
-        path,
-        url: publicUrlData.publicUrl,
-        mime_type: file.type,
+        path: uploaded.path,
+        url: uploaded.url,
+        mime_type: file.type === "image/gif" ? "image/gif" : "image/webp",
         kind: file.type === "image/gif" ? "gif" : "image",
       });
 
       await supabase
         .from("recent_work_categories")
-        .update({ cover_image_url: publicUrlData.publicUrl, cover_image_path: path })
+        .update({ cover_image_url: uploaded.url, cover_image_path: uploaded.path })
         .eq("id", id);
     }
   } else if (typeof mediaId === "string" && mediaId) {

@@ -1,7 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { optimizeAndStoreDecorImage } from "@/lib/artwork-storage";
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
 
@@ -19,23 +20,15 @@ async function updateLogo(supabase: SupabaseClient, formData: FormData) {
       .eq("id", true)
       .maybeSingle();
 
-    const path = `branding/${crypto.randomUUID()}-${logoFile.name}`;
-    const { error: uploadError } = await supabase.storage
-      .from("pages")
-      .upload(path, logoFile, { contentType: logoFile.type });
-
-    if (uploadError) {
-      console.error("updateLogo upload", uploadError);
+    const uploaded = await optimizeAndStoreDecorImage(supabase, "pages", "branding", logoFile);
+    if (!uploaded) {
+      console.error("updateLogo upload failed");
       return;
     }
 
-    const { data: publicUrlData } = supabase.storage
-      .from("pages")
-      .getPublicUrl(path);
-
     const { error: updateError } = await supabase
       .from("settings")
-      .update({ header_logo_url: publicUrlData.publicUrl, header_logo_path: path })
+      .update({ header_logo_url: uploaded.url, header_logo_path: uploaded.path })
       .eq("id", true);
 
     if (updateError) {
@@ -98,4 +91,5 @@ export async function updateSettings(formData: FormData) {
 
   revalidatePath("/admin/settings");
   revalidatePath("/", "layout");
+  updateTag("settings");
 }

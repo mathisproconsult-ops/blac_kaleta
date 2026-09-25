@@ -13,7 +13,9 @@ type ProductWork = {
   title: string;
   year: number | null;
   techniques: { name: string } | null;
-  product_images: { url: string; position: number }[];
+  product_images: { id: number; url: string; position: number }[];
+  age_restricted: boolean;
+  image_blurred_url: string | null;
 };
 
 type MediaWork = {
@@ -26,6 +28,8 @@ type MediaWork = {
   video_url: string | null;
   video_provider: VideoProvider | null;
   video_external_url: string | null;
+  age_restricted: boolean;
+  image_blurred_url: string | null;
 };
 
 export async function generateMetadata({
@@ -60,75 +64,73 @@ export default async function RecentWorksCategoryPage({
   const { annee, technique } = await searchParams;
 
   const supabase = await createClient();
-  const [{ data: category }, { data: products }, { data: media }, { data: ageRestrictedRow }] =
-    await Promise.all([
-      supabase.from("recent_work_categories").select("id, name").eq("id", categoryId).maybeSingle(),
-      supabase
-        .from("products")
-        .select("id, title, year, techniques(name), product_images(url, position)")
-        .eq("recent_work_category_id", categoryId)
-        .eq("show_in_recent_works", true)
-        .eq("is_visible", true)
-        .is("deleted_at", null)
-        .returns<ProductWork[]>(),
-      supabase
-        .from("recent_work_media")
-        .select(
-          "id, title, year, techniques(name), kind, image_url, video_url, video_provider, video_external_url",
-        )
-        .eq("recent_work_category_id", categoryId)
-        .order("position", { ascending: true })
-        .returns<MediaWork[]>(),
-      // Requête séparée et best-effort : la colonne peut ne pas encore
-      // exister si la migration 0034 n'a pas été appliquée — dans ce cas,
-      // la catégorie n'est simplement jamais traitée comme sensible.
-      supabase
-        .from("recent_work_categories")
-        .select("age_restricted")
-        .eq("id", categoryId)
-        .maybeSingle(),
-    ]);
+  // Colonnes issues des migrations 0031/0034/0035 (confirmées appliquées
+  // depuis longtemps) : regroupées directement dans les requêtes
+  // principales plutôt qu'en requêtes séparées, pour limiter le nombre
+  // d'allers-retours à la base sur cette page.
+  const [{ data: category }, { data: products }, { data: media }] = await Promise.all([
+    supabase
+      .from("recent_work_categories")
+      .select("id, name, age_restricted")
+      .eq("id", categoryId)
+      .maybeSingle(),
+    supabase
+      .from("products")
+      .select(
+        "id, title, year, techniques(name), product_images(id, url, position), age_restricted, image_blurred_url",
+      )
+      .eq("recent_work_category_id", categoryId)
+      .eq("show_in_recent_works", true)
+      .eq("is_visible", true)
+      .is("deleted_at", null)
+      .returns<ProductWork[]>(),
+    supabase
+      .from("recent_work_media")
+      .select(
+        "id, title, year, techniques(name), kind, image_url, video_url, video_provider, video_external_url, age_restricted, image_blurred_url",
+      )
+      .eq("recent_work_category_id", categoryId)
+      .order("position", { ascending: true })
+      .returns<MediaWork[]>(),
+  ]);
 
   if (!category) notFound();
 
-  const categoryAgeRestricted =
-    (ageRestrictedRow as { age_restricted: boolean } | null)?.age_restricted ?? false;
+  const categoryAgeRestricted = (category as { age_restricted?: boolean }).age_restricted ?? false;
 
   const cookieStore = await cookies();
   const verified = cookieStore.get(`av_cat_${categoryId}`)?.value === "1";
   const locked = categoryAgeRestricted && !verified;
 
   // Requêtes séparées et best-effort : ces colonnes peuvent ne pas encore
-  // exister si la migration 0035 n'a pas été appliquée — dans ce cas,
-  // aucune œuvre individuelle n'est traitée comme sensible.
-  const productIds = (products ?? []).map((product) => product.id);
-  const productAgeRestrictedById = new Map<number, boolean>();
-  const productBlurredUrlById = new Map<number, string | null>();
-  if (productIds.length > 0) {
+  // exister (migration 0038, pas encore appliquée) — sans elles, la grille
+  // retombe simplement sur l'image pleine résolution comme avant.
+  const mediaIds = (media ?? []).map((item) => item.id);
+  const mediaThumbnailUrlById = new Map<number, string | null>();
+  if (mediaIds.length > 0) {
     const { data: rows } = await supabase
-      .from("products")
-      .select("id, age_restricted, image_blurred_url")
-      .in("id", productIds);
+      .from("recent_work_media")
+      .select("id, thumbnail_url")
+      .in("id", mediaIds);
     if (rows) {
-      for (const row of rows as { id: number; age_restricted: boolean; image_blurred_url: string | null }[]) {
-        productAgeRestrictedById.set(row.id, row.age_restricted);
-        productBlurredUrlById.set(row.id, row.image_blurred_url);
+      for (const row of rows as { id: number; thumbnail_url: string | null }[]) {
+        mediaThumbnailUrlById.set(row.id, row.thumbnail_url);
       }
     }
   }
 
-  const mediaIds = (media ?? []).map((item) => item.id);
-  const mediaAgeRestrictedById = new Map<number, boolean>();
-  const mediaBlurredUrlById = new Map<number, string | null>();
-  if (mediaIds.length > 0) {
+  const productImageThumbnailById = new Map<number, string | null>();
+  const productImageIds = (products ?? []).flatMap((product) =>
+    product.product_images.map((image) => image.id),
+  );
+  if (productImageIds.length > 0) {
     const { data: rows } = await supabase
-      .from("recent_work_media")
-      .select("id, age_restricted, image_blurred_url")
-      .in("id", mediaIds);
+      .from("product_images")
+      .select("id, thumbnail_url")
+      .in("id", productImageIds);
     if (rows) {
-      for (const row of rows as { id: number; age_restricted: boolean; image_blurred_url: string | null }[]) {
-        mediaAgeRestrictedById.set(row.id, row.age_restricted);
-        mediaBlurredUrlById.set(row.id, row.image_blurred_url);
+      for (const row of rows as { id: number; thumbnail_url: string | null }[]) {
+        productImageThumbnailById.set(row.id, row.thumbnail_url);
       }
     }
   }
@@ -139,6 +141,7 @@ export default async function RecentWorksCategoryPage({
     year: number | null;
     technique: string | null;
     imageUrl: string | null;
+    thumbnailUrl: string | null;
     kind: "oeuvre" | "photo" | "video";
     videoUrl?: string | null;
     videoEmbedUrl?: string | null;
@@ -148,18 +151,22 @@ export default async function RecentWorksCategoryPage({
   };
 
   const productWorks: UnifiedWork[] = (products ?? []).map((product) => {
-    const itemAgeRestricted = productAgeRestrictedById.get(product.id) ?? false;
+    const itemAgeRestricted = product.age_restricted ?? false;
     // Cache réel dès que la catégorie est verrouillée OU que l'œuvre est
     // elle-même marquée +18 : jamais l'URL réelle envoyée dans ces deux cas.
     const hide = locked || itemAgeRestricted;
+    const firstImage = [...product.product_images].sort((a, b) => a.position - b.position)[0];
+    const fullUrl = hide ? product.image_blurred_url ?? null : firstImage?.url ?? null;
+    const thumbnailUrl = hide
+      ? fullUrl
+      : (firstImage ? productImageThumbnailById.get(firstImage.id) : null) ?? fullUrl;
     return {
       id: `product-${product.id}`,
       title: product.title,
       year: product.year,
       technique: product.techniques?.name ?? null,
-      imageUrl: hide
-        ? productBlurredUrlById.get(product.id) ?? null
-        : [...product.product_images].sort((a, b) => a.position - b.position)[0]?.url ?? null,
+      imageUrl: fullUrl,
+      thumbnailUrl,
       kind: "oeuvre",
       locked,
       ageRestricted: itemAgeRestricted,
@@ -167,19 +174,22 @@ export default async function RecentWorksCategoryPage({
   });
 
   const mediaWorks: UnifiedWork[] = (media ?? []).map((item) => {
-    const itemAgeRestricted = mediaAgeRestrictedById.get(item.id) ?? false;
+    const itemAgeRestricted = item.age_restricted ?? false;
     const hide = locked || itemAgeRestricted;
     let videoEmbedUrl: string | null = null;
     if (!hide && item.kind === "video" && item.video_provider && item.video_external_url) {
       const ref = parseVideoUrl(item.video_external_url);
       videoEmbedUrl = ref ? embedUrl(ref) : null;
     }
+    const fullUrl = hide ? item.image_blurred_url ?? null : item.image_url;
+    const thumbnailUrl = hide ? fullUrl : mediaThumbnailUrlById.get(item.id) ?? fullUrl;
     return {
       id: `media-${item.id}`,
       title: item.title,
       year: item.year,
       technique: item.techniques?.name ?? null,
-      imageUrl: hide ? mediaBlurredUrlById.get(item.id) ?? null : item.image_url,
+      imageUrl: fullUrl,
+      thumbnailUrl,
       kind: item.kind,
       videoUrl: hide ? null : item.video_url,
       videoEmbedUrl,

@@ -86,7 +86,7 @@ export function PopupManager({ popups }: { popups: ActivePopup[] }) {
         </button>
         {active.image_url ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={active.image_url} alt="" className="mb-4 h-40 w-full object-cover" />
+          <img src={active.image_url} alt="" loading="lazy" className="mb-4 h-40 w-full object-cover" />
         ) : null}
         <p className="pr-6 text-sm font-semibold uppercase tracking-wide">{active.title}</p>
         <p className="mt-3 whitespace-pre-line text-sm text-zinc-600 dark:text-zinc-400">

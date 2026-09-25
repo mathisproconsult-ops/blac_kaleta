@@ -78,18 +78,26 @@ function parseUploadedImages(formData: FormData): UploadedImage[] {
 // avec les entrées Photo d'Œuvres récentes.)
 
 // La colonne original_path peut ne pas encore exister si la migration 0029
-// n'a pas été appliquée : on retente sans elle plutôt que de perdre la photo
-// (même filet de sécurité que pour les autres colonnes ajoutées après coup).
+// n'a pas été appliquée, ni thumbnail_path/thumbnail_url (migration 0038) :
+// on retente sans elles plutôt que de perdre la photo (même filet de
+// sécurité que pour les autres colonnes ajoutées après coup).
 async function insertProductImage(
   supabase: SupabaseClient,
-  row: { product_id: number; path: string; url: string; original_path: string | null; position: number },
+  row: {
+    product_id: number;
+    path: string;
+    url: string;
+    original_path: string | null;
+    thumbnail_path: string | null;
+    thumbnail_url: string | null;
+    position: number;
+  },
 ) {
   const { error } = await supabase.from("product_images").insert(row);
   if (error) {
     console.error("insertProductImage", error);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- extrait volontairement du reste pour le retirer de l'insert de repli
-    const { original_path: _originalPath, ...withoutOriginalPath } = row;
-    await supabase.from("product_images").insert(withoutOriginalPath);
+    const { product_id, path, url, position } = row;
+    await supabase.from("product_images").insert({ product_id, path, url, position });
   }
 }
 
@@ -113,6 +121,8 @@ async function attachUploadedImages(
       path: stored?.path ?? image.path,
       url: stored?.url ?? image.url,
       original_path: stored?.originalPath ?? null,
+      thumbnail_path: stored?.thumbnailPath ?? null,
+      thumbnail_url: stored?.thumbnailUrl ?? null,
       position,
     });
     position += 1;
@@ -160,6 +170,8 @@ async function attachLibraryMedia(
       path: stored?.path ?? media.path,
       url: stored?.url ?? media.url,
       original_path: stored?.originalPath ?? null,
+      thumbnail_path: stored?.thumbnailPath ?? null,
+      thumbnail_url: stored?.thumbnailUrl ?? null,
       position,
     });
     position += 1;

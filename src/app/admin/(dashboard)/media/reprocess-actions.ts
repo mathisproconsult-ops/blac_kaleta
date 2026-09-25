@@ -24,9 +24,10 @@ type ProductImageSourceRow = {
 };
 
 // Liste les photos de produits (hors Printify) pas encore passées par le
-// pipeline de protection (original_path pas encore renseigné) — utilisé par
-// le bouton du dashboard pour connaître le total avant de traiter photo par
-// photo et afficher une progression réelle.
+// pipeline de protection (original_path pas encore renseigné), et celles
+// déjà protégées mais sans vignette de grille (thumbnail_path, migration
+// 0038) — utilisé par le bouton du dashboard pour connaître le total avant
+// de traiter photo par photo et afficher une progression réelle.
 export async function listImagesNeedingReprocessing(): Promise<{
   images: ReprocessImageRef[];
   error: string | null;
@@ -44,9 +45,29 @@ export async function listImagesNeedingReprocessing(): Promise<{
   }
 
   const rows = (data ?? []) as unknown as ProductImageSourceRow[];
-  const images = rows
+  const unprotectedImages = rows
     .filter((row) => row.products?.source !== "printify")
     .map((row) => ({ id: row.id, productId: row.product_id }));
+
+  // Requête séparée et best-effort : la colonne thumbnail_path peut ne pas
+  // encore exister (migration 0038) — dans ce cas, seules les photos
+  // jamais protégées sont proposées au retraitement.
+  const { data: missingThumbRows } = await supabase
+    .from("product_images")
+    .select("id, product_id, products(source)")
+    .is("thumbnail_path", null)
+    .not("original_path", "is", null)
+    .order("id", { ascending: true });
+
+  const missingThumbImages = ((missingThumbRows ?? []) as unknown as ProductImageSourceRow[])
+    .filter((row) => row.products?.source !== "printify")
+    .map((row) => ({ id: row.id, productId: row.product_id }));
+
+  const seen = new Set(unprotectedImages.map((image) => image.id));
+  const images = [
+    ...unprotectedImages,
+    ...missingThumbImages.filter((image) => !seen.has(image.id)),
+  ];
 
   return { images, error: null };
 }
@@ -72,7 +93,19 @@ export async function reprocessOneImage(imageId: number): Promise<ReprocessResul
   if (imageError || !image) {
     return { id: imageId, status: "error", message: "Photo introuvable." };
   }
-  if (image.original_path) {
+
+  // Requête séparée et best-effort : la colonne peut ne pas encore exister
+  // (migration 0038).
+  const { data: thumbRow } = await supabase
+    .from("product_images")
+    .select("thumbnail_path")
+    .eq("id", imageId)
+    .maybeSingle();
+  const hasThumbnail = Boolean(
+    (thumbRow as { thumbnail_path?: string | null } | null)?.thumbnail_path,
+  );
+
+  if (image.original_path && hasThumbnail) {
     return { id: imageId, status: "skipped", message: "Déjà traitée." };
   }
 
@@ -91,32 +124,75 @@ export async function reprocessOneImage(imageId: number): Promise<ReprocessResul
     if (downloadError || !downloaded) {
       throw new Error(downloadError?.message ?? "téléchargement vide");
     }
-    const originalBuffer = Buffer.from(await downloaded.arrayBuffer());
+    const sourceBuffer = Buffer.from(await downloaded.arrayBuffer());
 
     // Import différé : sharp ne doit être chargé que lors d'un retraitement
     // effectif, jamais au simple affichage de la Médiathèque.
-    const { protectArtworkImage } = await import("@/lib/image-protection");
-    const protectedImage = await protectArtworkImage(originalBuffer);
-    const destPath = `${image.product_id}/${imageId}-${Date.now()}.${protectedImage.extension}`;
+    const { protectArtworkImage, THUMBNAIL_MAX_DIMENSION } = await import("@/lib/image-protection");
 
-    const { error: originalUploadError } = await supabase.storage
-      .from("artwork-originals")
-      .upload(destPath, originalBuffer, { contentType: "image/*", upsert: true });
-    if (originalUploadError) throw new Error(`original : ${originalUploadError.message}`);
+    if (!image.original_path) {
+      // Photo jamais protégée : le fichier actuel EST l'original — produit
+      // la copie protégée pleine résolution ET la vignette de grille.
+      const [protectedImage, thumbnailImage] = await Promise.all([
+        protectArtworkImage(sourceBuffer),
+        protectArtworkImage(sourceBuffer, THUMBNAIL_MAX_DIMENSION),
+      ]);
+      const destPath = `${image.product_id}/${imageId}-${Date.now()}.${protectedImage.extension}`;
+      const thumbDestPath = `${image.product_id}/${imageId}-${Date.now()}-thumb.${thumbnailImage.extension}`;
 
-    const { error: publicUploadError } = await supabase.storage
+      const [originalUpload, publicUpload, thumbnailUpload] = await Promise.all([
+        supabase.storage
+          .from("artwork-originals")
+          .upload(destPath, sourceBuffer, { contentType: "image/*", upsert: true }),
+        supabase.storage.from("products").upload(destPath, protectedImage.buffer, {
+          contentType: protectedImage.contentType,
+          upsert: true,
+        }),
+        supabase.storage.from("products").upload(thumbDestPath, thumbnailImage.buffer, {
+          contentType: thumbnailImage.contentType,
+          upsert: true,
+        }),
+      ]);
+      if (originalUpload.error) throw new Error(`original : ${originalUpload.error.message}`);
+      if (publicUpload.error) throw new Error(`public : ${publicUpload.error.message}`);
+
+      const { data: publicUrlData } = supabase.storage.from("products").getPublicUrl(destPath);
+      const updates: Record<string, unknown> = {
+        path: destPath,
+        url: publicUrlData.publicUrl,
+        original_path: destPath,
+      };
+      if (!thumbnailUpload.error) {
+        const { data: thumbUrlData } = supabase.storage.from("products").getPublicUrl(thumbDestPath);
+        updates.thumbnail_path = thumbDestPath;
+        updates.thumbnail_url = thumbUrlData.publicUrl;
+      }
+
+      const { error: updateError } = await supabase
+        .from("product_images")
+        .update(updates)
+        .eq("id", imageId);
+      if (updateError) throw new Error(`mise à jour : ${updateError.message}`);
+
+      return { id: imageId, status: "done" };
+    }
+
+    // Déjà protégée, il ne manque que la vignette de grille — génère juste
+    // celle-ci à partir de la copie déjà en ligne (pas besoin de l'original).
+    const thumbnailImage = await protectArtworkImage(sourceBuffer, THUMBNAIL_MAX_DIMENSION);
+    const thumbDestPath = `${image.product_id}/${imageId}-${Date.now()}-thumb.${thumbnailImage.extension}`;
+    const { error: thumbnailUploadError } = await supabase.storage
       .from("products")
-      .upload(destPath, protectedImage.buffer, {
-        contentType: protectedImage.contentType,
+      .upload(thumbDestPath, thumbnailImage.buffer, {
+        contentType: thumbnailImage.contentType,
         upsert: true,
       });
-    if (publicUploadError) throw new Error(`public : ${publicUploadError.message}`);
+    if (thumbnailUploadError) throw new Error(`vignette : ${thumbnailUploadError.message}`);
 
-    const { data: publicUrlData } = supabase.storage.from("products").getPublicUrl(destPath);
-
+    const { data: thumbUrlData } = supabase.storage.from("products").getPublicUrl(thumbDestPath);
     const { error: updateError } = await supabase
       .from("product_images")
-      .update({ path: destPath, url: publicUrlData.publicUrl, original_path: destPath })
+      .update({ thumbnail_path: thumbDestPath, thumbnail_url: thumbUrlData.publicUrl })
       .eq("id", imageId);
     if (updateError) throw new Error(`mise à jour : ${updateError.message}`);
 

@@ -1,12 +1,14 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { optimizeAndStoreDecorImage } from "@/lib/artwork-storage";
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
 
 function revalidatePublic() {
   revalidatePath("/", "layout");
+  updateTag("popups");
 }
 
 function parsePopupFields(formData: FormData) {
@@ -39,16 +41,7 @@ function parsePopupFields(formData: FormData) {
 }
 
 async function uploadPopupImage(supabase: SupabaseClient, popupId: number, file: File) {
-  const path = `popups/${popupId}/${crypto.randomUUID()}-${file.name}`;
-  const { error: uploadError } = await supabase.storage
-    .from("pages")
-    .upload(path, file, { contentType: file.type });
-  if (uploadError) {
-    console.error("uploadPopupImage", uploadError);
-    return null;
-  }
-  const { data: publicUrlData } = supabase.storage.from("pages").getPublicUrl(path);
-  return { path, url: publicUrlData.publicUrl };
+  return optimizeAndStoreDecorImage(supabase, "pages", `popups/${popupId}`, file);
 }
 
 export async function createPopup(formData: FormData) {
@@ -178,4 +171,5 @@ export async function movePopup(id: number, direction: "up" | "down") {
   await supabase.from("popups").update({ position: current.position }).eq("id", target.id);
 
   revalidatePath("/admin/popups");
+  revalidatePublic();
 }

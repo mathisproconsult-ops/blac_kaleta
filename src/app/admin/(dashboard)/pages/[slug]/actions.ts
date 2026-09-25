@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { optimizeAndStoreDecorImage } from "@/lib/artwork-storage";
 import type { BlockType } from "@/lib/page-blocks";
 
 function revalidatePageSlug(slug: string) {
@@ -77,22 +78,15 @@ export async function uploadImageBlock(
   const supabase = await createClient();
 
   if (file instanceof File && file.size > 0) {
-    const path = `${pageSlug}/${crypto.randomUUID()}-${file.name}`;
-    const { error: uploadError } = await supabase.storage
-      .from("pages")
-      .upload(path, file, { contentType: file.type });
+    const uploaded = await optimizeAndStoreDecorImage(supabase, "pages", pageSlug, file);
 
-    if (!uploadError) {
-      const { data: publicUrlData } = supabase.storage
-        .from("pages")
-        .getPublicUrl(path);
-
+    if (uploaded) {
       await supabase
         .from("page_blocks")
         .update({
           content: {
-            url: publicUrlData.publicUrl,
-            path,
+            url: uploaded.url,
+            path: uploaded.path,
             alt: typeof alt === "string" ? alt : "",
           },
         })

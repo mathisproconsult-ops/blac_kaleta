@@ -1,11 +1,12 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
 function revalidateFooter() {
   revalidatePath("/admin/footer");
   revalidatePath("/", "layout");
+  updateTag("footer");
 }
 
 export async function updateFooterCopyright(formData: FormData) {
@@ -18,7 +19,9 @@ export async function updateFooterCopyright(formData: FormData) {
     .update({ footer_copyright_text: text.trim() })
     .eq("id", true);
 
-  revalidateFooter();
+  revalidatePath("/admin/footer");
+  revalidatePath("/", "layout");
+  updateTag("settings");
 }
 
 export async function createFooterLink(formData: FormData) {

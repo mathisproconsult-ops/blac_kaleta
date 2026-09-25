@@ -27,18 +27,20 @@ async function isCategoryAgeRestricted(supabase: SupabaseClient, categoryId: num
 }
 
 // Mise à jour décorrélée de l'insertion principale : si la migration
-// n'est pas encore appliquée, les colonnes image_blurred_*/age_restricted
-// n'existent pas encore et cette étape best-effort échoue silencieusement
-// plutôt que de faire échouer l'ajout de la photo/vidéo elle-même. Un aperçu
-// flouté qui échoue à se générer (fichier illisible, lien externe temporai-
-// rement injoignable...) ne bloque pas non plus l'ajout : l'élément reste
-// affiché derrière un cadenas générique côté public plutôt que via l'image
-// nette — jamais l'inverse, voir categorie/[id]/page.tsx.
-async function applyBlurredFields(
+// n'est pas encore appliquée, les colonnes image_blurred_*/age_restricted/
+// thumbnail_* n'existent pas encore et cette étape best-effort échoue
+// silencieusement plutôt que de faire échouer l'ajout de la photo/vidéo
+// elle-même. Un aperçu flouté qui échoue à se générer (fichier illisible,
+// lien externe temporairement injoignable...) ne bloque pas non plus
+// l'ajout : l'élément reste affiché derrière un cadenas générique côté
+// public plutôt que via l'image nette — jamais l'inverse, voir
+// categorie/[id]/page.tsx.
+async function applyMediaExtras(
   supabase: SupabaseClient,
   mediaId: number,
   ageRestricted: boolean,
   blurred: { path: string; url: string } | null,
+  thumbnail?: { path: string | null; url: string | null },
 ) {
   const { error } = await supabase
     .from("recent_work_media")
@@ -46,9 +48,12 @@ async function applyBlurredFields(
       age_restricted: ageRestricted,
       image_blurred_path: blurred?.path ?? null,
       image_blurred_url: blurred?.url ?? null,
+      ...(thumbnail
+        ? { thumbnail_path: thumbnail.path, thumbnail_url: thumbnail.url }
+        : {}),
     })
     .eq("id", mediaId);
-  if (error) console.error("applyBlurredFields", error);
+  if (error) console.error("applyMediaExtras", error);
 }
 
 function parseCommonFields(formData: FormData) {
@@ -150,7 +155,10 @@ export async function createRecentWorkPhoto(
     return { success: false, error: "Erreur base de données : " + error?.message };
   }
 
-  await applyBlurredFields(supabase, inserted.id, fields.ageRestricted, blurred);
+  await applyMediaExtras(supabase, inserted.id, fields.ageRestricted, blurred, {
+    path: stored?.thumbnailPath ?? null,
+    url: stored?.thumbnailUrl ?? null,
+  });
 
   revalidatePath(`/admin/oeuvres-recentes/${categoryId}`);
   revalidatePath("/oeuvres-recentes");
@@ -233,7 +241,7 @@ export async function createRecentWorkVideoUpload(
     return { success: false, error: "Erreur base de données : " + error?.message };
   }
 
-  await applyBlurredFields(supabase, inserted.id, fields.ageRestricted, blurred);
+  await applyMediaExtras(supabase, inserted.id, fields.ageRestricted, blurred);
 
   revalidatePath(`/admin/oeuvres-recentes/${categoryId}`);
   revalidatePath("/oeuvres-recentes");
@@ -379,7 +387,7 @@ export async function createRecentWorkVideoLink(
     return { success: false, error: "Erreur base de données : " + error?.message };
   }
 
-  await applyBlurredFields(supabase, inserted.id, fields.ageRestricted, blurred);
+  await applyMediaExtras(supabase, inserted.id, fields.ageRestricted, blurred);
 
   revalidatePath(`/admin/oeuvres-recentes/${categoryId}`);
   revalidatePath("/oeuvres-recentes");

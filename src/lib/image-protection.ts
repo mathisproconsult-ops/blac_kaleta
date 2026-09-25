@@ -8,6 +8,10 @@ import sharp from "sharp";
 // artwork-originals, cette fonction ne touche qu'à la copie publique).
 
 const MAX_DIMENSION = 1200;
+// Taille de sortie pour les vignettes de grille (Boutique, Œuvres
+// récentes) : bien plus légère que la copie pleine résolution, servie à
+// la place de celle-ci partout où l'image n'est affichée qu'en petit.
+export const THUMBNAIL_MAX_DIMENSION = 480;
 const WATERMARK_LABEL = "Blac_Kaleta · blac-kaleta.com";
 
 function buildWatermarkSvg(width: number, height: number): Buffer {
@@ -51,17 +55,26 @@ export type ProtectedImage = {
 };
 
 // Prend les octets tels qu'envoyés par l'admin et produit la copie
-// destinée au site public : redimensionnée (max 1200px sur le grand
-// côté — inexploitable pour une impression de qualité, sans perte
+// destinée au site public : redimensionnée (par défaut max 1200px sur le
+// grand côté — inexploitable pour une impression de qualité, sans perte
 // visible à l'écran), filigranée, avec métadonnées de copyright.
-export async function protectArtworkImage(input: Buffer): Promise<ProtectedImage> {
+// maxDimension permet de produire une vignette plus légère pour les
+// grilles (voir createThumbnail plus bas) en réutilisant le même pipeline
+// de redimensionnement/filigrane, juste à une taille de sortie différente.
+export async function protectArtworkImage(
+  input: Buffer,
+  maxDimension: number = MAX_DIMENSION,
+): Promise<ProtectedImage> {
   const rotated = sharp(input).rotate(); // applique l'orientation EXIF puis la retire
   const metadata = await rotated.metadata();
-  const width = metadata.width ?? MAX_DIMENSION;
-  const height = metadata.height ?? MAX_DIMENSION;
-  const scale = Math.min(1, MAX_DIMENSION / Math.max(width, height));
-  const targetWidth = Math.round(width * scale);
-  const targetHeight = Math.round(height * scale);
+  const width = metadata.width ?? maxDimension;
+  const height = metadata.height ?? maxDimension;
+  const scale = Math.min(1, maxDimension / Math.max(width, height));
+  // Math.max(1, ...) : pour un ratio très extrême (ex. 1×5000, une vignette
+  // à 480px), l'arrondi peut tomber à 0 sur le petit côté — sharp exige un
+  // entier strictement positif.
+  const targetWidth = Math.max(1, Math.round(width * scale));
+  const targetHeight = Math.max(1, Math.round(height * scale));
 
   // Redimensionne d'abord, puis relit les dimensions RÉELLES du résultat —
   // l'arrondi interne de sharp pour fit:"inside" peut différer de notre
@@ -131,6 +144,36 @@ export async function blurArtworkImage(input: Buffer): Promise<ProtectedImage> {
     .resize({ width: targetWidth, height: targetHeight, fit: "fill" })
     .blur(BLUR_SIGMA)
     .webp({ quality: 60 })
+    .toBuffer();
+
+  return { buffer, contentType: "image/webp", extension: "webp" };
+}
+
+const DECOR_MAX_DIMENSION = 1600;
+
+// Pour les images "de décor" (logo, couvertures de catégories, images de
+// popup, images de pages personnalisées) : ni filigrane ni métadonnées
+// d'œuvre, juste un redimensionnement raisonnable et une compression WebP
+// — ces images sont uploadées telles quelles par l'admin (parfois
+// plusieurs Mo, directement depuis un téléphone) alors qu'elles ne sont
+// jamais affichées à plus de quelques centaines de pixels de large.
+export async function optimizeDecorImage(input: Buffer): Promise<ProtectedImage> {
+  const rotated = sharp(input).rotate();
+  const metadata = await rotated.metadata();
+  const width = metadata.width ?? DECOR_MAX_DIMENSION;
+  const height = metadata.height ?? DECOR_MAX_DIMENSION;
+  const scale = Math.min(1, DECOR_MAX_DIMENSION / Math.max(width, height));
+  const targetWidth = Math.max(1, Math.round(width * scale));
+  const targetHeight = Math.max(1, Math.round(height * scale));
+
+  const buffer = await rotated
+    .resize({
+      width: targetWidth,
+      height: targetHeight,
+      fit: "inside",
+      withoutEnlargement: true,
+    })
+    .webp({ quality: 82 })
     .toBuffer();
 
   return { buffer, contentType: "image/webp", extension: "webp" };

@@ -35,6 +35,7 @@ export default async function BoutiquePage() {
                 <img
                   src={category.cover_image_url}
                   alt={category.name}
+                  loading="lazy"
                   className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
                 />
               ) : (

@@ -1,11 +1,12 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
 function revalidateMenu() {
   revalidatePath("/admin/menu");
   revalidatePath("/", "layout");
+  updateTag("menu");
 }
 
 export async function createMenuItem(formData: FormData) {

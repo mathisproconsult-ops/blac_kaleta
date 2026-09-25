@@ -31,6 +31,7 @@ export function CartView() {
               <img
                 src={item.image}
                 alt={item.title}
+                loading="lazy"
                 className="h-16 w-16 flex-none object-cover"
               />
             ) : (

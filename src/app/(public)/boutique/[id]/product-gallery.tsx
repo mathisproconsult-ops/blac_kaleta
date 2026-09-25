@@ -20,7 +20,12 @@ export function ProductGallery({
       <div className="flex w-full items-center justify-center bg-zinc-50 dark:bg-zinc-900">
         {main ? (
           protectImages ? (
-            <ProtectedImage src={main.url} alt={alt} className="max-h-[70vh] w-auto max-w-full object-contain" />
+            <ProtectedImage
+              src={main.url}
+              alt={alt}
+              className="max-h-[70vh] w-auto max-w-full object-contain"
+              priority
+            />
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={main.url} alt={alt} className="max-h-[70vh] w-auto max-w-full object-contain" />
@@ -49,7 +54,7 @@ export function ProductGallery({
               }
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={image.url} alt="" className="h-full w-full object-cover" />
+              <img src={image.url} alt="" loading="lazy" className="h-full w-full object-cover" />
             </button>
           ))}
         </div>

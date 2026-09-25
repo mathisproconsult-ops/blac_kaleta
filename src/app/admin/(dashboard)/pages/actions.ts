@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { RESERVED_SLUGS, slugify } from "@/lib/page-blocks";
 
@@ -49,6 +49,10 @@ async function syncMenuItem(
 function revalidatePublic(slug: string) {
   revalidatePath("/", "layout");
   revalidatePath(`/${slug}`);
+  // Ces trois points d'entrée peuvent chacun faire apparaître/disparaître
+  // une entrée de menu (page_id en cascade côté suppression, syncMenuItem
+  // côté création/édition) : autant toujours invalider, coût négligeable.
+  updateTag("menu");
 }
 
 export type CreatePageState = { error: string | null };

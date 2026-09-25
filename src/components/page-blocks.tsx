@@ -41,6 +41,7 @@ function renderBlock(block: PageBlock) {
         <img
           src={block.content.url}
           alt={block.content.alt ?? ""}
+          loading="lazy"
           className="h-full w-full object-cover"
         />
       ) : null}

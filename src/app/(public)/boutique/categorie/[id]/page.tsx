@@ -15,7 +15,7 @@ type ProductCard = {
   price: number | null;
   stock: number;
   status: ProductStatus;
-  product_images: { url: string; position: number }[];
+  product_images: { id: number; url: string; position: number }[];
   product_categories: { category_id: number }[];
 };
 
@@ -63,7 +63,7 @@ export default async function BoutiqueCategoryPage({
     supabase
       .from("products")
       .select(
-        "id, title, price, stock, status, product_images(url, position), product_categories(category_id)",
+        "id, title, price, stock, status, product_images(id, url, position), product_categories(category_id)",
       )
       .eq("is_for_sale", true)
       .eq("is_visible", true)
@@ -106,6 +106,25 @@ export default async function BoutiqueCategoryPage({
     }
   }
 
+  // Requête séparée et best-effort : la colonne peut ne pas encore exister
+  // (migration 0038) — sans elle, la grille retombe simplement sur l'image
+  // pleine résolution comme avant.
+  const thumbnailUrlById = new Map<number, string | null>();
+  if (productList.length > 0) {
+    const imageIds = productList.flatMap((product) => product.product_images.map((image) => image.id));
+    if (imageIds.length > 0) {
+      const { data: thumbnailRows } = await supabase
+        .from("product_images")
+        .select("id, thumbnail_url")
+        .in("id", imageIds);
+      if (thumbnailRows) {
+        for (const row of thumbnailRows as { id: number; thumbnail_url: string | null }[]) {
+          thumbnailUrlById.set(row.id, row.thumbnail_url);
+        }
+      }
+    }
+  }
+
   if (tri === "prix-asc") {
     productList = [...productList].sort(
       (a, b) => (a.price ?? Infinity) - (b.price ?? Infinity),
@@ -141,18 +160,19 @@ export default async function BoutiqueCategoryPage({
             const image = [...product.product_images].sort(
               (a, b) => a.position - b.position,
             )[0];
+            const thumbnailUrl = image ? thumbnailUrlById.get(image.id) ?? image.url : null;
 
             return (
               <div key={product.id} className="group mb-8 break-inside-avoid">
                 <Link href={`/boutique/${product.id}`}>
                   <div className="relative w-full bg-zinc-50 dark:bg-zinc-900">
-                    {image ? (
+                    {thumbnailUrl ? (
                       printifySourceIds.has(product.id) ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={image.url} alt={product.title} className="block h-auto w-full" />
+                        <img src={thumbnailUrl} alt={product.title} loading="lazy" className="block h-auto w-full" />
                       ) : (
                         <ProtectedImage
-                          src={image.url}
+                          src={thumbnailUrl}
                           alt={product.title}
                           className="block h-auto w-full"
                         />
@@ -194,7 +214,7 @@ export default async function BoutiqueCategoryPage({
                         title: product.title,
                         price: product.price,
                         stock: product.stock,
-                        image: image?.url ?? null,
+                        image: thumbnailUrl,
                       }}
                       variant="compact"
                     />

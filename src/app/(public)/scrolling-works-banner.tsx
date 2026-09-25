@@ -115,7 +115,12 @@ export function ScrollingWorksBanner({ works }: { works: BannerWork[] }) {
           className="h-[320px] flex-none sm:h-[420px] lg:h-[520px]"
         >
           {work.image ? (
-            <ProtectedImage src={work.image} alt={work.title} className="h-full w-auto" />
+            <ProtectedImage
+              src={work.image}
+              alt={work.title}
+              className="h-full w-auto"
+              priority={index < 2}
+            />
           ) : (
             <div
               className="flex h-full w-[320px] items-center justify-center text-xs uppercase tracking-widest text-zinc-400 sm:w-[420px] lg:w-[520px]"

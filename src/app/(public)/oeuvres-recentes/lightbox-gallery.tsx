@@ -17,6 +17,10 @@ type Work = {
   year: number | null;
   technique: string | null;
   imageUrl: string | null;
+  // Vignette plus légère utilisée dans la grille — l'image pleine
+  // résolution (imageUrl) n'est chargée que dans la lightbox agrandie.
+  // Retombe sur imageUrl si absente (contenu pas encore retraité).
+  thumbnailUrl?: string | null;
   kind: "oeuvre" | "photo" | "video";
   videoUrl?: string | null;
   videoEmbedUrl?: string | null;
@@ -132,7 +136,7 @@ export function LightboxGallery({ works }: { works: Work[] }) {
         {works.map((work, index) => (
           <button key={work.id} type="button" onClick={() => openAt(index)} className="group mb-8 block w-full break-inside-avoid text-left">
             <div className="relative w-full bg-zinc-50 dark:bg-zinc-900">
-              {work.imageUrl ? <ProtectedImage src={work.imageUrl} alt={work.title} className="block h-auto w-full" /> : <div className="aspect-square w-full" style={{ backgroundImage: "repeating-linear-gradient(45deg, #f0f0ee 0, #f0f0ee 2px, #ffffff 2px, #ffffff 12px)" }} />}
+              {work.thumbnailUrl ?? work.imageUrl ? <ProtectedImage src={(work.thumbnailUrl ?? work.imageUrl) as string} alt={work.title} className="block h-auto w-full" /> : <div className="aspect-square w-full" style={{ backgroundImage: "repeating-linear-gradient(45deg, #f0f0ee 0, #f0f0ee 2px, #ffffff 2px, #ffffff 12px)" }} />}
               {work.kind === "video" && !work.locked ? (
                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
                   <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/60 text-xl text-white">▶</span>

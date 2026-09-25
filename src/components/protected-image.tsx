@@ -14,10 +14,17 @@ export function ProtectedImage({
   src,
   alt,
   className,
+  priority = false,
 }: {
   src: string;
   alt: string;
   className?: string;
+  // Par défaut, chargement différé (loading="lazy") : l'immense majorité
+  // des usages sont des grilles/galeries où la plupart des images sont
+  // hors écran au chargement de la page. priority=true réserve le
+  // chargement immédiat aux images réellement visibles dès l'arrivée sur
+  // la page (ex : les premières de la bannière d'accueil).
+  priority?: boolean;
 }) {
   const [showNotice, setShowNotice] = useState(false);
 
@@ -37,6 +44,9 @@ export function ProtectedImage({
         src={src}
         alt={alt}
         draggable={false}
+        loading={priority ? "eager" : "lazy"}
+        fetchPriority={priority ? "high" : "auto"}
+        decoding={priority ? "sync" : "async"}
         className={`${className ?? ""} select-none [-webkit-touch-callout:none] [-webkit-user-select:none]`}
       />
       <div

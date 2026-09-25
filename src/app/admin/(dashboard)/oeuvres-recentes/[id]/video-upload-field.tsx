@@ -14,7 +14,13 @@ type UploadedVideo = {
 
 // Capture la première frame lisible de la vidéo dans un <canvas> pour en
 // faire la vignette — entièrement côté navigateur, aucun traitement serveur
-// (pas de dépendance vidéo type ffmpeg à ajouter au projet).
+// (pas de dépendance vidéo type ffmpeg à ajouter au projet). Réduite à une
+// taille raisonnable (la même vignette sert à la fois de grille et
+// d'affiche avant lecture, jamais en pleine résolution) plutôt que de
+// conserver la résolution native de la vidéo (jusqu'à plusieurs Mo pour
+// une simple image fixe en 4K).
+const THUMBNAIL_MAX_DIMENSION = 640;
+
 function extractVideoThumbnail(file: File): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const video = document.createElement("video");
@@ -32,9 +38,12 @@ function extractVideoThumbnail(file: File): Promise<Blob> {
       video.currentTime = Math.min(0.5, (video.duration || 1) / 2);
     };
     video.onseeked = () => {
+      const nativeWidth = video.videoWidth || 640;
+      const nativeHeight = video.videoHeight || 360;
+      const scale = Math.min(1, THUMBNAIL_MAX_DIMENSION / Math.max(nativeWidth, nativeHeight));
       const canvas = document.createElement("canvas");
-      canvas.width = video.videoWidth || 640;
-      canvas.height = video.videoHeight || 360;
+      canvas.width = Math.round(nativeWidth * scale);
+      canvas.height = Math.round(nativeHeight * scale);
       const ctx = canvas.getContext("2d");
       if (!ctx) {
         cleanup();
