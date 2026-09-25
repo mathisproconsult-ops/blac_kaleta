@@ -40,6 +40,7 @@ export default async function AdminDashboardLayout({
         { label: "Menu", href: "/admin/menu" },
         { label: "Pied de page", href: "/admin/footer" },
         { label: "Contenu des pages", href: "/admin/pages" },
+        { label: "Popups", href: "/admin/popups" },
       ],
     },
     { type: "link", label: "Paramètres", href: "/admin/settings" },

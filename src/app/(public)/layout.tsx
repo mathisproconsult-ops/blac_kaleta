@@ -2,7 +2,9 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { createClient } from "@/lib/supabase/server";
 import { getSettings } from "@/lib/settings";
+import { getActivePopups } from "@/lib/popups";
 import { CartProvider } from "@/lib/cart-context";
+import { PopupManager } from "./popup-manager";
 
 export default async function PublicLayout({
   children,
@@ -10,7 +12,7 @@ export default async function PublicLayout({
   children: React.ReactNode;
 }) {
   const supabase = await createClient();
-  const [{ data: menuItems }, { data: footerLinks }, settings] = await Promise.all([
+  const [{ data: menuItems }, { data: footerLinks }, settings, popups] = await Promise.all([
     supabase
       .from("menu_items")
       .select("id, label, href")
@@ -20,6 +22,7 @@ export default async function PublicLayout({
       .select("id, label, href")
       .order("position", { ascending: true }),
     getSettings(),
+    getActivePopups(),
   ]);
 
   return (
@@ -36,6 +39,7 @@ export default async function PublicLayout({
           links={footerLinks ?? []}
         />
       </div>
+      <PopupManager popups={popups} />
     </CartProvider>
   );
 }

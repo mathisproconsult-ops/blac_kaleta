@@ -17,17 +17,17 @@ export function ProductGallery({
 
   return (
     <div>
-      <div className="aspect-[3/4] w-full bg-zinc-50 dark:bg-zinc-900">
+      <div className="flex w-full items-center justify-center bg-zinc-50 dark:bg-zinc-900">
         {main ? (
           protectImages ? (
-            <ProtectedImage src={main.url} alt={alt} className="h-full w-full object-cover" />
+            <ProtectedImage src={main.url} alt={alt} className="max-h-[70vh] w-auto max-w-full object-contain" />
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={main.url} alt={alt} className="h-full w-full object-cover" />
+            <img src={main.url} alt={alt} className="max-h-[70vh] w-auto max-w-full object-contain" />
           )
         ) : (
           <div
-            className="h-full w-full"
+            className="aspect-square w-full"
             style={{
               backgroundImage:
                 "repeating-linear-gradient(45deg, #f0f0ee 0, #f0f0ee 2px, #ffffff 2px, #ffffff 12px)",
