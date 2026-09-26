@@ -245,11 +245,31 @@ async function syncRecentWorkCategory(
 // pas été appliquée. À l'activation, génère un aperçu flouté de la
 // première image (celle utilisée dans la grille Œuvres récentes) à partir
 // de la copie déjà protégée (filigranée) — jamais depuis l'original.
+//
+// Un produit peut être masqué côté public pour deux raisons indépendantes
+// (voir oeuvres-recentes/categorie/[id]/page.tsx) : sa propre case +18
+// cochée, OU sa catégorie "Œuvres récentes" elle-même marquée +18. Ne
+// générer l'aperçu flouté que dans le premier cas laissait le second sans
+// aucune image de remplacement (juste le motif de hachures) — c'est le bug
+// remonté sur certaines œuvres qui n'affichaient pas le floutage.
 async function syncAgeRestricted(supabase: SupabaseClient, productId: number, formData: FormData) {
-  const ageRestricted = formData.get("age_restricted") === "on";
+  const ownCheckbox = formData.get("age_restricted") === "on";
+
+  const rawCategoryId = formData.get("recent_work_category_id");
+  const categoryId = typeof rawCategoryId === "string" && rawCategoryId ? Number(rawCategoryId) : null;
+  let categoryRestricted = false;
+  if (categoryId) {
+    const { data: category } = await supabase
+      .from("recent_work_categories")
+      .select("age_restricted")
+      .eq("id", categoryId)
+      .maybeSingle();
+    categoryRestricted = (category as { age_restricted?: boolean } | null)?.age_restricted ?? false;
+  }
+  const shouldBlur = ownCheckbox || categoryRestricted;
 
   let blurred: { path: string; url: string } | null = null;
-  if (ageRestricted) {
+  if (shouldBlur) {
     const { data: existing } = await supabase
       .from("products")
       .select("image_blurred_path")
@@ -271,11 +291,11 @@ async function syncAgeRestricted(supabase: SupabaseClient, productId: number, fo
     }
   }
 
-  const updates: Record<string, unknown> = { age_restricted: ageRestricted };
+  const updates: Record<string, unknown> = { age_restricted: ownCheckbox };
   if (blurred) {
     updates.image_blurred_path = blurred.path;
     updates.image_blurred_url = blurred.url;
-  } else if (!ageRestricted) {
+  } else if (!shouldBlur) {
     updates.image_blurred_path = null;
     updates.image_blurred_url = null;
   }

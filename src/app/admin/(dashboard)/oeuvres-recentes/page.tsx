@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { SubmitButton } from "@/components/submit-button";
 import { Disclosure } from "@/components/disclosure";
+import { BackfillBlurButton } from "./backfill-blur-button";
 import {
   createRecentWorkCategory,
   deleteRecentWorkCategory,
@@ -61,6 +62,10 @@ export default async function RecentWorkCategoriesPage() {
         </p>
       ) : null}
 
+      <div className="mt-6">
+        <BackfillBlurButton />
+      </div>
+
       <form action={createRecentWorkCategory} className="mt-6 flex flex-wrap items-center gap-3">
         <input
           name="name"
@@ -82,7 +87,10 @@ export default async function RecentWorkCategoriesPage() {
       <p className="mt-2 text-xs text-zinc-500">
         Une catégorie sensible affiche un badge « +18 » sur sa vignette, et
         toutes ses photos/vidéos sont floutées côté serveur tant que l&apos;âge
-        du visiteur n&apos;est pas vérifié.
+        du visiteur n&apos;est pas vérifié. Si tu marques une catégorie +18
+        après coup (ou que tu y déplaces une œuvre existante), pense à
+        cliquer sur « Régénérer les floutages manquants » ci-dessus pour
+        protéger le contenu déjà en place.
       </p>
 
       {list.length === 0 ? (
