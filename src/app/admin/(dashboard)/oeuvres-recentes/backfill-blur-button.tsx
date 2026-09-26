@@ -58,7 +58,7 @@ export function BackfillBlurButton() {
       setProcessed(index + 1);
     }
 
-    await revalidateAfterBlurBackfill();
+    await revalidateAfterBlurBackfill(works.map((work) => work.categoryId));
     setPhase("done");
   }
 

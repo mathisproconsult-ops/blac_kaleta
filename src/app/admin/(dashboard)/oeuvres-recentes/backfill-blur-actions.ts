@@ -188,24 +188,50 @@ export async function forceRegenerateBlur(work: BlurWorkRef): Promise<BackfillRe
     : backfillProduct(supabase, work.id, true);
 }
 
-// Variantes utilisables directement comme action de formulaire (un bouton
-// par ligne dans la liste des photos/vidéos d'une catégorie), qui
-// revalident les pages concernées après régénération.
-export async function forceRegenerateMediaBlur(id: number, categoryId: number) {
-  await forceRegenerateBlur({ kind: "media", id, categoryId });
-  revalidatePath(`/admin/oeuvres-recentes/${categoryId}`);
+// Action de formulaire (useActionState) utilisée par RegenerateBlurButton —
+// un bouton par œuvre, qui affiche le résultat réel (régénéré / ignoré /
+// erreur) au lieu de rester muet : sans ce retour, impossible de savoir si
+// un clic a effectivement recréé le fichier ou n'a rien fait (par exemple
+// faute d'image source), ce qui rendait le bug très difficile à diagnostiquer
+// depuis le dashboard.
+//
+// La page publique réellement affichée par les visiteurs est
+// /oeuvres-recentes/categorie/[id] (la galerie elle-même), pas seulement
+// /oeuvres-recentes (la liste des catégories) — l'oubli de cette
+// revalidation précise faisait qu'une régénération réussie côté base de
+// données restait invisible : la page continuait de servir l'ancienne
+// image, déjà cassée, depuis le cache.
+export type RegenerateBlurState = {
+  status: "idle" | "done" | "skipped" | "error";
+  message: string | null;
+};
+
+export async function regenerateBlurAction(
+  work: BlurWorkRef,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _prevState: RegenerateBlurState,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _formData: FormData,
+): Promise<RegenerateBlurState> {
+  const result = await forceRegenerateBlur(work);
+
+  if (work.kind === "media") {
+    revalidatePath(`/admin/oeuvres-recentes/${work.categoryId}`);
+  } else {
+    revalidatePath("/admin/products");
+    revalidatePath(`/admin/products/${work.id}`);
+  }
+  revalidatePath(`/oeuvres-recentes/categorie/${work.categoryId}`);
   revalidatePath("/oeuvres-recentes");
+
+  return { status: result.status, message: result.message ?? null };
 }
 
-export async function forceRegenerateProductBlur(id: number, categoryId: number) {
-  await forceRegenerateBlur({ kind: "product", id, categoryId });
-  revalidatePath("/admin/products");
-  revalidatePath(`/admin/products/${id}`);
-  revalidatePath("/oeuvres-recentes");
-}
-
-export async function revalidateAfterBlurBackfill() {
+export async function revalidateAfterBlurBackfill(categoryIds: number[]) {
   revalidatePath("/admin/oeuvres-recentes");
   revalidatePath("/admin/products");
   revalidatePath("/oeuvres-recentes");
+  for (const categoryId of new Set(categoryIds)) {
+    revalidatePath(`/oeuvres-recentes/categorie/${categoryId}`);
+  }
 }
