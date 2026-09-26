@@ -7,6 +7,7 @@ import { SubmitButton } from "@/components/submit-button";
 import { ProductFields } from "../product-fields";
 import { deleteProductImage, updateProduct } from "../actions";
 import { DownloadOriginalButton } from "../download-original-button";
+import { forceRegenerateProductBlur } from "../../oeuvres-recentes/backfill-blur-actions";
 
 export const maxDuration = 60;
 
@@ -287,6 +288,24 @@ export default async function EditProductPage({
           Enregistrer les modifications
         </SubmitButton>
       </form>
+
+      {product.recent_work_category_id ? (
+        <form
+          action={forceRegenerateProductBlur.bind(null, product.id, product.recent_work_category_id)}
+          className="mt-3"
+        >
+          <SubmitButton
+            pendingText="Régénération…"
+            className="text-sm text-zinc-600 hover:underline dark:text-zinc-400"
+          >
+            Régénérer l&apos;aperçu flouté (+18)
+          </SubmitButton>
+          <p className="mt-1 text-xs text-zinc-400">
+            À utiliser si l&apos;aperçu flouté de ce produit s&apos;affiche mal
+            (ex. rectangle totalement noir) plutôt que flouté.
+          </p>
+        </form>
+      ) : null}
     </div>
   );
 }

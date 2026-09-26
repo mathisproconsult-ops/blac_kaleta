@@ -127,6 +127,11 @@ export async function blurArtworkImage(input: Buffer): Promise<ProtectedImage> {
   const width = metadata.width ?? BLUR_OUTPUT_DIMENSION;
   const height = metadata.height ?? BLUR_OUTPUT_DIMENSION;
 
+  // .normalize() étire le contraste de la minuscule vignette sur toute la
+  // plage de luminosité disponible : sans ça, une œuvre déjà très sombre ou
+  // peu contrastée (fusain, encre...) pouvait s'écraser en un aplat quasi
+  // uniforme une fois réduite à 24px puis floutée — un rectangle
+  // pratiquement noir plutôt qu'un flou reconnaissable comme tel.
   const tinyBuffer = await rotated
     .resize({
       width: BLUR_TINY_DIMENSION,
@@ -134,6 +139,7 @@ export async function blurArtworkImage(input: Buffer): Promise<ProtectedImage> {
       fit: "inside",
       withoutEnlargement: true,
     })
+    .normalize()
     .toBuffer();
 
   const scale = Math.min(1, BLUR_OUTPUT_DIMENSION / Math.max(width, height));

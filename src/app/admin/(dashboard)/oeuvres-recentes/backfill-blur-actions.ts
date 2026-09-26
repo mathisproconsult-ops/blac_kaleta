@@ -84,7 +84,12 @@ export async function listWorksNeedingBlur(): Promise<{
 
 export type BackfillResult = { status: "done" | "skipped" | "error"; message?: string };
 
-async function backfillMedia(supabase: SupabaseClient, id: number, categoryId: number): Promise<BackfillResult> {
+async function backfillMedia(
+  supabase: SupabaseClient,
+  id: number,
+  categoryId: number,
+  force: boolean,
+): Promise<BackfillResult> {
   const { data: row, error } = await supabase
     .from("recent_work_media")
     .select("image_path, image_url, image_blurred_path")
@@ -92,7 +97,7 @@ async function backfillMedia(supabase: SupabaseClient, id: number, categoryId: n
     .maybeSingle();
 
   if (error || !row) return { status: "error", message: "Entrée introuvable." };
-  if ((row as { image_blurred_path?: string | null }).image_blurred_path) {
+  if (!force && (row as { image_blurred_path?: string | null }).image_blurred_path) {
     return { status: "skipped", message: "Déjà floutée." };
   }
 
@@ -122,13 +127,17 @@ async function backfillMedia(supabase: SupabaseClient, id: number, categoryId: n
   return { status: "done" };
 }
 
-async function backfillProduct(supabase: SupabaseClient, id: number): Promise<BackfillResult> {
+async function backfillProduct(
+  supabase: SupabaseClient,
+  id: number,
+  force: boolean,
+): Promise<BackfillResult> {
   const { data: existing } = await supabase
     .from("products")
     .select("image_blurred_path")
     .eq("id", id)
     .maybeSingle();
-  if ((existing as { image_blurred_path?: string | null } | null)?.image_blurred_path) {
+  if (!force && (existing as { image_blurred_path?: string | null } | null)?.image_blurred_path) {
     return { status: "skipped", message: "Déjà floutée." };
   }
 
@@ -163,8 +172,36 @@ async function backfillProduct(supabase: SupabaseClient, id: number): Promise<Ba
 export async function backfillOneWork(work: BlurWorkRef): Promise<BackfillResult> {
   const supabase = await createClient();
   return work.kind === "media"
-    ? backfillMedia(supabase, work.id, work.categoryId)
-    : backfillProduct(supabase, work.id);
+    ? backfillMedia(supabase, work.id, work.categoryId, false)
+    : backfillProduct(supabase, work.id, false);
+}
+
+// Régénère le floutage d'UNE œuvre précise même si elle en a déjà un —
+// contrairement à backfillOneWork, qui ignore ce qui est déjà traité.
+// Utilisé pour corriger un aperçu flouté déjà généré mais visuellement
+// dégénéré (voir le correctif "normalize" dans blurArtworkImage), sans
+// avoir à retraiter tout le reste du catalogue.
+export async function forceRegenerateBlur(work: BlurWorkRef): Promise<BackfillResult> {
+  const supabase = await createClient();
+  return work.kind === "media"
+    ? backfillMedia(supabase, work.id, work.categoryId, true)
+    : backfillProduct(supabase, work.id, true);
+}
+
+// Variantes utilisables directement comme action de formulaire (un bouton
+// par ligne dans la liste des photos/vidéos d'une catégorie), qui
+// revalident les pages concernées après régénération.
+export async function forceRegenerateMediaBlur(id: number, categoryId: number) {
+  await forceRegenerateBlur({ kind: "media", id, categoryId });
+  revalidatePath(`/admin/oeuvres-recentes/${categoryId}`);
+  revalidatePath("/oeuvres-recentes");
+}
+
+export async function forceRegenerateProductBlur(id: number, categoryId: number) {
+  await forceRegenerateBlur({ kind: "product", id, categoryId });
+  revalidatePath("/admin/products");
+  revalidatePath(`/admin/products/${id}`);
+  revalidatePath("/oeuvres-recentes");
 }
 
 export async function revalidateAfterBlurBackfill() {

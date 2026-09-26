@@ -11,6 +11,7 @@ import {
   moveRecentWorkMedia,
   toggleRecentWorkMediaAgeRestricted,
 } from "./actions";
+import { forceRegenerateMediaBlur } from "../backfill-blur-actions";
 
 type MediaRow = {
   id: number;
@@ -154,6 +155,15 @@ export default async function RecentWorkCategoryDetailPage({
                   />
                   +18
                 </label>
+              </form>
+
+              <form action={forceRegenerateMediaBlur.bind(null, item.id, categoryId)}>
+                <SubmitButton
+                  pendingText="…"
+                  className="text-xs text-zinc-500 hover:underline dark:text-zinc-400"
+                >
+                  Régénérer le floutage
+                </SubmitButton>
               </form>
 
               <form action={deleteRecentWorkMedia.bind(null, item.id, categoryId)}>
