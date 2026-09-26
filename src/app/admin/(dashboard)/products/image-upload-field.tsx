@@ -37,7 +37,7 @@ export function ImageUploadField() {
       const path = `library/${crypto.randomUUID()}-${toUpload.name}`;
       const { error: uploadError } = await supabase.storage
         .from("media")
-        .upload(path, toUpload, { contentType: toUpload.type });
+        .upload(path, toUpload, { contentType: toUpload.type, cacheControl: "31536000" });
 
       if (uploadError) {
         setError(`Échec de l'envoi de « ${file.name} » : ${uploadError.message}`);

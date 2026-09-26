@@ -22,14 +22,14 @@ async function getSocialLinks() {
 type FeaturedWork = {
   id: number;
   title: string;
-  product_images: { url: string; position: number }[];
+  product_images: { id: number; url: string; position: number }[];
 };
 
 async function getFeaturedWorks() {
   const supabase = await createClient();
   const { data } = await supabase
     .from("products")
-    .select("id, title, product_images(url, position)")
+    .select("id, title, product_images(id, url, position)")
     .eq("featured_home", true)
     .eq("is_visible", true)
     .is("deleted_at", null)
@@ -37,6 +37,22 @@ async function getFeaturedWorks() {
     .returns<FeaturedWork[]>();
 
   return data ?? [];
+}
+
+// Requête séparée et best-effort : les colonnes peuvent ne pas encore
+// exister si la migration 0040 n'a pas été appliquée — dans ce cas, la
+// bannière retombe simplement sur un rendu sans dimensions réservées
+// (comme avant), plutôt que de faire échouer toute la page d'accueil.
+async function getImageDimensions(imageIds: number[]) {
+  if (imageIds.length === 0) return new Map<number, { width: number | null; height: number | null }>();
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("product_images")
+    .select("id, width, height")
+    .in("id", imageIds);
+  return new Map(
+    (data ?? []).map((row) => [row.id, { width: row.width, height: row.height }]),
+  );
 }
 
 // Requête séparée et best-effort : la colonne peut ne pas encore exister si
@@ -59,9 +75,19 @@ export default async function HomePage() {
     getHomeWelcomeText(),
   ]);
 
+  const imageIds = featuredWorks.flatMap((work) => work.product_images.map((image) => image.id));
+  const dimensionsById = await getImageDimensions(imageIds);
+
   const bannerWorks = featuredWorks.map((work) => {
     const image = [...work.product_images].sort((a, b) => a.position - b.position)[0];
-    return { id: work.id, title: work.title, image: image?.url ?? null };
+    const dimensions = image ? dimensionsById.get(image.id) : undefined;
+    return {
+      id: work.id,
+      title: work.title,
+      image: image?.url ?? null,
+      width: dimensions?.width ?? null,
+      height: dimensions?.height ?? null,
+    };
   });
 
   return (

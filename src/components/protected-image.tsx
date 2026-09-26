@@ -15,6 +15,8 @@ export function ProtectedImage({
   alt,
   className,
   priority = false,
+  width,
+  height,
 }: {
   src: string;
   alt: string;
@@ -25,6 +27,14 @@ export function ProtectedImage({
   // chargement immédiat aux images réellement visibles dès l'arrivée sur
   // la page (ex : les premières de la bannière d'accueil).
   priority?: boolean;
+  // Dimensions intrinsèques réelles (en pixels) de l'image, si connues :
+  // posées comme attributs HTML width/height, elles indiquent au
+  // navigateur le ratio d'aspect avant même que l'image ne soit chargée,
+  // pour réserver le bon espace et éviter un décalage visuel (CLS) —
+  // utile là où la taille affichée n'est pas fixe (ex : la bannière
+  // défilante d'accueil, dont chaque vignette a une largeur différente).
+  width?: number | null;
+  height?: number | null;
 }) {
   const [showNotice, setShowNotice] = useState(false);
 
@@ -47,6 +57,8 @@ export function ProtectedImage({
         loading={priority ? "eager" : "lazy"}
         fetchPriority={priority ? "high" : "auto"}
         decoding={priority ? "sync" : "async"}
+        width={width ?? undefined}
+        height={height ?? undefined}
         className={`${className ?? ""} select-none [-webkit-touch-callout:none] [-webkit-user-select:none]`}
       />
       <div

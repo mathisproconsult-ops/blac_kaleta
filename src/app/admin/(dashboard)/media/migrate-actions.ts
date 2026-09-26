@@ -105,7 +105,7 @@ export async function migrateExternalProductImages(
 
       const { error: uploadError } = await supabase.storage
         .from("media")
-        .upload(path, buffer, { contentType });
+        .upload(path, buffer, { contentType, cacheControl: "31536000" });
       if (uploadError) {
         failed += 1;
         continue;

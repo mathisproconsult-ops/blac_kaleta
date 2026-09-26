@@ -109,7 +109,7 @@ async function importProductImage(
 
     const { error: uploadError } = await supabase.storage
       .from("products")
-      .upload(path, buffer, { contentType });
+      .upload(path, buffer, { contentType, cacheControl: "31536000" });
     if (uploadError) return;
 
     const { data: publicUrlData } = supabase.storage

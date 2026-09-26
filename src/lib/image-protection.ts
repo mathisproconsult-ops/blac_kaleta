@@ -52,6 +52,13 @@ export type ProtectedImage = {
   buffer: Buffer;
   contentType: string;
   extension: string;
+  // Dimensions réelles de l'image produite : permettent de réserver le bon
+  // espace côté navigateur avant même que l'image ne soit chargée (attributs
+  // width/height sur <img>), pour éviter un décalage visuel (CLS) quand
+  // l'image apparaît — en particulier dans la bannière défilante d'accueil,
+  // où chaque vignette a une largeur intrinsèque différente.
+  width: number;
+  height: number;
 };
 
 // Prend les octets tels qu'envoyés par l'admin et produit la copie
@@ -106,7 +113,7 @@ export async function protectArtworkImage(
     .webp({ quality: 82 })
     .toBuffer();
 
-  return { buffer, contentType: "image/webp", extension: "webp" };
+  return { buffer, contentType: "image/webp", extension: "webp", width: actualWidth, height: actualHeight };
 }
 
 const BLUR_TINY_DIMENSION = 24;
@@ -152,7 +159,7 @@ export async function blurArtworkImage(input: Buffer): Promise<ProtectedImage> {
     .webp({ quality: 60 })
     .toBuffer();
 
-  return { buffer, contentType: "image/webp", extension: "webp" };
+  return { buffer, contentType: "image/webp", extension: "webp", width: targetWidth, height: targetHeight };
 }
 
 const DECOR_MAX_DIMENSION = 1600;
@@ -172,15 +179,23 @@ export async function optimizeDecorImage(input: Buffer): Promise<ProtectedImage>
   const targetWidth = Math.max(1, Math.round(width * scale));
   const targetHeight = Math.max(1, Math.round(height * scale));
 
-  const buffer = await rotated
+  const resizedBuffer = await rotated
     .resize({
       width: targetWidth,
       height: targetHeight,
       fit: "inside",
       withoutEnlargement: true,
     })
-    .webp({ quality: 82 })
     .toBuffer();
 
-  return { buffer, contentType: "image/webp", extension: "webp" };
+  // fit:"inside" peut arrondir différemment de notre calcul de 1px : on
+  // relit les dimensions réelles plutôt que de supposer qu'elles valent
+  // targetWidth/targetHeight.
+  const resizedMetadata = await sharp(resizedBuffer).metadata();
+  const actualWidth = resizedMetadata.width ?? targetWidth;
+  const actualHeight = resizedMetadata.height ?? targetHeight;
+
+  const buffer = await sharp(resizedBuffer).webp({ quality: 82 }).toBuffer();
+
+  return { buffer, contentType: "image/webp", extension: "webp", width: actualWidth, height: actualHeight };
 }

@@ -8,6 +8,7 @@ import { MediaFilters, MediaViewToggle } from "./media-filters";
 import { MediaUploadField } from "./media-upload-field";
 import { MigrateImagesButton } from "./migrate-images-button";
 import { ReprocessImagesButton } from "./reprocess-images-button";
+import { DecorBackfillButton } from "./decor-backfill-button";
 import {
   attachUploadedMedia,
   bulkMediaAction,
@@ -155,6 +156,7 @@ export default async function MediaPage({
       <div className="mt-4 flex flex-col gap-4 border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
         <MigrateImagesButton />
         <ReprocessImagesButton />
+        <DecorBackfillButton />
       </div>
 
       <div className="mt-6 flex flex-wrap items-center gap-4 text-sm">

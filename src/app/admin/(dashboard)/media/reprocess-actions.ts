@@ -24,10 +24,13 @@ type ProductImageSourceRow = {
 };
 
 // Liste les photos de produits (hors Printify) pas encore passées par le
-// pipeline de protection (original_path pas encore renseigné), et celles
-// déjà protégées mais sans vignette de grille (thumbnail_path, migration
-// 0038) — utilisé par le bouton du dashboard pour connaître le total avant
-// de traiter photo par photo et afficher une progression réelle.
+// pipeline de protection (original_path pas encore renseigné), celles déjà
+// protégées mais sans vignette de grille (thumbnail_path, migration 0038),
+// et celles complètes mais sans dimensions enregistrées (width/height,
+// migration 0040, nécessaires pour réserver l'espace de l'image côté
+// navigateur et éviter un décalage visuel) — utilisé par le bouton du
+// dashboard pour connaître le total avant de traiter photo par photo et
+// afficher une progression réelle.
 export async function listImagesNeedingReprocessing(): Promise<{
   images: ReprocessImageRef[];
   error: string | null;
@@ -63,11 +66,30 @@ export async function listImagesNeedingReprocessing(): Promise<{
     .filter((row) => row.products?.source !== "printify")
     .map((row) => ({ id: row.id, productId: row.product_id }));
 
+  // Requête séparée et best-effort : la colonne width peut ne pas encore
+  // exister (migration 0040).
+  const { data: missingDimensionRows } = await supabase
+    .from("product_images")
+    .select("id, product_id, products(source)")
+    .is("width", null)
+    .not("original_path", "is", null)
+    .not("thumbnail_path", "is", null)
+    .order("id", { ascending: true });
+
+  const missingDimensionImages = (
+    (missingDimensionRows ?? []) as unknown as ProductImageSourceRow[]
+  )
+    .filter((row) => row.products?.source !== "printify")
+    .map((row) => ({ id: row.id, productId: row.product_id }));
+
   const seen = new Set(unprotectedImages.map((image) => image.id));
-  const images = [
-    ...unprotectedImages,
-    ...missingThumbImages.filter((image) => !seen.has(image.id)),
-  ];
+  const images = [...unprotectedImages];
+  for (const image of [...missingThumbImages, ...missingDimensionImages]) {
+    if (!seen.has(image.id)) {
+      seen.add(image.id);
+      images.push(image);
+    }
+  }
 
   return { images, error: null };
 }
@@ -94,18 +116,18 @@ export async function reprocessOneImage(imageId: number): Promise<ReprocessResul
     return { id: imageId, status: "error", message: "Photo introuvable." };
   }
 
-  // Requête séparée et best-effort : la colonne peut ne pas encore exister
-  // (migration 0038).
-  const { data: thumbRow } = await supabase
+  // Requête séparée et best-effort : ces colonnes peuvent ne pas encore
+  // exister (migrations 0038 et 0040).
+  const { data: extraRow } = await supabase
     .from("product_images")
-    .select("thumbnail_path")
+    .select("thumbnail_path, width")
     .eq("id", imageId)
     .maybeSingle();
-  const hasThumbnail = Boolean(
-    (thumbRow as { thumbnail_path?: string | null } | null)?.thumbnail_path,
-  );
+  const extra = extraRow as { thumbnail_path?: string | null; width?: number | null } | null;
+  const hasThumbnail = Boolean(extra?.thumbnail_path);
+  const hasDimensions = extra?.width !== null && extra?.width !== undefined;
 
-  if (image.original_path && hasThumbnail) {
+  if (image.original_path && hasThumbnail && hasDimensions) {
     return { id: imageId, status: "skipped", message: "Déjà traitée." };
   }
 
@@ -129,6 +151,7 @@ export async function reprocessOneImage(imageId: number): Promise<ReprocessResul
     // Import différé : sharp ne doit être chargé que lors d'un retraitement
     // effectif, jamais au simple affichage de la Médiathèque.
     const { protectArtworkImage, THUMBNAIL_MAX_DIMENSION } = await import("@/lib/image-protection");
+    const sharp = (await import("sharp")).default;
 
     if (!image.original_path) {
       // Photo jamais protégée : le fichier actuel EST l'original — produit
@@ -143,14 +166,20 @@ export async function reprocessOneImage(imageId: number): Promise<ReprocessResul
       const [originalUpload, publicUpload, thumbnailUpload] = await Promise.all([
         supabase.storage
           .from("artwork-originals")
-          .upload(destPath, sourceBuffer, { contentType: "image/*", upsert: true }),
+          .upload(destPath, sourceBuffer, {
+            contentType: "image/*",
+            upsert: true,
+            cacheControl: "31536000",
+          }),
         supabase.storage.from("products").upload(destPath, protectedImage.buffer, {
           contentType: protectedImage.contentType,
           upsert: true,
+          cacheControl: "31536000",
         }),
         supabase.storage.from("products").upload(thumbDestPath, thumbnailImage.buffer, {
           contentType: thumbnailImage.contentType,
           upsert: true,
+          cacheControl: "31536000",
         }),
       ]);
       if (originalUpload.error) throw new Error(`original : ${originalUpload.error.message}`);
@@ -168,12 +197,34 @@ export async function reprocessOneImage(imageId: number): Promise<ReprocessResul
         updates.thumbnail_url = thumbUrlData.publicUrl;
       }
 
+      // Dimensions de la copie protégée déjà connues (calculées par
+      // protectArtworkImage) : pas besoin d'une lecture de métadonnées
+      // séparée.
+      updates.width = protectedImage.width;
+      updates.height = protectedImage.height;
+
       const { error: updateError } = await supabase
         .from("product_images")
         .update(updates)
         .eq("id", imageId);
       if (updateError) throw new Error(`mise à jour : ${updateError.message}`);
 
+      return { id: imageId, status: "done" };
+    }
+
+    if (hasThumbnail && !hasDimensions) {
+      // Déjà protégée et déjà vignettée, il ne manque que les dimensions —
+      // simple lecture de métadonnées sur la copie déjà en ligne, sans
+      // aucun re-traitement ni ré-upload (donc sans dédoubler le filigrane).
+      const { width, height } = await sharp(sourceBuffer).metadata();
+      if (!width || !height) {
+        return { id: imageId, status: "error", message: "Dimensions illisibles." };
+      }
+      const { error: updateError } = await supabase
+        .from("product_images")
+        .update({ width, height })
+        .eq("id", imageId);
+      if (updateError) throw new Error(`mise à jour : ${updateError.message}`);
       return { id: imageId, status: "done" };
     }
 
@@ -186,13 +237,27 @@ export async function reprocessOneImage(imageId: number): Promise<ReprocessResul
       .upload(thumbDestPath, thumbnailImage.buffer, {
         contentType: thumbnailImage.contentType,
         upsert: true,
+        cacheControl: "31536000",
       });
     if (thumbnailUploadError) throw new Error(`vignette : ${thumbnailUploadError.message}`);
 
     const { data: thumbUrlData } = supabase.storage.from("products").getPublicUrl(thumbDestPath);
+    const updates: Record<string, unknown> = {
+      thumbnail_path: thumbDestPath,
+      thumbnail_url: thumbUrlData.publicUrl,
+    };
+    if (!hasDimensions) {
+      // sourceBuffer est ici la copie déjà protégée (image.original_path
+      // est renseigné) : une simple lecture de métadonnées suffit.
+      const { width, height } = await sharp(sourceBuffer).metadata();
+      if (width && height) {
+        updates.width = width;
+        updates.height = height;
+      }
+    }
     const { error: updateError } = await supabase
       .from("product_images")
-      .update({ thumbnail_path: thumbDestPath, thumbnail_url: thumbUrlData.publicUrl })
+      .update(updates)
       .eq("id", imageId);
     if (updateError) throw new Error(`mise à jour : ${updateError.message}`);
 

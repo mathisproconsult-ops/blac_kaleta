@@ -92,7 +92,7 @@ async function uploadDigitalFile(
   const path = `options/${crypto.randomUUID()}-${file.name}`;
   const { error } = await supabase.storage
     .from("media")
-    .upload(path, file, { contentType: file.type });
+    .upload(path, file, { contentType: file.type, cacheControl: "31536000" });
 
   if (error) return null;
 

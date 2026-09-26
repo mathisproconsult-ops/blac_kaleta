@@ -8,6 +8,8 @@ type BannerWork = {
   id: number;
   title: string;
   image: string | null;
+  width: number | null;
+  height: number | null;
 };
 
 const AUTO_SCROLL_PX_PER_FRAME = 0.5;
@@ -120,6 +122,8 @@ export function ScrollingWorksBanner({ works }: { works: BannerWork[] }) {
               alt={work.title}
               className="h-full w-auto"
               priority={index < 2}
+              width={work.width}
+              height={work.height}
             />
           ) : (
             <div

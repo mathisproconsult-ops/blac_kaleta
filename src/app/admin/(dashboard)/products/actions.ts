@@ -90,6 +90,8 @@ async function insertProductImage(
     original_path: string | null;
     thumbnail_path: string | null;
     thumbnail_url: string | null;
+    width: number | null;
+    height: number | null;
     position: number;
   },
 ) {
@@ -123,6 +125,8 @@ async function attachUploadedImages(
       original_path: stored?.originalPath ?? null,
       thumbnail_path: stored?.thumbnailPath ?? null,
       thumbnail_url: stored?.thumbnailUrl ?? null,
+      width: stored?.width ?? null,
+      height: stored?.height ?? null,
       position,
     });
     position += 1;
@@ -172,6 +176,8 @@ async function attachLibraryMedia(
       original_path: stored?.originalPath ?? null,
       thumbnail_path: stored?.thumbnailPath ?? null,
       thumbnail_url: stored?.thumbnailUrl ?? null,
+      width: stored?.width ?? null,
+      height: stored?.height ?? null,
       position,
     });
     position += 1;

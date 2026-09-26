@@ -91,7 +91,7 @@ export function VideoUploadField() {
       const videoPath = `library/${crypto.randomUUID()}-${file.name}`;
       const { error: uploadError } = await supabase.storage
         .from("media")
-        .upload(videoPath, file, { contentType: file.type });
+        .upload(videoPath, file, { contentType: file.type, cacheControl: "31536000" });
       if (uploadError) throw new Error(uploadError.message);
       const { data: videoUrlData } = supabase.storage.from("media").getPublicUrl(videoPath);
 
@@ -99,7 +99,7 @@ export function VideoUploadField() {
       const thumbnailPath = `library/${crypto.randomUUID()}-thumbnail.webp`;
       const { error: thumbnailError } = await supabase.storage
         .from("media")
-        .upload(thumbnailPath, thumbnailBlob, { contentType: "image/webp" });
+        .upload(thumbnailPath, thumbnailBlob, { contentType: "image/webp", cacheControl: "31536000" });
       if (thumbnailError) throw new Error(thumbnailError.message);
       const { data: thumbnailUrlData } = supabase.storage.from("media").getPublicUrl(thumbnailPath);
 

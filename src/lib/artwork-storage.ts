@@ -8,6 +8,13 @@ export type StoredArtworkImage = {
   originalPath: string | null;
   thumbnailPath: string | null;
   thumbnailUrl: string | null;
+  // Dimensions de la copie publique (pas la vignette) : permettent de
+  // réserver l'espace exact côté navigateur avant chargement de l'image
+  // (attributs width/height), pour éviter un décalage visuel (CLS) — en
+  // particulier dans la bannière défilante d'accueil, où chaque image a
+  // une largeur intrinsèque différente. Null pour les GIF (non retraités).
+  width: number | null;
+  height: number | null;
 };
 
 // Télécharge le fichier tel qu'envoyé (bucket "media", où atterrissent tous
@@ -38,6 +45,8 @@ export async function protectAndStoreArtworkImage(
       originalPath: null,
       thumbnailPath: null,
       thumbnailUrl: null,
+      width: null,
+      height: null,
     };
   }
 
@@ -70,16 +79,27 @@ export async function protectAndStoreArtworkImage(
   const destPath = `${destFolder}/${crypto.randomUUID()}.${protectedImage.extension}`;
   const thumbnailDestPath = `${destFolder}/${crypto.randomUUID()}-thumb.${thumbnailImage.extension}`;
 
+  // cacheControl long (1 an) : chaque fichier a un nom unique
+  // (crypto.randomUUID()) et n'est jamais réécrit au même chemin — sans
+  // risque de contenu périmé, ça permet au navigateur/CDN de ne plus
+  // jamais re-télécharger un fichier déjà vu. Sans ce réglage, Supabase
+  // Storage retombe sur 1h par défaut.
   const [publicUpload, originalUpload, thumbnailUpload] = await Promise.all([
     supabase.storage
       .from("products")
-      .upload(destPath, protectedImage.buffer, { contentType: protectedImage.contentType }),
+      .upload(destPath, protectedImage.buffer, {
+        contentType: protectedImage.contentType,
+        cacheControl: "31536000",
+      }),
     supabase.storage
       .from("artwork-originals")
-      .upload(destPath, originalBuffer, { contentType: mimeType }),
+      .upload(destPath, originalBuffer, { contentType: mimeType, cacheControl: "31536000" }),
     supabase.storage
       .from("products")
-      .upload(thumbnailDestPath, thumbnailImage.buffer, { contentType: thumbnailImage.contentType }),
+      .upload(thumbnailDestPath, thumbnailImage.buffer, {
+        contentType: thumbnailImage.contentType,
+        cacheControl: "31536000",
+      }),
   ]);
 
   if (publicUpload.error) {
@@ -107,6 +127,8 @@ export async function protectAndStoreArtworkImage(
     // l'image pleine résolution si elle manque (voir les pages publiques).
     thumbnailPath: thumbnailUpload.error ? null : thumbnailDestPath,
     thumbnailUrl: thumbnailUpload.error ? null : thumbnailUrlData.publicUrl,
+    width: protectedImage.width,
+    height: protectedImage.height,
   };
 }
 
@@ -132,7 +154,10 @@ export async function createBlurredArtworkPreview(
   const destPath = `${destFolder}/${crypto.randomUUID()}-blur.${blurred.extension}`;
   const { error } = await supabase.storage
     .from("products")
-    .upload(destPath, blurred.buffer, { contentType: blurred.contentType });
+    .upload(destPath, blurred.buffer, {
+      contentType: blurred.contentType,
+      cacheControl: "31536000",
+    });
 
   if (error) {
     console.error("createBlurredArtworkPreview upload", destPath, error);
@@ -174,7 +199,9 @@ export async function optimizeAndStoreDecorImage(
 ): Promise<{ path: string; url: string } | null> {
   if (file.type === "image/gif") {
     const path = `${destFolder}/${crypto.randomUUID()}-${file.name}`;
-    const { error } = await supabase.storage.from(bucket).upload(path, file, { contentType: file.type });
+    const { error } = await supabase.storage
+      .from(bucket)
+      .upload(path, file, { contentType: file.type, cacheControl: "31536000" });
     if (error) {
       console.error("optimizeAndStoreDecorImage gif upload", path, error);
       return null;
@@ -195,7 +222,10 @@ export async function optimizeAndStoreDecorImage(
   const path = `${destFolder}/${crypto.randomUUID()}.${optimized.extension}`;
   const { error } = await supabase.storage
     .from(bucket)
-    .upload(path, optimized.buffer, { contentType: optimized.contentType });
+    .upload(path, optimized.buffer, {
+      contentType: optimized.contentType,
+      cacheControl: "31536000",
+    });
   if (error) {
     console.error("optimizeAndStoreDecorImage upload", path, error);
     return null;
