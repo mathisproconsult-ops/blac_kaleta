@@ -48,10 +48,18 @@ export async function listImagesNeedingWatermarkRefresh(): Promise<{
     .filter((row) => !row.path?.toLowerCase().endsWith(".gif"))
     .map((row): WatermarkImageRef => ({ kind: "product", id: row.id }));
 
+  // "video" est inclus en plus de "photo" : une vidéo auto-hébergée a sa
+  // propre vignette (image_path pointant vers un fichier brut dans le
+  // bucket "media", jamais protégé jusqu'ici — voir createRecentWorkVideoUpload
+  // dans [id]/actions.ts), qui fait bien partie de la catégorie "Production
+  // Vidéos" visée par le filigrane. Le filtre image_path non nul exclut déjà
+  // naturellement les liens vidéo externes (YouTube/Vimeo/Instagram/TikTok),
+  // qui n'ont qu'une vignette externe (image_url) qu'on ne possède pas et ne
+  // doit pas filigraner.
   const { data: mediaRows, error: mediaError } = await supabase
     .from("recent_work_media")
     .select("id")
-    .eq("kind", "photo")
+    .in("kind", ["photo", "video"])
     .not("image_path", "is", null)
     .order("id", { ascending: true });
 
@@ -89,6 +97,30 @@ function describeError(err: unknown, fallback: string): string {
   return fallback;
 }
 
+// Tente les emplacements possibles dans l'ordre, et s'arrête au premier qui
+// répond : original jamais filigrané (artwork-originals) > copie publique
+// déjà filigranée (products — l'original a été perdu, mais le pipeline
+// avait bien tourné) > fichier brut jamais traité (media — le pipeline de
+// protection avait échoué silencieusement à l'ajout, voir
+// protectAndStoreArtworkImage dans lib/artwork-storage.ts, qui retombe alors
+// sur le chemin brut tel quel : aucun filigrane n'a jamais existé pour cette
+// image, elle est restée dans le bucket "media" où elle a été uploadée).
+// C'est cette dernière étape qui manquait et causait l'erreur "Object not
+// found" : la photo n'avait jamais été copiée dans "products", donc y
+// chercher ne pouvait que la rater.
+async function downloadFirstAvailable(
+  supabase: SupabaseClient,
+  candidates: { bucket: string; path: string }[],
+): Promise<{ buffer: Buffer | null; error: unknown }> {
+  let lastError: unknown = null;
+  for (const { bucket, path } of candidates) {
+    const { data, error } = await supabase.storage.from(bucket).download(path);
+    if (data) return { buffer: Buffer.from(await data.arrayBuffer()), error: null };
+    lastError = error;
+  }
+  return { buffer: null, error: lastError };
+}
+
 async function regenerateProductWatermark(
   supabase: SupabaseClient,
   id: number,
@@ -112,38 +144,25 @@ async function regenerateProductWatermark(
   }
 
   // Priorité à l'original jamais filigrané (bucket privé artwork-originals).
-  // S'il manque — l'upload de l'original avait échoué à l'époque, ou la
-  // photo a été ajoutée avant l'introduction de cette sauvegarde — on
-  // retombe sur la copie publique actuelle, déjà filigranée : le nouveau
-  // filigrane s'ajoute par-dessus l'ancien (visuellement imparfait), mais
-  // c'est la seule source qui reste et ça vaut mieux que ne jamais corriger
-  // le filigrane cassé (même compromis déjà accepté pour les entrées Photo
-  // ci-dessous).
-  let sourceBuffer: Buffer;
-  if (image.original_path) {
-    const { data: downloaded, error: downloadError } = await supabase.storage
-      .from("artwork-originals")
-      .download(image.original_path);
-    if (downloadError || !downloaded) {
-      return {
-        status: "error",
-        message: describeError(downloadError, "Téléchargement de l'original impossible."),
-        ...context,
-      };
-    }
-    sourceBuffer = Buffer.from(await downloaded.arrayBuffer());
-  } else {
-    const { data: downloaded, error: downloadError } = await supabase.storage
-      .from("products")
-      .download(image.path);
-    if (downloadError || !downloaded) {
-      return {
-        status: "error",
-        message: describeError(downloadError, "Téléchargement de l'image impossible."),
-        ...context,
-      };
-    }
-    sourceBuffer = Buffer.from(await downloaded.arrayBuffer());
+  // S'il manque, on retombe sur la copie publique actuelle dans "products"
+  // (déjà filigranée — le pipeline avait tourné mais l'original a été perdu
+  // depuis). Et si celle-ci manque aussi, on tente enfin "media" : le
+  // fichier brut tel qu'uploadé, jamais copié nulle part ailleurs parce que
+  // le pipeline de protection avait échoué silencieusement à l'ajout (voir
+  // protectAndStoreArtworkImage) — ce cas précis n'avait aucun filigrane du
+  // tout (pas même cassé), et provoquait l'erreur "Object not found" tant
+  // qu'on ne cherchait que dans "products".
+  const candidates: { bucket: string; path: string }[] = [];
+  if (image.original_path) candidates.push({ bucket: "artwork-originals", path: image.original_path });
+  candidates.push({ bucket: "products", path: image.path }, { bucket: "media", path: image.path });
+
+  const { buffer: sourceBuffer, error: downloadError } = await downloadFirstAvailable(supabase, candidates);
+  if (!sourceBuffer) {
+    return {
+      status: "error",
+      message: describeError(downloadError, "Image introuvable dans le Storage (fichier manquant)."),
+      ...context,
+    };
   }
 
   let protectedImage, thumbnailImage;
@@ -216,31 +235,28 @@ async function regenerateMediaWatermark(
     return { status: "skipped", message: "GIF animé, non retraité.", ...context };
   }
 
-  // Les entrées Photo d'Œuvres récentes ne conservent pas de référence
+  // Les entrées Photo/Vidéo d'Œuvres récentes ne conservent pas de référence
   // explicite à leur original (contrairement aux produits), mais
   // protectAndStoreArtworkImage uploade toujours l'original et la copie
-  // publique au même chemin relatif, juste dans des buckets différents —
-  // on tente donc "artwork-originals" au même chemin, et on retombe sur la
-  // copie publique actuelle si l'original n'y est pas (plus rare, mais
-  // corrige quand même le filigrane cassé).
-  let sourceBuffer: Buffer | null = null;
-  const { data: originalDownload } = await supabase.storage
-    .from("artwork-originals")
-    .download(media.image_path);
-  if (originalDownload) {
-    sourceBuffer = Buffer.from(await originalDownload.arrayBuffer());
-  } else {
-    const { data: publicDownload, error: publicDownloadError } = await supabase.storage
-      .from("products")
-      .download(media.image_path);
-    if (publicDownloadError || !publicDownload) {
-      return {
-        status: "error",
-        message: describeError(publicDownloadError, "Téléchargement de l'image impossible."),
-        ...context,
-      };
-    }
-    sourceBuffer = Buffer.from(await publicDownload.arrayBuffer());
+  // publique au même chemin relatif, juste dans des buckets différents — on
+  // tente donc "artwork-originals" au même chemin. Si l'original n'y est
+  // pas, on retombe sur la copie publique actuelle dans "products" (déjà
+  // filigranée). Et si celle-ci manque aussi, "media" : la vignette brute
+  // telle qu'uploadée, pour les cas qui n'ont jamais eu de filigrane du tout
+  // — une vignette de vidéo auto-hébergée (voir createRecentWorkVideoUpload)
+  // n'est jamais passée par le pipeline de protection jusqu'ici, ou une
+  // photo dont ce pipeline avait échoué silencieusement à l'ajout.
+  const { buffer: sourceBuffer, error: downloadError } = await downloadFirstAvailable(supabase, [
+    { bucket: "artwork-originals", path: media.image_path },
+    { bucket: "products", path: media.image_path },
+    { bucket: "media", path: media.image_path },
+  ]);
+  if (!sourceBuffer) {
+    return {
+      status: "error",
+      message: describeError(downloadError, "Image introuvable dans le Storage (fichier manquant)."),
+      ...context,
+    };
   }
 
   let protectedImage, thumbnailImage;
