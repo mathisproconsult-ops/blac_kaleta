@@ -10,7 +10,13 @@ import {
 
 type Phase = "idle" | "running" | "done" | "error";
 
-type FailedImage = { kind: "product" | "media"; id: number; message: string };
+type FailedImage = {
+  kind: "product" | "media";
+  id: number;
+  message: string;
+  productId?: number;
+  title?: string;
+};
 
 export function WatermarkBackfillButton() {
   const [phase, setPhase] = useState<Phase>("idle");
@@ -51,6 +57,8 @@ export function WatermarkBackfillButton() {
           kind: image.kind,
           id: image.id,
           message: result.message ?? "Erreur inconnue.",
+          productId: result.productId,
+          title: result.title,
         });
         setFailures([...finalFailures]);
       }
@@ -108,11 +116,18 @@ export function WatermarkBackfillButton() {
         <div className="border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300">
           <p className="font-medium">Images en échec :</p>
           <ul className="mt-1 flex flex-col gap-1">
-            {failures.map((failure) => (
-              <li key={`${failure.kind}-${failure.id}`}>
-                {failure.kind === "product" ? "Produit" : "Média"} #{failure.id} — {failure.message}
-              </li>
-            ))}
+            {failures.map((failure) => {
+              const label =
+                failure.title ??
+                (failure.kind === "product" && failure.productId
+                  ? `produit #${failure.productId}`
+                  : `${failure.kind === "product" ? "produit" : "média"} #${failure.id}`);
+              return (
+                <li key={`${failure.kind}-${failure.id}`}>
+                  {label} — {failure.message}
+                </li>
+              );
+            })}
           </ul>
         </div>
       ) : null}
