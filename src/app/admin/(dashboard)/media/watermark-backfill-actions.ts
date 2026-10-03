@@ -23,6 +23,19 @@ export type WatermarkImageRef = { kind: "product" | "media"; id: number };
 // réparée malgré un filigrane cassé bien réel (bug remonté sur "Minions").
 // regenerateProductWatermark retombe sur la copie publique actuelle quand
 // l'original manque, comme c'est déjà le cas pour les entrées Photo.
+//
+// L'exclusion des produits Printify ne se fait PAS sur products.source :
+// un produit catalogué Printify peut quand même porter une vraie œuvre
+// uploadée à la main par l'artiste (cas de "Minions"), qui doit être
+// filigranée comme les autres. Le seul signal fiable est le chemin de
+// l'image elle-même : syncProductImages (printify-actions.ts) est le seul
+// endroit de tout le code qui enregistre path/url comme l'URL externe
+// Printify brute (image.src) plutôt qu'un chemin relatif dans notre
+// propre bucket Storage — un upload manuel, un choix depuis la
+// Médiathèque, ou un import CSV stockent TOUJOURS un chemin relatif. Une
+// image dont path est une URL http(s) n'a donc jamais été touchée par un
+// upload réel : c'est la maquette Printify telle quelle, qu'on ne possède
+// pas et qu'on ne doit pas filigraner.
 export async function listImagesNeedingWatermarkRefresh(): Promise<{
   images: WatermarkImageRef[];
   error: string | null;
@@ -31,7 +44,7 @@ export async function listImagesNeedingWatermarkRefresh(): Promise<{
 
   const { data: productRows, error: productError } = await supabase
     .from("product_images")
-    .select("id, path, products(source)")
+    .select("id, path")
     .order("id", { ascending: true });
 
   if (productError) {
@@ -39,12 +52,8 @@ export async function listImagesNeedingWatermarkRefresh(): Promise<{
     return { images: [], error: productError.message };
   }
 
-  const productImages = ((productRows ?? []) as unknown as {
-    id: number;
-    path: string | null;
-    products: { source: string } | null;
-  }[])
-    .filter((row) => row.products?.source !== "printify")
+  const productImages = ((productRows ?? []) as { id: number; path: string | null }[])
+    .filter((row) => !/^https?:\/\//i.test(row.path ?? ""))
     .filter((row) => !row.path?.toLowerCase().endsWith(".gif"))
     .map((row): WatermarkImageRef => ({ kind: "product", id: row.id }));
 
@@ -174,6 +183,9 @@ async function regenerateProductWatermark(
   };
   if (!image.path) {
     return { status: "skipped", message: "Pas d'image.", ...context };
+  }
+  if (/^https?:\/\//i.test(image.path)) {
+    return { status: "skipped", message: "Image externe (Printify), non filigranée.", ...context };
   }
   if (image.path.toLowerCase().endsWith(".gif")) {
     return { status: "skipped", message: "GIF animé, non retraité.", ...context };
