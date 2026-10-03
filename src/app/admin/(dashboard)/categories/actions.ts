@@ -35,6 +35,21 @@ export async function renameCategory(id: number, formData: FormData) {
   revalidatePath("/admin/categories");
 }
 
+// Best-effort : la colonne peut ne pas encore exister si la migration 0041
+// n'a pas été appliquée — dans ce cas, l'interrupteur n'a simplement aucun
+// effet plutôt que de faire échouer la page.
+export async function toggleCategoryVisibility(id: number, currentlyVisible: boolean) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("categories")
+    .update({ is_visible: !currentlyVisible })
+    .eq("id", id);
+  if (error) console.error("toggleCategoryVisibility", error);
+
+  revalidatePath("/admin/categories");
+  revalidatePath("/boutique");
+}
+
 export async function deleteCategory(id: number) {
   const supabase = await createClient();
   await supabase.from("categories").delete().eq("id", id);

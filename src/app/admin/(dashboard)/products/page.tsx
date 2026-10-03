@@ -19,7 +19,7 @@ import {
   toggleProductVisibility,
   trashProduct,
 } from "./actions";
-import { STATUS_LABELS, STATUS_ORDER, STATUS_STYLES, type ProductStatus } from "./status";
+import { STATUS_LABELS, STATUS_STYLES, type ProductStatus } from "./status";
 
 export const metadata: Metadata = {
   title: "Produits — Admin Blac_Kaleta",
@@ -305,7 +305,9 @@ export default async function ProductsPage({
                         ) : null}
                       </p>
                       <div className="mt-1 flex flex-wrap items-center gap-2">
-                        <form action={cycleProductStatus.bind(null, product.id, product.status)}>
+                        <form
+                          action={cycleProductStatus.bind(null, product.id, product.status, product.stock)}
+                        >
                           <SubmitButton
                             pendingText="…"
                             className={`px-2 py-1 text-xs font-medium ${STATUS_STYLES[product.status]}`}
@@ -409,14 +411,17 @@ function QuickEditForm({ product }: { product: ProductRow }) {
         <label className="text-xs uppercase tracking-wide text-zinc-500">Statut</label>
         <select
           name="status"
-          defaultValue={product.status}
+          defaultValue={
+            product.status === "reserved" || product.status === "sold" ? product.status : "auto"
+          }
           className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
         >
-          {STATUS_ORDER.map((status) => (
-            <option key={status} value={status}>
-              {STATUS_LABELS[status]}
-            </option>
-          ))}
+          {/* "Disponible"/"Épuisé" ne sont plus des choix manuels : ce sont
+              des états dérivés du stock (voir deriveStatus), pour ne plus
+              jamais pouvoir diverger de la quantité réellement en stock. */}
+          <option value="auto">Normal (selon le stock)</option>
+          <option value="reserved">{STATUS_LABELS.reserved}</option>
+          <option value="sold">{STATUS_LABELS.sold}</option>
         </select>
       </div>
       <SubmitButton

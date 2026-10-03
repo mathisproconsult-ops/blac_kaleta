@@ -17,8 +17,6 @@ export default async function RecentWorksPage() {
     .order("position", { ascending: true })
     .returns<Category[]>();
 
-  const categoryList = categories ?? [];
-
   // Requête séparée et best-effort : la colonne peut ne pas encore exister
   // si la migration 0034 n'a pas été appliquée — dans ce cas, aucun badge
   // +18 ne s'affiche plutôt que de faire échouer toute la page.
@@ -30,6 +28,20 @@ export default async function RecentWorksPage() {
       .filter((row) => row.age_restricted)
       .map((row) => row.id),
   );
+
+  // Requête séparée et best-effort : la colonne peut ne pas encore exister
+  // si la migration 0041 n'a pas été appliquée — dans ce cas, toutes les
+  // catégories restent affichées.
+  const { data: visibilityRows } = await supabase
+    .from("recent_work_categories")
+    .select("id, is_visible");
+  const hiddenIds = new Set(
+    ((visibilityRows ?? []) as { id: number; is_visible?: boolean }[])
+      .filter((row) => row.is_visible === false)
+      .map((row) => row.id),
+  );
+
+  const categoryList = (categories ?? []).filter((category) => !hiddenIds.has(category.id));
 
   return (
     <div className="px-4 py-8 sm:px-6 sm:py-10 lg:px-10 lg:py-12">

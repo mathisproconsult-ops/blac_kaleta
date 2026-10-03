@@ -9,6 +9,7 @@ import { MediaUploadField } from "./media-upload-field";
 import { MigrateImagesButton } from "./migrate-images-button";
 import { ReprocessImagesButton } from "./reprocess-images-button";
 import { DecorBackfillButton } from "./decor-backfill-button";
+import { WatermarkBackfillButton } from "./watermark-backfill-button";
 import {
   attachUploadedMedia,
   bulkMediaAction,
@@ -157,6 +158,7 @@ export default async function MediaPage({
         <MigrateImagesButton />
         <ReprocessImagesButton />
         <DecorBackfillButton />
+        <WatermarkBackfillButton />
       </div>
 
       <div className="mt-6 flex flex-wrap items-center gap-4 text-sm">

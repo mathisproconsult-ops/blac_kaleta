@@ -9,6 +9,7 @@ import {
   deleteRecentWorkCategory,
   moveRecentWorkCategory,
   renameRecentWorkCategory,
+  toggleRecentWorkCategoryVisibility,
   updateRecentWorkCategoryCover,
 } from "./actions";
 
@@ -41,6 +42,19 @@ export default async function RecentWorkCategoriesPage() {
     ((ageRestrictedRows ?? []) as { id: number; age_restricted: boolean }[]).map((row) => [
       row.id,
       row.age_restricted,
+    ]),
+  );
+
+  // Requête séparée et best-effort : la colonne peut ne pas encore exister
+  // si la migration 0041 n'a pas été appliquée — dans ce cas, toutes les
+  // catégories sont simplement traitées comme visibles.
+  const { data: visibilityRows } = await supabase
+    .from("recent_work_categories")
+    .select("id, is_visible");
+  const visibleById = new Map(
+    ((visibilityRows ?? []) as { id: number; is_visible?: boolean }[]).map((row) => [
+      row.id,
+      row.is_visible ?? true,
     ]),
   );
 
@@ -142,6 +156,11 @@ export default async function RecentWorkCategoriesPage() {
                       +18
                     </span>
                   ) : null}
+                  {!visibleById.get(category.id) ? (
+                    <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                      Masquée
+                    </span>
+                  ) : null}
                   <label className="flex items-center gap-1.5 text-xs text-zinc-500">
                     <input
                       type="checkbox"
@@ -162,6 +181,20 @@ export default async function RecentWorkCategoriesPage() {
                     className="text-sm text-red-600 hover:underline dark:text-red-400"
                   >
                     Supprimer
+                  </SubmitButton>
+                </form>
+                <form
+                  action={toggleRecentWorkCategoryVisibility.bind(
+                    null,
+                    category.id,
+                    visibleById.get(category.id) ?? true,
+                  )}
+                >
+                  <SubmitButton
+                    pendingText="…"
+                    className="text-sm text-zinc-600 hover:underline dark:text-zinc-400"
+                  >
+                    {visibleById.get(category.id) ? "Masquer" : "Afficher"}
                   </SubmitButton>
                 </form>
                 <Link

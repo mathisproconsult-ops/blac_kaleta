@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { deriveStatus } from "@/app/admin/(dashboard)/products/status";
 
 export type CheckoutState = {
   success: boolean;
@@ -159,17 +160,16 @@ export async function createCartOrder(
       selected_options: lineOptions.length > 0 ? lineOptions : null,
     });
 
+    // Dernier exemplaire d'une pièce unique vendu : marqué "Réservé" plutôt
+    // que "Épuisé", pour distinguer au dashboard une pièce à confirmer
+    // "Vendu" après livraison d'un simple réapprovisionnement à venir.
+    // Sinon, toujours dérivé du nouveau stock (jamais laissé tel quel), pour
+    // que stock et statut ne puissent plus diverger (voir deriveStatus).
     const wasUnique = product.stock === 1;
     const newStock = product.stock - line.quantity;
-    const updates: Record<string, unknown> = { stock: newStock };
+    const status = wasUnique && newStock <= 0 ? "reserved" : deriveStatus("available", newStock);
 
-    if (wasUnique) {
-      updates.status = "reserved";
-    } else if (newStock <= 0) {
-      updates.status = "out_of_stock";
-    }
-
-    await supabase.from("products").update(updates).eq("id", product.id);
+    await supabase.from("products").update({ stock: newStock, status }).eq("id", product.id);
     revalidatePath(`/boutique/${product.id}`);
   }
 

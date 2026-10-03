@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { blurStoredImage, protectAndStoreArtworkImage } from "@/lib/artwork-storage";
-import { STATUS_ORDER, type ProductStatus } from "./status";
+import { deriveStatus, STATUS_ORDER, type ProductStatus } from "./status";
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
 
@@ -356,7 +356,10 @@ export async function createProduct(formData: FormData) {
   const supabase = await createClient();
   const { data: product, error } = await supabase
     .from("products")
-    .insert(fields)
+    // Statut dérivé du stock dès la création — jamais une valeur par
+    // défaut de colonne qui pourrait ne pas correspondre (voir
+    // deriveStatus dans ./status.ts).
+    .insert({ ...fields, status: deriveStatus("available", fields.stock) })
     .select("id")
     .single();
 
@@ -391,7 +394,22 @@ export async function updateProduct(id: number, formData: FormData) {
   if (!fields) return;
 
   const supabase = await createClient();
-  await supabase.from("products").update(fields).eq("id", id);
+
+  // Le formulaire principal ne propose pas de champ Statut (seul le stock
+  // y est modifié) — sans cette étape, changer le stock ici ne mettait
+  // jamais à jour le statut "available"/"out_of_stock" en retour, qui
+  // pouvait alors rester périmé (voir deriveStatus dans ./status.ts).
+  const { data: existing } = await supabase
+    .from("products")
+    .select("status")
+    .eq("id", id)
+    .maybeSingle();
+  const currentStatus = (existing as { status?: ProductStatus } | null)?.status ?? "available";
+
+  await supabase
+    .from("products")
+    .update({ ...fields, status: deriveStatus(currentStatus, fields.stock) })
+    .eq("id", id);
 
   await syncCategories(supabase, id, parseCategoryIds(formData));
   await syncOptionGroups(supabase, id, parseOptionGroupIds(formData));
@@ -490,13 +508,25 @@ export async function deleteProductImage(imageId: number, path: string, original
   revalidatePath("/");
 }
 
+// Cycle à 3 étapes (normal → réservé → vendu → normal...) plutôt que de
+// parcourir les 4 ProductStatus bruts : faire cycler jusqu'à "available"
+// ou "out_of_stock" sans connaître le stock réel pouvait forcer un statut
+// contredisant le stock (le bug remonté sur "Croisement"). "Normal"
+// retombe toujours sur le statut réellement dérivé du stock (voir
+// deriveStatus dans ./status.ts).
+const CYCLE_STEPS = ["normal", "reserved", "sold"] as const;
+
 export async function cycleProductStatus(
   id: number,
   currentStatus: ProductStatus,
+  stock: number,
 ) {
   const supabase = await createClient();
-  const currentIndex = STATUS_ORDER.indexOf(currentStatus);
-  const nextStatus = STATUS_ORDER[(currentIndex + 1) % STATUS_ORDER.length];
+  const currentStep =
+    currentStatus === "reserved" || currentStatus === "sold" ? currentStatus : "normal";
+  const currentIndex = CYCLE_STEPS.indexOf(currentStep);
+  const nextStep = CYCLE_STEPS[(currentIndex + 1) % CYCLE_STEPS.length];
+  const nextStatus = deriveStatus(nextStep === "normal" ? "available" : nextStep, stock);
   await supabase.from("products").update({ status: nextStatus }).eq("id", id);
   revalidatePath("/admin/products");
   revalidatePath("/");
@@ -526,9 +556,14 @@ export async function quickUpdateProduct(id: number, formData: FormData) {
   const status = formData.get("status");
 
   if (typeof title !== "string" || !title.trim()) return;
-  if (typeof status !== "string" || !STATUS_ORDER.includes(status as ProductStatus)) {
+  // "auto" (statut géré automatiquement selon le stock) n'est pas un
+  // ProductStatus valide en base — seuls "reserved"/"sold" sont des choix
+  // explicites admis ici, voir deriveStatus dans ./status.ts.
+  if (typeof status !== "string" || (status !== "auto" && !STATUS_ORDER.includes(status as ProductStatus))) {
     return;
   }
+
+  const stockValue = typeof stock === "string" && stock ? Number(stock) : 0;
 
   const supabase = await createClient();
   await supabase
@@ -536,8 +571,8 @@ export async function quickUpdateProduct(id: number, formData: FormData) {
     .update({
       title: title.trim(),
       price: typeof price === "string" && price ? Number(price) : null,
-      stock: typeof stock === "string" && stock ? Number(stock) : 0,
-      status,
+      stock: stockValue,
+      status: deriveStatus(status === "auto" ? "available" : (status as ProductStatus), stockValue),
     })
     .eq("id", id);
 

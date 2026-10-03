@@ -1,4 +1,8 @@
 import sharp from "sharp";
+import { mkdirSync, writeFileSync, existsSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import { WATERMARK_FONT_BASE64 } from "./fonts/watermark-font";
 
 // Toutes les images d'œuvres servies publiquement passent par ce pipeline :
 // redimensionnement (inexploitable en impression), filigrane visible, et
@@ -13,8 +17,64 @@ const MAX_DIMENSION = 1200;
 // la place de celle-ci partout où l'image n'est affichée qu'en petit.
 export const THUMBNAIL_MAX_DIMENSION = 480;
 const WATERMARK_LABEL = "Blac_Kaleta · blac-kaleta.com";
+const WATERMARK_FONT_FAMILY = "Blac Kaleta Watermark";
+
+// Le filigrane était rendu avec une police système (Helvetica/Arial/
+// sans-serif) : sur un serveur sans aucune police installée (le cas de
+// l'environnement d'exécution utilisé en production), librsvg/pango n'a
+// aucun glyphe à dessiner et affiche un petit carré vide à la place de
+// chaque caractère — le bug remonté sur certaines photos, reproduit et
+// vérifié en local en vidant complètement fontconfig.
+//
+// Un @font-face avec police encodée en base64 directement dans le SVG a
+// été essayé en premier mais échoue exactement pareil dès que fontconfig
+// ne trouve aucune police système : le rendu passe par pango, qui route la
+// résolution de police — même pour un @font-face embarqué — par
+// fontconfig. La police doit donc être enregistrée auprès de fontconfig
+// lui-même pour être trouvée, quoi qu'il arrive. Solution vérifiée : écrire
+// le fichier de police (déjà embarqué en base64 dans le bundle, voir
+// ./fonts/watermark-font.ts) dans /tmp au premier démarrage, avec un
+// fonts.conf minimal qui pointe dessus — fontconfig sait scanner un
+// dossier à la volée, sans cache pré-généré. Fait une seule fois par
+// instance (le fichier n'est réécrit que s'il est absent).
+let fontconfigReady = false;
+function ensureWatermarkFontRegistered(): void {
+  if (fontconfigReady) return;
+  try {
+    const dir = join(tmpdir(), "blac-kaleta-watermark-font");
+    const fontPath = join(dir, "watermark.ttf");
+    const cacheDir = join(dir, "fc-cache");
+    const confPath = join(dir, "fonts.conf");
+
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+    if (!existsSync(cacheDir)) mkdirSync(cacheDir, { recursive: true });
+    if (!existsSync(fontPath)) {
+      writeFileSync(fontPath, Buffer.from(WATERMARK_FONT_BASE64, "base64"));
+    }
+    if (!existsSync(confPath)) {
+      // Le <match> force le nom de famille à WATERMARK_FONT_FAMILY plutôt
+      // que de dépendre du nom interne du fichier .ttf (actuellement
+      // "DejaVu Sans") — le SVG référence ce nom fixe, indépendant du
+      // fichier de police réellement utilisé.
+      writeFileSync(
+        confPath,
+        `<?xml version="1.0"?>\n<!DOCTYPE fontconfig SYSTEM "fonts.dtd">\n<fontconfig>\n  <dir>${dir}</dir>\n  <cachedir>${cacheDir}</cachedir>\n  <match target="scan">\n    <test name="file"><string>${fontPath}</string></test>\n    <edit name="family" mode="assign"><string>${WATERMARK_FONT_FAMILY}</string></edit>\n  </match>\n</fontconfig>\n`,
+      );
+    }
+
+    process.env.FONTCONFIG_FILE = confPath;
+    fontconfigReady = true;
+  } catch (err) {
+    // Best-effort : si /tmp n'est pas accessible en écriture pour une
+    // raison quelconque, on retombe sur la résolution système normale
+    // (le comportement d'avant ce correctif) plutôt que de faire planter
+    // tout le traitement d'image.
+    console.error("ensureWatermarkFontRegistered", err);
+  }
+}
 
 function buildWatermarkSvg(width: number, height: number): Buffer {
+  ensureWatermarkFontRegistered();
   // Motif répété en diagonale sur toute l'image (pas une seule instance
   // centrée) : un recadrage ne peut pas retirer le filigrane sans mutiler
   // l'œuvre. Opacité faible pour rester discret.
@@ -39,7 +99,7 @@ function buildWatermarkSvg(width: number, height: number): Buffer {
 
   const svg = `
     <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-      <g transform="translate(${width / 2} ${height / 2}) rotate(-30)" text-anchor="middle" font-family="Helvetica, Arial, sans-serif">
+      <g transform="translate(${width / 2} ${height / 2}) rotate(-30)" text-anchor="middle" font-family="${WATERMARK_FONT_FAMILY}">
         ${tiles.join("\n")}
       </g>
     </svg>

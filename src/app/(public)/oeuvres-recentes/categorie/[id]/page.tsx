@@ -96,6 +96,15 @@ export default async function RecentWorksCategoryPage({
 
   if (!category) notFound();
 
+  // Requête séparée et best-effort : la colonne peut ne pas encore exister
+  // si la migration 0041 n'a pas été appliquée.
+  const { data: visibilityRow } = await supabase
+    .from("recent_work_categories")
+    .select("is_visible")
+    .eq("id", categoryId)
+    .maybeSingle();
+  if ((visibilityRow as { is_visible?: boolean } | null)?.is_visible === false) notFound();
+
   const categoryAgeRestricted = (category as { age_restricted?: boolean }).age_restricted ?? false;
 
   const cookieStore = await cookies();

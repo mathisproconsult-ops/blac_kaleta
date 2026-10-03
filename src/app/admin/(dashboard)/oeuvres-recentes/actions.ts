@@ -66,6 +66,21 @@ export async function deleteRecentWorkCategory(id: number) {
   revalidatePath("/oeuvres-recentes");
 }
 
+// Best-effort : la colonne peut ne pas encore exister si la migration 0041
+// n'a pas été appliquée — dans ce cas, l'interrupteur n'a simplement aucun
+// effet plutôt que de faire échouer la page.
+export async function toggleRecentWorkCategoryVisibility(id: number, currentlyVisible: boolean) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("recent_work_categories")
+    .update({ is_visible: !currentlyVisible })
+    .eq("id", id);
+  if (error) console.error("toggleRecentWorkCategoryVisibility", error);
+
+  revalidatePath("/admin/oeuvres-recentes");
+  revalidatePath("/oeuvres-recentes");
+}
+
 export async function updateRecentWorkCategoryCover(id: number, formData: FormData) {
   const supabase = await createClient();
   const file = formData.get("cover_file");

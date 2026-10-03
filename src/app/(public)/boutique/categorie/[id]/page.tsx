@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getSettings } from "@/lib/settings";
 import { formatPrice, formatIndicativeConversion } from "@/lib/currency";
-import type { ProductStatus } from "@/app/admin/(dashboard)/products/status";
+import { deriveStatus, type ProductStatus } from "@/app/admin/(dashboard)/products/status";
 import { ProtectedImage } from "@/components/protected-image";
 import { SortSelect } from "../../sort-select";
 import { AddToCartControls } from "../../add-to-cart-controls";
@@ -58,23 +58,33 @@ export default async function BoutiqueCategoryPage({
   const selectedCategoryId = id === "tous" ? null : Number(id);
   if (id !== "tous" && !Number.isInteger(selectedCategoryId)) notFound();
 
-  const [{ data: categories }, { data: products }, settings] = await Promise.all([
-    supabase.from("categories").select("id, name").order("position", { ascending: true }),
-    supabase
-      .from("products")
-      .select(
-        "id, title, price, stock, status, product_images(id, url, position), product_categories(category_id)",
-      )
-      .eq("is_for_sale", true)
-      .eq("is_visible", true)
-      .is("deleted_at", null)
-      .order("created_at", { ascending: false })
-      .returns<ProductCard[]>(),
-    getSettings(),
-  ]);
+  const [{ data: categories }, { data: products }, settings, { data: visibilityRows }] =
+    await Promise.all([
+      supabase.from("categories").select("id, name").order("position", { ascending: true }),
+      supabase
+        .from("products")
+        .select(
+          "id, title, price, stock, status, product_images(id, url, position), product_categories(category_id)",
+        )
+        .eq("is_for_sale", true)
+        .eq("is_visible", true)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false })
+        .returns<ProductCard[]>(),
+      getSettings(),
+      // Requête séparée et best-effort : la colonne peut ne pas encore
+      // exister si la migration 0041 n'a pas été appliquée — dans ce cas,
+      // toutes les catégories restent accessibles.
+      supabase.from("categories").select("id, is_visible"),
+    ]);
   const { usd_rate: usdRate } = settings;
 
-  const categoryList = categories ?? [];
+  const hiddenIds = new Set(
+    ((visibilityRows ?? []) as { id: number; is_visible?: boolean }[])
+      .filter((row) => row.is_visible === false)
+      .map((row) => row.id),
+  );
+  const categoryList = (categories ?? []).filter((category) => !hiddenIds.has(category.id));
 
   if (selectedCategoryId && !categoryList.some((category) => category.id === selectedCategoryId)) {
     notFound();
@@ -161,6 +171,9 @@ export default async function BoutiqueCategoryPage({
               (a, b) => a.position - b.position,
             )[0];
             const thumbnailUrl = image ? thumbnailUrlById.get(image.id) ?? image.url : null;
+            // Filet de sécurité : dérivé du stock réel (voir deriveStatus
+            // dans products/status.ts) plutôt que le statut stocké tel quel.
+            const effectiveStatus = deriveStatus(product.status, product.stock);
 
             return (
               <div key={product.id} className="group mb-8 break-inside-avoid">
@@ -186,7 +199,7 @@ export default async function BoutiqueCategoryPage({
                         }}
                       />
                     )}
-                    {product.status === "sold" ? (
+                    {effectiveStatus === "sold" ? (
                       <span className="absolute right-2 top-2 bg-[#c9702f] px-2 py-1 text-xs font-medium uppercase text-white">
                         Vendu
                       </span>
@@ -211,7 +224,7 @@ export default async function BoutiqueCategoryPage({
                       </p>
                     ) : null}
                   </div>
-                  {product.price !== null && product.status === "available" && product.stock > 0 ? (
+                  {product.price !== null && effectiveStatus === "available" && product.stock > 0 ? (
                     <AddToCartControls
                       product={{
                         id: product.id,
@@ -227,7 +240,7 @@ export default async function BoutiqueCategoryPage({
                       href={`/boutique/${product.id}`}
                       className="text-xs uppercase tracking-wide text-zinc-500 hover:underline"
                     >
-                      {product.price !== null ? statusButtonLabel[product.status] : "Voir"}
+                      {product.price !== null ? statusButtonLabel[effectiveStatus] : "Voir"}
                     </Link>
                   )}
                 </div>

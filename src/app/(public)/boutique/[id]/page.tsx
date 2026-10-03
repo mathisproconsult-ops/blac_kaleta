@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getSettings } from "@/lib/settings";
 import { formatPrice, formatIndicativeConversion } from "@/lib/currency";
-import { STATUS_LABELS, type ProductStatus } from "@/app/admin/(dashboard)/products/status";
+import { deriveStatus, STATUS_LABELS, type ProductStatus } from "@/app/admin/(dashboard)/products/status";
 import { BackButton } from "@/components/back-button";
 import { ProductGallery } from "./product-gallery";
 import { AddToCartControls } from "../add-to-cart-controls";
@@ -116,8 +116,14 @@ export default async function ProductPage({
     }))
     .filter((group) => group.choices.length > 0);
 
+  // Filet de sécurité : dérivé du stock réel plutôt que de faire confiance
+  // au statut stocké tel quel (voir deriveStatus dans products/status.ts —
+  // la vraie correction empêche désormais les deux de diverger à
+  // l'écriture, ceci garantit qu'un éventuel cas oublié ne se voit jamais
+  // publiquement).
+  const effectiveStatus = deriveStatus(product.status, product.stock);
   const isPurchasable =
-    product.status === "available" && product.price !== null && product.stock > 0;
+    effectiveStatus === "available" && product.price !== null && product.stock > 0;
 
   return (
     <div className="px-4 py-8 sm:px-6 sm:py-10 lg:px-10 lg:py-12">
@@ -131,7 +137,7 @@ export default async function ProductPage({
       <div>
         <h1 className="flex items-center gap-3 text-2xl font-semibold">
           {product.title}
-          {product.status === "sold" ? (
+          {effectiveStatus === "sold" ? (
             <span className="bg-[#c9702f] px-2 py-1 text-xs font-medium uppercase text-white">
               Vendu
             </span>
@@ -149,7 +155,7 @@ export default async function ProductPage({
         )}
 
         <p className="mt-4 inline-block border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700">
-          {STATUS_LABELS[product.status]}
+          {STATUS_LABELS[effectiveStatus]}
         </p>
 
         {categoryNames.length > 0 ? (

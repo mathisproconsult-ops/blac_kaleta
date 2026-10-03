@@ -7,6 +7,7 @@ import {
   deleteCategory,
   moveCategory,
   renameCategory,
+  toggleCategoryVisibility,
   updateCategoryCover,
 } from "./actions";
 
@@ -31,6 +32,17 @@ export default async function CategoriesPage() {
 
   const list = categories ?? [];
   const mediaList = media ?? [];
+
+  // Requête séparée et best-effort : la colonne peut ne pas encore exister
+  // si la migration 0041 n'a pas été appliquée — dans ce cas, toutes les
+  // catégories sont simplement traitées comme visibles.
+  const { data: visibilityRows } = await supabase.from("categories").select("id, is_visible");
+  const visibleById = new Map(
+    ((visibilityRows ?? []) as { id: number; is_visible?: boolean }[]).map((row) => [
+      row.id,
+      row.is_visible ?? true,
+    ]),
+  );
 
   return (
     <div>
@@ -98,11 +110,18 @@ export default async function CategoriesPage() {
                       ▼
                     </SubmitButton>
                   </div>
-                  <input
-                    name="name"
-                    defaultValue={category.name}
-                    className="flex-1 max-w-sm border border-transparent px-2 py-1 text-sm hover:border-zinc-300 focus:border-black focus:outline-none dark:hover:border-zinc-600 dark:focus:border-zinc-100"
-                  />
+                  <div className="flex flex-1 items-center gap-2">
+                    <input
+                      name="name"
+                      defaultValue={category.name}
+                      className="flex-1 max-w-sm border border-transparent px-2 py-1 text-sm hover:border-zinc-300 focus:border-black focus:outline-none dark:hover:border-zinc-600 dark:focus:border-zinc-100"
+                    />
+                    {!visibleById.get(category.id) ? (
+                      <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                        Masquée
+                      </span>
+                    ) : null}
+                  </div>
                   <SubmitButton
                     pendingText="Enregistrement…"
                     className="text-sm text-zinc-600 hover:underline dark:text-zinc-400"
@@ -115,6 +134,14 @@ export default async function CategoriesPage() {
                     className="text-sm text-red-600 hover:underline dark:text-red-400"
                   >
                     Supprimer
+                  </SubmitButton>
+                </form>
+                <form action={toggleCategoryVisibility.bind(null, category.id, visibleById.get(category.id) ?? true)}>
+                  <SubmitButton
+                    pendingText="…"
+                    className="text-sm text-zinc-600 hover:underline dark:text-zinc-400"
+                  >
+                    {visibleById.get(category.id) ? "Masquer" : "Afficher"}
                   </SubmitButton>
                 </form>
               </div>
