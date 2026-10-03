@@ -274,12 +274,12 @@ async function regenerateProductWatermark(
     updates.original_path = destPath;
   }
 
-  // .select() est indispensable ici : un update() bloqué par une policy RLS
-  // ne renvoie PAS d'erreur côté Supabase JS quand aucune ligne autorisée
-  // ne correspond — juste un succès silencieux avec 0 ligne modifiée. Sans
-  // .select() pour vérifier qu'une ligne est bien revenue, ce cas est
-  // indiscernable d'une vraie réussite (bug réel rencontré : il manquait une
-  // policy UPDATE sur product_images, voir migration 0042).
+  // .select() est indispensable ici : un update() bloqué (policy RLS,
+  // trigger, ou toute autre raison côté base) ne renvoie PAS forcément
+  // d'erreur côté Supabase JS quand aucune ligne ne correspond — juste un
+  // succès silencieux avec 0 ligne modifiée. Sans .select() pour vérifier
+  // qu'une ligne est bien revenue, ce cas est indiscernable d'une vraie
+  // réussite.
   const { data: updatedRow, error: updateError } = await supabase
     .from("product_images")
     .update(updates)
@@ -292,7 +292,7 @@ async function regenerateProductWatermark(
   if (!updatedRow) {
     return {
       status: "error",
-      message: "Mise à jour silencieusement refusée (0 ligne modifiée — vérifie les policies RLS).",
+      message: "Mise à jour silencieusement refusée (0 ligne modifiée).",
       ...context,
     };
   }
@@ -411,7 +411,7 @@ async function regenerateMediaWatermark(
   }
 
   // Voir le commentaire équivalent dans regenerateProductWatermark : un
-  // update() bloqué par RLS ne renvoie pas d'erreur sans .select() pour
+  // update() bloqué ne renvoie pas forcément d'erreur sans .select() pour
   // vérifier qu'une ligne est bien revenue.
   const { data: updatedRow, error: updateError } = await supabase
     .from("recent_work_media")
@@ -425,7 +425,7 @@ async function regenerateMediaWatermark(
   if (!updatedRow) {
     return {
       status: "error",
-      message: "Mise à jour silencieusement refusée (0 ligne modifiée — vérifie les policies RLS).",
+      message: "Mise à jour silencieusement refusée (0 ligne modifiée).",
       ...context,
     };
   }
