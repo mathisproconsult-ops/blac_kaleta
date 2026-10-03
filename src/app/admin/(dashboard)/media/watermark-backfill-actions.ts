@@ -121,6 +121,42 @@ async function downloadFirstAvailable(
   return { buffer: null, error: lastError };
 }
 
+// Bucket privé, jamais servi au navigateur : le type exact importe peu, mais
+// autant rester correct plutôt que de tout marquer "octet-stream".
+async function guessImageContentType(buffer: Buffer): Promise<string> {
+  try {
+    const sharp = (await import("sharp")).default;
+    const format = (await sharp(buffer).metadata()).format;
+    if (format === "jpeg" || format === "jpg") return "image/jpeg";
+    if (format) return `image/${format}`;
+  } catch {
+    // ignore — retombe sur le type générique ci-dessous
+  }
+  return "application/octet-stream";
+}
+
+// Retrouve un original "orphelin" : avant ce correctif, régénérer une
+// entrée Photo/Vidéo changeait image_path sans jamais réécrire
+// artwork-originals, donc l'original resté là-bas (à l'ancien chemin,
+// jamais noté nulle part : ces entrées n'ont pas de colonne original_path
+// contrairement aux produits) devenait introuvable par chemin exact — la
+// régénération suivante retombait alors sur la copie "products" déjà
+// filigranée et empilait un second filigrane par-dessus (bug remonté sur
+// "À l'aurore"). Avant ce correctif, rien n'écrivait JAMAIS dans
+// artwork-originals pour ces entrées en dehors de l'ajout initial : un
+// dossier recent-works/{catégorie} qui ne contient qu'UN seul fichier ne
+// peut donc être que cet original orphelin, sans ambiguïté possible.
+// Plusieurs fichiers = ambigu (plusieurs photos dans la même catégorie) :
+// on ne devine pas, on laisse retomber sur les autres sources.
+async function findOrphanedOriginal(supabase: SupabaseClient, folder: string): Promise<Buffer | null> {
+  const { data: files } = await supabase.storage.from("artwork-originals").list(folder);
+  if (!files || files.length !== 1) return null;
+  const { data: downloaded } = await supabase.storage
+    .from("artwork-originals")
+    .download(`${folder}/${files[0].name}`);
+  return downloaded ? Buffer.from(await downloaded.arrayBuffer()) : null;
+}
+
 async function regenerateProductWatermark(
   supabase: SupabaseClient,
   id: number,
@@ -179,7 +215,14 @@ async function regenerateProductWatermark(
   const destPath = `${image.product_id}/${id}-${Date.now()}.${protectedImage.extension}`;
   const thumbDestPath = `${image.product_id}/${id}-${Date.now()}-thumb.${thumbnailImage.extension}`;
 
-  const [publicUpload, thumbnailUpload] = await Promise.all([
+  // Réécrit aussi l'original propre (jamais filigrané) dans
+  // artwork-originals, au même chemin que la copie publique — exactement le
+  // contrat de protectAndStoreArtworkImage à l'ajout initial. Sans ça,
+  // original_path restait orphelin après une régénération (pointant vers un
+  // fichier qui n'existe peut-être plus, ou simplement jamais mis à jour) :
+  // la régénération SUIVANTE ne retrouvait plus de source propre et
+  // retombait sur la copie déjà filigranée, empilant un second filigrane.
+  const [publicUpload, thumbnailUpload, originalUpload] = await Promise.all([
     supabase.storage.from("products").upload(destPath, protectedImage.buffer, {
       contentType: protectedImage.contentType,
       cacheControl: "31536000",
@@ -188,6 +231,12 @@ async function regenerateProductWatermark(
       contentType: thumbnailImage.contentType,
       cacheControl: "31536000",
     }),
+    supabase.storage
+      .from("artwork-originals")
+      .upload(destPath, sourceBuffer, {
+        contentType: await guessImageContentType(sourceBuffer),
+        cacheControl: "31536000",
+      }),
   ]);
   if (publicUpload.error) {
     return {
@@ -208,6 +257,9 @@ async function regenerateProductWatermark(
     const { data: thumbUrlData } = supabase.storage.from("products").getPublicUrl(thumbDestPath);
     updates.thumbnail_path = thumbDestPath;
     updates.thumbnail_url = thumbUrlData.publicUrl;
+  }
+  if (!originalUpload.error) {
+    updates.original_path = destPath;
   }
 
   const { error: updateError } = await supabase.from("product_images").update(updates).eq("id", id);
@@ -235,22 +287,37 @@ async function regenerateMediaWatermark(
     return { status: "skipped", message: "GIF animé, non retraité.", ...context };
   }
 
+  const destFolder = `recent-works/${media.recent_work_category_id}`;
+
   // Les entrées Photo/Vidéo d'Œuvres récentes ne conservent pas de référence
-  // explicite à leur original (contrairement aux produits), mais
-  // protectAndStoreArtworkImage uploade toujours l'original et la copie
-  // publique au même chemin relatif, juste dans des buckets différents — on
-  // tente donc "artwork-originals" au même chemin. Si l'original n'y est
-  // pas, on retombe sur la copie publique actuelle dans "products" (déjà
-  // filigranée). Et si celle-ci manque aussi, "media" : la vignette brute
-  // telle qu'uploadée, pour les cas qui n'ont jamais eu de filigrane du tout
-  // — une vignette de vidéo auto-hébergée (voir createRecentWorkVideoUpload)
-  // n'est jamais passée par le pipeline de protection jusqu'ici, ou une
-  // photo dont ce pipeline avait échoué silencieusement à l'ajout.
-  const { buffer: sourceBuffer, error: downloadError } = await downloadFirstAvailable(supabase, [
-    { bucket: "artwork-originals", path: media.image_path },
-    { bucket: "products", path: media.image_path },
-    { bucket: "media", path: media.image_path },
-  ]);
+  // explicite à leur original (contrairement aux produits) — on tente donc
+  // "artwork-originals" au même chemin que image_path. Si l'original n'y
+  // est pas À CE chemin précis, avant de abandonner et retomber sur la
+  // copie déjà filigranée, on cherche un original orphelin dans le dossier
+  // (voir findOrphanedOriginal) : une régénération précédente peut avoir
+  // changé image_path sans jamais réécrire artwork-originals, laissant
+  // l'original propre à son chemin d'origine, introuvable autrement — c'est
+  // exactement ce qui causait le filigrane doublé sur "À l'aurore". Ce
+  // correctif réécrit désormais artwork-originals à chaque régénération
+  // (voir plus bas), donc ce repli ne devrait plus être nécessaire après ce
+  // premier passage. En dernier recours : "products" (déjà filigranée) puis
+  // "media" (vignette jamais traitée, ex. vidéo auto-hébergée).
+  let sourceBuffer: Buffer | null = null;
+  let downloadError: unknown = null;
+  const exactOriginal = await supabase.storage.from("artwork-originals").download(media.image_path);
+  if (exactOriginal.data) {
+    sourceBuffer = Buffer.from(await exactOriginal.data.arrayBuffer());
+  } else {
+    sourceBuffer = await findOrphanedOriginal(supabase, destFolder);
+    if (!sourceBuffer) {
+      const fallback = await downloadFirstAvailable(supabase, [
+        { bucket: "products", path: media.image_path },
+        { bucket: "media", path: media.image_path },
+      ]);
+      sourceBuffer = fallback.buffer;
+      downloadError = fallback.error;
+    }
+  }
   if (!sourceBuffer) {
     return {
       status: "error",
@@ -270,10 +337,13 @@ async function regenerateMediaWatermark(
     return { status: "error", message: describeError(err, "Échec du traitement de l'image."), ...context };
   }
 
-  const destFolder = `recent-works/${media.recent_work_category_id}`;
   const destPath = `${destFolder}/${id}-${Date.now()}.${protectedImage.extension}`;
   const thumbDestPath = `${destFolder}/${id}-${Date.now()}-thumb.${thumbnailImage.extension}`;
 
+  // Réécrit l'original propre dans artwork-originals au même chemin que la
+  // nouvelle copie publique : rétablit la convention "même chemin, bucket
+  // différent" pour la PROCHAINE régénération, qui le retrouvera cette fois
+  // par correspondance exacte au lieu de devoir chercher un orphelin.
   const [publicUpload, thumbnailUpload] = await Promise.all([
     supabase.storage.from("products").upload(destPath, protectedImage.buffer, {
       contentType: protectedImage.contentType,
@@ -283,6 +353,12 @@ async function regenerateMediaWatermark(
       contentType: thumbnailImage.contentType,
       cacheControl: "31536000",
     }),
+    supabase.storage
+      .from("artwork-originals")
+      .upload(destPath, sourceBuffer, {
+        contentType: await guessImageContentType(sourceBuffer),
+        cacheControl: "31536000",
+      }),
   ]);
   if (publicUpload.error) {
     return {
