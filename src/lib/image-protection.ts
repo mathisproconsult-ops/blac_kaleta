@@ -2,6 +2,7 @@ import sharp from "sharp";
 import { mkdirSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { createHash } from "node:crypto";
 import { WATERMARK_FONT_BASE64 } from "./fonts/watermark-font";
 
 // Toutes les images d'œuvres servies publiquement passent par ce pipeline :
@@ -18,13 +19,21 @@ const MAX_DIMENSION = 1200;
 export const THUMBNAIL_MAX_DIMENSION = 480;
 const WATERMARK_LABEL = "Blac_Kaleta";
 const WATERMARK_FONT_FAMILY = "Blac Kaleta Watermark";
+// Couleurs du filigrane selon la luminosité du coin de l'image où il se
+// pose (voir sampleCornerBrightness) : clair sur fond sombre, sombre sur
+// fond clair, pour ne jamais devenir invisible selon la photo.
+const WATERMARK_COLOR_ON_DARK = { fill: "#ffffff", stroke: "#000000" };
+const WATERMARK_COLOR_ON_LIGHT = { fill: "#1a1a1a", stroke: "#ffffff" };
 
 // Le filigrane était rendu avec une police système (Helvetica/Arial/
 // sans-serif) : sur un serveur sans aucune police installée (le cas de
 // l'environnement d'exécution utilisé en production), librsvg/pango n'a
 // aucun glyphe à dessiner et affiche un petit carré vide à la place de
 // chaque caractère — le bug remonté sur certaines photos, reproduit et
-// vérifié en local en vidant complètement fontconfig.
+// vérifié en local en vidant complètement fontconfig. Police actuelle :
+// Caveat (effet signature manuscrite), extraite du paquet npm
+// @fontsource/caveat (licence SIL OFL, voir fonts/LICENSE.txt) et
+// convertie de WOFF2 vers TTF.
 //
 // Un @font-face avec police encodée en base64 directement dans le SVG a
 // été essayé en premier mais échoue exactement pareil dès que fontconfig
@@ -41,7 +50,18 @@ let fontconfigReady = false;
 function ensureWatermarkFontRegistered(): void {
   if (fontconfigReady) return;
   try {
-    const dir = join(tmpdir(), "blac-kaleta-watermark-font");
+    // Le dossier est nommé d'après un hash du contenu de la police plutôt
+    // qu'un nom fixe : un process serveur assez longtemps vivant pour avoir
+    // déjà écrit l'ancienne police à ce chemin fixe aurait sinon gardé ce
+    // fichier périmé indéfiniment après un changement de police (le check
+    // !existsSync ci-dessous ne regarde que la présence du fichier, jamais
+    // son contenu) — repéré en testant le passage à Caveat dans ce même
+    // environnement : l'ancien fichier DejaVu était toujours là. Un hash
+    // différent à chaque changement de contenu donne un nouveau chemin,
+    // donc une écriture fraîche garantie, sans perdre l'intérêt du cache
+    // (les appels répétés avec la même police réutilisent le même chemin).
+    const fontHash = createHash("sha256").update(WATERMARK_FONT_BASE64).digest("hex").slice(0, 16);
+    const dir = join(tmpdir(), `blac-kaleta-watermark-font-${fontHash}`);
     const fontPath = join(dir, "watermark.ttf");
     const cacheDir = join(dir, "fc-cache");
     const confPath = join(dir, "fonts.conf");
@@ -54,8 +74,8 @@ function ensureWatermarkFontRegistered(): void {
     if (!existsSync(confPath)) {
       // Le <match> force le nom de famille à WATERMARK_FONT_FAMILY plutôt
       // que de dépendre du nom interne du fichier .ttf (actuellement
-      // "DejaVu Sans") — le SVG référence ce nom fixe, indépendant du
-      // fichier de police réellement utilisé.
+      // "Caveat") — le SVG référence ce nom fixe, indépendant du fichier de
+      // police réellement utilisé.
       writeFileSync(
         confPath,
         `<?xml version="1.0"?>\n<!DOCTYPE fontconfig SYSTEM "fonts.dtd">\n<fontconfig>\n  <dir>${dir}</dir>\n  <cachedir>${cacheDir}</cachedir>\n  <match target="scan">\n    <test name="file"><string>${fontPath}</string></test>\n    <edit name="family" mode="assign"><string>${WATERMARK_FONT_FAMILY}</string></edit>\n  </match>\n</fontconfig>\n`,
@@ -73,21 +93,52 @@ function ensureWatermarkFontRegistered(): void {
   }
 }
 
-function buildWatermarkSvg(width: number, height: number): Buffer {
+// Échantillonne le coin où se pose le filigrane (plus généreux que la zone
+// de texte réelle, pour rester fiable quelle que soit la largeur du texte)
+// et renvoie sa luminosité moyenne (0 = noir, 255 = blanc) — sert à choisir
+// une couleur de filigrane qui reste visible quel que soit le fond de la
+// photo à cet endroit précis, plutôt qu'une couleur fixe qui peut devenir
+// quasi invisible sur un fond de la même teinte.
+async function sampleCornerBrightness(buffer: Buffer, width: number, height: number): Promise<number> {
+  try {
+    const sampleWidth = Math.max(1, Math.min(width, Math.round(width * 0.3)));
+    const sampleHeight = Math.max(1, Math.min(height, Math.round(height * 0.18)));
+    const left = Math.max(0, width - sampleWidth);
+    const top = Math.max(0, height - sampleHeight);
+    const { data } = await sharp(buffer)
+      .extract({ left, top, width: sampleWidth, height: sampleHeight })
+      .removeAlpha()
+      .greyscale()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    if (data.length === 0) return 128;
+    let sum = 0;
+    for (const value of data) sum += value;
+    return sum / data.length;
+  } catch (err) {
+    // Best-effort : une image illisible pour l'extraction (ex. format
+    // exotique) ne doit pas faire échouer tout le filigranage — retombe sur
+    // une luminosité moyenne, qui choisit les couleurs actuelles par défaut.
+    console.error("sampleCornerBrightness", err);
+    return 128;
+  }
+}
+
+function buildWatermarkSvg(width: number, height: number, lightBackground: boolean): Buffer {
   ensureWatermarkFontRegistered();
   // Une seule occurrence, en bas à droite (plutôt que le motif répété en
   // diagonale sur toute l'image utilisé avant) : moins protecteur contre un
   // recadrage agressif, mais c'est le compromis demandé pour ne plus gêner
-  // la lecture de l'œuvre. Opacité plus marquée que l'ancien motif répété
-  // pour rester lisible malgré la taille réduite et le contour discret.
-  const fontSize = Math.max(14, Math.round(Math.min(width, height) * 0.032));
-  const margin = Math.round(fontSize * 0.9);
+  // la lecture de l'œuvre.
+  const fontSize = Math.max(16, Math.round(Math.min(width, height) * 0.045));
+  const margin = Math.round(fontSize * 0.7);
   const x = width - margin;
   const y = height - margin;
+  const { fill, stroke } = lightBackground ? WATERMARK_COLOR_ON_LIGHT : WATERMARK_COLOR_ON_DARK;
 
   const svg = `
     <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-      <text x="${x}" y="${y}" text-anchor="end" font-family="${WATERMARK_FONT_FAMILY}" font-size="${fontSize}" font-weight="600" fill="#ffffff" fill-opacity="0.75" stroke="#000000" stroke-opacity="0.35" stroke-width="0.8">${WATERMARK_LABEL}</text>
+      <text x="${x}" y="${y}" text-anchor="end" font-family="${WATERMARK_FONT_FAMILY}" font-size="${fontSize}" font-weight="700" fill="${fill}" fill-opacity="0.85" stroke="${stroke}" stroke-opacity="0.3" stroke-width="0.8">${WATERMARK_LABEL}</text>
     </svg>
   `;
 
@@ -147,8 +198,11 @@ export async function protectArtworkImage(
   const actualWidth = resizedMetadata.width ?? targetWidth;
   const actualHeight = resizedMetadata.height ?? targetHeight;
 
+  const cornerBrightness = await sampleCornerBrightness(resizedBuffer, actualWidth, actualHeight);
+  const lightBackground = cornerBrightness > 150;
+
   const buffer = await sharp(resizedBuffer)
-    .composite([{ input: buildWatermarkSvg(actualWidth, actualHeight) }])
+    .composite([{ input: buildWatermarkSvg(actualWidth, actualHeight, lightBackground) }])
     .withExifMerge({
       IFD0: {
         Artist: "Blac_Kaleta",
