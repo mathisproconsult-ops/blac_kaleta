@@ -15,6 +15,14 @@ export type WatermarkImageRef = { kind: "product" | "media"; id: number };
 // "déjà correct"/"cassé" possible sans inspection visuelle : on régénère
 // tout, opération sans risque (chaque régénération produit un nouveau
 // fichier, jamais une réécriture en place).
+//
+// Ne PAS exiger original_path non nul ici : une photo dont l'upload de
+// l'original avait échoué à l'époque (original_path resté null, voir
+// protectAndStoreArtworkImage dans lib/artwork-storage.ts) était
+// silencieusement exclue de cette liste — jamais même tentée, donc jamais
+// réparée malgré un filigrane cassé bien réel (bug remonté sur "Minions").
+// regenerateProductWatermark retombe sur la copie publique actuelle quand
+// l'original manque, comme c'est déjà le cas pour les entrées Photo.
 export async function listImagesNeedingWatermarkRefresh(): Promise<{
   images: WatermarkImageRef[];
   error: string | null;
@@ -23,8 +31,7 @@ export async function listImagesNeedingWatermarkRefresh(): Promise<{
 
   const { data: productRows, error: productError } = await supabase
     .from("product_images")
-    .select("id, products(source)")
-    .not("original_path", "is", null)
+    .select("id, path, products(source)")
     .order("id", { ascending: true });
 
   if (productError) {
@@ -34,9 +41,11 @@ export async function listImagesNeedingWatermarkRefresh(): Promise<{
 
   const productImages = ((productRows ?? []) as unknown as {
     id: number;
+    path: string | null;
     products: { source: string } | null;
   }[])
     .filter((row) => row.products?.source !== "printify")
+    .filter((row) => !row.path?.toLowerCase().endsWith(".gif"))
     .map((row): WatermarkImageRef => ({ kind: "product", id: row.id }));
 
   const { data: mediaRows, error: mediaError } = await supabase
@@ -86,7 +95,7 @@ async function regenerateProductWatermark(
 ): Promise<WatermarkResult> {
   const { data: image, error } = await supabase
     .from("product_images")
-    .select("product_id, original_path, products(title)")
+    .select("product_id, path, original_path, products(title)")
     .eq("id", id)
     .maybeSingle();
 
@@ -95,24 +104,47 @@ async function regenerateProductWatermark(
     productId: image.product_id,
     title: (image as { products?: { title?: string } | null }).products?.title,
   };
-  if (!image.original_path) {
-    return { status: "skipped", message: "Pas d'original conservé.", ...context };
+  if (!image.path) {
+    return { status: "skipped", message: "Pas d'image.", ...context };
   }
-  if (image.original_path.toLowerCase().endsWith(".gif")) {
+  if (image.path.toLowerCase().endsWith(".gif")) {
     return { status: "skipped", message: "GIF animé, non retraité.", ...context };
   }
 
-  const { data: downloaded, error: downloadError } = await supabase.storage
-    .from("artwork-originals")
-    .download(image.original_path);
-  if (downloadError || !downloaded) {
-    return {
-      status: "error",
-      message: describeError(downloadError, "Téléchargement de l'original impossible."),
-      ...context,
-    };
+  // Priorité à l'original jamais filigrané (bucket privé artwork-originals).
+  // S'il manque — l'upload de l'original avait échoué à l'époque, ou la
+  // photo a été ajoutée avant l'introduction de cette sauvegarde — on
+  // retombe sur la copie publique actuelle, déjà filigranée : le nouveau
+  // filigrane s'ajoute par-dessus l'ancien (visuellement imparfait), mais
+  // c'est la seule source qui reste et ça vaut mieux que ne jamais corriger
+  // le filigrane cassé (même compromis déjà accepté pour les entrées Photo
+  // ci-dessous).
+  let sourceBuffer: Buffer;
+  if (image.original_path) {
+    const { data: downloaded, error: downloadError } = await supabase.storage
+      .from("artwork-originals")
+      .download(image.original_path);
+    if (downloadError || !downloaded) {
+      return {
+        status: "error",
+        message: describeError(downloadError, "Téléchargement de l'original impossible."),
+        ...context,
+      };
+    }
+    sourceBuffer = Buffer.from(await downloaded.arrayBuffer());
+  } else {
+    const { data: downloaded, error: downloadError } = await supabase.storage
+      .from("products")
+      .download(image.path);
+    if (downloadError || !downloaded) {
+      return {
+        status: "error",
+        message: describeError(downloadError, "Téléchargement de l'image impossible."),
+        ...context,
+      };
+    }
+    sourceBuffer = Buffer.from(await downloaded.arrayBuffer());
   }
-  const sourceBuffer = Buffer.from(await downloaded.arrayBuffer());
 
   let protectedImage, thumbnailImage;
   try {

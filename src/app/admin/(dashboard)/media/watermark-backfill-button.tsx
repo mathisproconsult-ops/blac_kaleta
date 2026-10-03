@@ -85,9 +85,10 @@ export function WatermarkBackfillButton() {
       <p className="text-xs text-zinc-400">
         Recrée le filigrane de chaque photo d&apos;œuvre (Boutique et toutes
         les catégories d&apos;Œuvres récentes) à partir de l&apos;image
-        d&apos;origine — corrige l&apos;affichage en carrés vides causé par
-        une police manquante sur le serveur. Peut prendre plusieurs minutes
-        selon le nombre de photos ; peut être relancé sans risque.
+        d&apos;origine — passe au nouveau filigrane en bas à droite (au lieu
+        du motif répété) et corrige l&apos;affichage en carrés vides causé
+        par une police manquante sur le serveur. Peut prendre plusieurs
+        minutes selon le nombre de photos ; peut être relancé sans risque.
       </p>
 
       {phase === "running" || (phase === "done" && total > 0) ? (
