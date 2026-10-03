@@ -274,9 +274,27 @@ async function regenerateProductWatermark(
     updates.original_path = destPath;
   }
 
-  const { error: updateError } = await supabase.from("product_images").update(updates).eq("id", id);
+  // .select() est indispensable ici : un update() bloqué par une policy RLS
+  // ne renvoie PAS d'erreur côté Supabase JS quand aucune ligne autorisée
+  // ne correspond — juste un succès silencieux avec 0 ligne modifiée. Sans
+  // .select() pour vérifier qu'une ligne est bien revenue, ce cas est
+  // indiscernable d'une vraie réussite (bug réel rencontré : il manquait une
+  // policy UPDATE sur product_images, voir migration 0042).
+  const { data: updatedRow, error: updateError } = await supabase
+    .from("product_images")
+    .update(updates)
+    .eq("id", id)
+    .select("id")
+    .maybeSingle();
   if (updateError) {
     return { status: "error", message: describeError(updateError, "Échec de mise à jour."), ...context };
+  }
+  if (!updatedRow) {
+    return {
+      status: "error",
+      message: "Mise à jour silencieusement refusée (0 ligne modifiée — vérifie les policies RLS).",
+      ...context,
+    };
   }
 
   return { status: "done", ...context };
@@ -392,12 +410,24 @@ async function regenerateMediaWatermark(
     updates.thumbnail_url = thumbUrlData.publicUrl;
   }
 
-  const { error: updateError } = await supabase
+  // Voir le commentaire équivalent dans regenerateProductWatermark : un
+  // update() bloqué par RLS ne renvoie pas d'erreur sans .select() pour
+  // vérifier qu'une ligne est bien revenue.
+  const { data: updatedRow, error: updateError } = await supabase
     .from("recent_work_media")
     .update(updates)
-    .eq("id", id);
+    .eq("id", id)
+    .select("id")
+    .maybeSingle();
   if (updateError) {
     return { status: "error", message: describeError(updateError, "Échec de mise à jour."), ...context };
+  }
+  if (!updatedRow) {
+    return {
+      status: "error",
+      message: "Mise à jour silencieusement refusée (0 ligne modifiée — vérifie les policies RLS).",
+      ...context,
+    };
   }
 
   return { status: "done", ...context };
