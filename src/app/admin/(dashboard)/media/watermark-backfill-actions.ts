@@ -208,7 +208,7 @@ async function regenerateProductWatermark(
   if (!sourceBuffer) {
     return {
       status: "error",
-      message: describeError(downloadError, "Image introuvable dans le Storage (fichier manquant)."),
+      message: `Téléchargement : ${describeError(downloadError, "fichier manquant dans le Storage.")}`,
       ...context,
     };
   }
@@ -221,7 +221,11 @@ async function regenerateProductWatermark(
       protectArtworkImage(sourceBuffer, THUMBNAIL_MAX_DIMENSION),
     ]);
   } catch (err) {
-    return { status: "error", message: describeError(err, "Échec du traitement de l'image."), ...context };
+    return {
+      status: "error",
+      message: `Traitement de l'image : ${describeError(err, "échec inconnu.")}`,
+      ...context,
+    };
   }
 
   const destPath = `${image.product_id}/${id}-${Date.now()}.${protectedImage.extension}`;
@@ -253,7 +257,7 @@ async function regenerateProductWatermark(
   if (publicUpload.error) {
     return {
       status: "error",
-      message: describeError(publicUpload.error, "Échec de l'envoi de l'image."),
+      message: `Envoi de l'image : ${describeError(publicUpload.error, "échec inconnu.")}`,
       ...context,
     };
   }
@@ -287,12 +291,16 @@ async function regenerateProductWatermark(
     .select("id")
     .maybeSingle();
   if (updateError) {
-    return { status: "error", message: describeError(updateError, "Échec de mise à jour."), ...context };
+    return {
+      status: "error",
+      message: `Mise à jour en base : ${describeError(updateError, "échec inconnu.")}`,
+      ...context,
+    };
   }
   if (!updatedRow) {
     return {
       status: "error",
-      message: "Mise à jour silencieusement refusée (0 ligne modifiée).",
+      message: "Mise à jour en base silencieusement refusée (0 ligne modifiée).",
       ...context,
     };
   }
@@ -351,7 +359,7 @@ async function regenerateMediaWatermark(
   if (!sourceBuffer) {
     return {
       status: "error",
-      message: describeError(downloadError, "Image introuvable dans le Storage (fichier manquant)."),
+      message: `Téléchargement : ${describeError(downloadError, "fichier manquant dans le Storage.")}`,
       ...context,
     };
   }
@@ -364,7 +372,11 @@ async function regenerateMediaWatermark(
       protectArtworkImage(sourceBuffer, THUMBNAIL_MAX_DIMENSION),
     ]);
   } catch (err) {
-    return { status: "error", message: describeError(err, "Échec du traitement de l'image."), ...context };
+    return {
+      status: "error",
+      message: `Traitement de l'image : ${describeError(err, "échec inconnu.")}`,
+      ...context,
+    };
   }
 
   const destPath = `${destFolder}/${id}-${Date.now()}.${protectedImage.extension}`;
@@ -393,7 +405,7 @@ async function regenerateMediaWatermark(
   if (publicUpload.error) {
     return {
       status: "error",
-      message: describeError(publicUpload.error, "Échec de l'envoi de l'image."),
+      message: `Envoi de l'image : ${describeError(publicUpload.error, "échec inconnu.")}`,
       ...context,
     };
   }
@@ -420,12 +432,16 @@ async function regenerateMediaWatermark(
     .select("id")
     .maybeSingle();
   if (updateError) {
-    return { status: "error", message: describeError(updateError, "Échec de mise à jour."), ...context };
+    return {
+      status: "error",
+      message: `Mise à jour en base : ${describeError(updateError, "échec inconnu.")}`,
+      ...context,
+    };
   }
   if (!updatedRow) {
     return {
       status: "error",
-      message: "Mise à jour silencieusement refusée (0 ligne modifiée).",
+      message: "Mise à jour en base silencieusement refusée (0 ligne modifiée).",
       ...context,
     };
   }
