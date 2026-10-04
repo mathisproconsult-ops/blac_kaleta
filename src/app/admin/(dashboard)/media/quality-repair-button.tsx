@@ -133,14 +133,15 @@ export function QualityRepairButton() {
             régénérées par précaution.
           </p>
           <p className="mt-1 text-xs">
-            Dont {confirmedCount} confirmée{confirmedCount > 1 ? "s" : ""} (même signe que
-            &quot;Croisement&quot; — dimensions inchangées) et {candidates.length - confirmedCount} en passage
-            préventif (redimensionnées, double compression ni confirmée ni exclue).
+            Dont {confirmedCount} confirmée{confirmedCount > 1 ? "s" : ""}{" "}
+            (même signe que &quot;Croisement&quot; — dimensions inchangées) et{" "}
+            {candidates.length - confirmedCount} en passage préventif (redimensionnées, double
+            compression ni confirmée ni exclue).
           </p>
           <p className="mt-1 text-xs">
             {results.filter((r) => r.status === "candidate_clean_source").length} réparable
-            {results.filter((r) => r.status === "candidate_clean_source").length > 1 ? "s" : ""} directement
-            depuis l&apos;original, et{" "}
+            {results.filter((r) => r.status === "candidate_clean_source").length > 1 ? "s" : ""}{" "}
+            directement depuis l&apos;original, et{" "}
             {results.filter((r) => r.status === "candidate_needs_media_lookup").length} via la Médiathèque.
           </p>
           {confirmedCount > 0 ? (
