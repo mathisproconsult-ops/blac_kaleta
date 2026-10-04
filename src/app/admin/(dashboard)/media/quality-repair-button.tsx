@@ -123,11 +123,12 @@ export function QualityRepairButton() {
       {phase === "detected" || phase === "repairing" || phase === "repaired" ? (
         <div className="border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
           <p className="font-medium">
-            ✓ Détection terminée — {candidates.length} image{candidates.length > 1 ? "s" : ""} sur {total} présente
-            {candidates.length > 1 ? "nt" : ""} le même signe que &quot;Croisement&quot;.
+            ✓ Détection terminée — {candidates.length} image{candidates.length > 1 ? "s" : ""} sur {total}{" "}
+            {candidates.length > 1 ? "présentent" : "présente"} le même signe que &quot;Croisement&quot;.
           </p>
           <p className="mt-1 text-xs">
-            Dont {results.filter((r) => r.status === "candidate_clean_source").length} réparables directement
+            Dont {results.filter((r) => r.status === "candidate_clean_source").length} réparable
+            {results.filter((r) => r.status === "candidate_clean_source").length > 1 ? "s" : ""} directement
             depuis l&apos;original, et{" "}
             {results.filter((r) => r.status === "candidate_needs_media_lookup").length} via la Médiathèque.
           </p>
