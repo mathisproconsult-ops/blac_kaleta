@@ -84,6 +84,7 @@ export function QualityRepairButton() {
   );
   const unrecoverable = results.filter((r) => r.status === "candidate_unrecoverable");
   const checkErrors = results.filter((r) => r.status === "error");
+  const confirmedCount = candidates.filter((r) => r.dimensionsMatch).length;
   const repairCandidatesTotal = candidates.length;
   const repairPercent =
     repairCandidatesTotal > 0 ? Math.round((repairProcessed / repairCandidatesTotal) * 100) : 0;
@@ -96,14 +97,19 @@ export function QualityRepairButton() {
         disabled={phase === "detecting" || phase === "repairing"}
         className="self-start border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
       >
-        {phase === "detecting" ? "Détection en cours…" : "1. Détecter les images à réparer"}
+        {phase === "detecting" ? "Détection en cours…" : "1. Vérifier toutes les photos de produits"}
       </button>
       <p className="text-xs text-zinc-400">
-        Compare, pour chaque photo de produit, les dimensions actuelles à
-        celles de l&apos;original jamais retouché — une image dont les
-        dimensions actuelles sont identiques à l&apos;original (donc jamais
-        redimensionnée) mais bien plus légère révèle une double
-        compression. Ne modifie rien : lecture seule.
+        Vérifie, pour chaque photo de produit, la fiabilité de l&apos;original
+        jamais retouché conservé en réserve — et prépare une régénération
+        propre en un seul passage depuis cet original pour toutes (le
+        refaire ne coûte rien, l&apos;original n&apos;est jamais modifié),
+        même quand un redimensionnement normal masque une éventuelle
+        double compression passée. Les images dont les dimensions actuelles
+        sont identiques à l&apos;original (comme &quot;Croisement&quot;)
+        sont signalées à part : c&apos;est un signe confirmé, pas juste
+        préventif. Ne modifie rien tant que la réparation n&apos;est pas
+        lancée : lecture seule.
       </p>
 
       {phase === "detecting" || phase === "detected" || phase === "repairing" || phase === "repaired" ? (
@@ -123,22 +129,30 @@ export function QualityRepairButton() {
       {phase === "detected" || phase === "repairing" || phase === "repaired" ? (
         <div className="border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
           <p className="font-medium">
-            ✓ Détection terminée — {candidates.length} image{candidates.length > 1 ? "s" : ""} sur {total}{" "}
-            {candidates.length > 1 ? "présentent" : "présente"} le même signe que &quot;Croisement&quot;.
+            ✓ Détection terminée — {candidates.length} image{candidates.length > 1 ? "s" : ""} sur {total} seront
+            régénérées par précaution.
           </p>
           <p className="mt-1 text-xs">
-            Dont {results.filter((r) => r.status === "candidate_clean_source").length} réparable
+            Dont {confirmedCount} confirmée{confirmedCount > 1 ? "s" : ""} (même signe que
+            &quot;Croisement&quot; — dimensions inchangées) et {candidates.length - confirmedCount} en passage
+            préventif (redimensionnées, double compression ni confirmée ni exclue).
+          </p>
+          <p className="mt-1 text-xs">
+            {results.filter((r) => r.status === "candidate_clean_source").length} réparable
             {results.filter((r) => r.status === "candidate_clean_source").length > 1 ? "s" : ""} directement
             depuis l&apos;original, et{" "}
             {results.filter((r) => r.status === "candidate_needs_media_lookup").length} via la Médiathèque.
           </p>
-          {candidates.length > 0 ? (
+          {confirmedCount > 0 ? (
             <ul className="mt-2 max-h-40 overflow-y-auto text-xs">
-              {candidates.map((c) => (
-                <li key={c.imageId}>
-                  {c.title} — {c.status === "candidate_clean_source" ? "original fiable" : "via Médiathèque"}
-                </li>
-              ))}
+              {candidates
+                .filter((c) => c.dimensionsMatch)
+                .map((c) => (
+                  <li key={c.imageId}>
+                    {c.title} — confirmée (
+                    {c.status === "candidate_clean_source" ? "original fiable" : "via Médiathèque"})
+                  </li>
+                ))}
             </ul>
           ) : null}
         </div>
@@ -181,7 +195,7 @@ export function QualityRepairButton() {
           onClick={repair}
           className="self-start bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
         >
-          2. Réparer ces {candidates.length} image{candidates.length > 1 ? "s" : ""}
+          2. Régénérer ces {candidates.length} image{candidates.length > 1 ? "s" : ""} depuis l&apos;original
         </button>
       ) : null}
 

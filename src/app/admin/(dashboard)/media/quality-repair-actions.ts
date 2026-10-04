@@ -33,19 +33,19 @@ export async function listQualityRepairCandidates(): Promise<{
 }
 
 export type CheckStatus =
-  // Dimensions différentes de l'original : redimensionnement normal,
-  // aucun signe de double compression.
-  | "healthy"
-  // Dimensions identiques à l'original ET l'original est dans un format
-  // qu'on ne produit jamais nous-mêmes (png/jpeg/...) : signe de double
-  // compression, réparation directe possible depuis cet original.
+  // L'original est dans un format qu'on ne produit jamais nous-mêmes
+  // (png/jpeg/...) : réparation directe possible depuis cet original.
+  // Que les dimensions actuelles correspondent ou non à l'original ne
+  // change rien au traitement — repartir de l'original ne coûte rien
+  // (jamais modifié) et élimine toute double compression éventuelle,
+  // visible (dimensions identiques, comme "Croisement") ou masquée par
+  // un redimensionnement normal.
   | "candidate_clean_source"
-  // Dimensions identiques ET l'original est lui-même au format webp —
-  // suspect (notre pipeline ne produit que du webp ; un vrai original
-  // uploadé par l'artiste l'est presque jamais) : pourrait être une copie
-  // déjà compressée accidentellement prise pour l'original. Le fichier
-  // brut véritable reste trouvable via la Médiathèque (table media, liée
-  // au produit).
+  // L'original est lui-même au format webp — suspect (notre pipeline ne
+  // produit que du webp ; un vrai original uploadé par l'artiste l'est
+  // presque jamais) : pourrait être une copie déjà compressée
+  // accidentellement prise pour l'original. Le fichier brut véritable
+  // reste trouvable via la Médiathèque (table media, liée au produit).
   | "candidate_needs_media_lookup"
   // Comme ci-dessus, mais la Médiathèque ne donne aucune piste fiable
   // (0 ou plusieurs fichiers bruts possibles pour ce produit) : pas de
@@ -58,6 +58,11 @@ export type CheckResult = {
   productId: number | null;
   title: string;
   status: CheckStatus;
+  // true si les dimensions actuelles égalent celles de l'original (signe
+  // confirmé de double compression, comme "Croisement") — à titre
+  // d'information seulement, ne change pas le traitement : false signifie
+  // juste "redimensionnée normalement", pas "saine à coup sûr".
+  dimensionsMatch: boolean;
   message?: string;
 };
 
@@ -71,10 +76,13 @@ async function detectFormat(buffer: Buffer): Promise<string | null> {
   }
 }
 
-// Vérifie UNE image, sans rien modifier : télécharge l'original, compare
-// ses dimensions à celles enregistrées pour la copie publique actuelle, et
-// qualifie le niveau de confiance dans cet original si un signe de double
-// compression est détecté.
+// Vérifie UNE image, sans rien modifier : télécharge l'original et qualifie
+// le niveau de confiance qu'on peut lui accorder comme source de
+// régénération. Couvre TOUTES les images (pas seulement celles aux
+// dimensions inchangées) : repartir de l'original ne coûte rien puisqu'il
+// n'est jamais modifié, donc autant le faire par précaution pour toutes,
+// même quand un redimensionnement normal masque un éventuel signe de
+// double compression.
 export async function checkImageForDoubleCompression(ref: RepairImageRef): Promise<CheckResult> {
   const supabase = await createClient();
 
@@ -87,7 +95,7 @@ export async function checkImageForDoubleCompression(ref: RepairImageRef): Promi
   const title = (image as { products?: { title?: string } | null } | null)?.products?.title ?? `Image #${ref.id}`;
 
   if (error || !image) {
-    return { imageId: ref.id, productId: null, title, status: "error", message: "Image introuvable." };
+    return { imageId: ref.id, productId: null, title, status: "error", dimensionsMatch: false, message: "Image introuvable." };
   }
   const productId = image.product_id;
 
@@ -97,6 +105,7 @@ export async function checkImageForDoubleCompression(ref: RepairImageRef): Promi
       productId,
       title,
       status: "error",
+      dimensionsMatch: false,
       message: "Pas d'original ou de dimensions enregistrées — vérification impossible.",
     };
   }
@@ -110,6 +119,7 @@ export async function checkImageForDoubleCompression(ref: RepairImageRef): Promi
       productId,
       title,
       status: "error",
+      dimensionsMatch: false,
       message: `Original introuvable : ${downloadError?.message ?? "erreur inconnue"}`,
     };
   }
@@ -119,21 +129,18 @@ export async function checkImageForDoubleCompression(ref: RepairImageRef): Promi
   const metadata = await sharp(buffer).rotate().metadata();
   const originalWidth = metadata.width ?? 0;
   const originalHeight = metadata.height ?? 0;
-
-  if (originalWidth !== image.width || originalHeight !== image.height) {
-    return { imageId: ref.id, productId, title, status: "healthy" };
-  }
+  const dimensionsMatch = originalWidth === image.width && originalHeight === image.height;
 
   const format = await detectFormat(buffer);
   if (format && format !== "webp") {
-    return { imageId: ref.id, productId, title, status: "candidate_clean_source" };
+    return { imageId: ref.id, productId, title, status: "candidate_clean_source", dimensionsMatch };
   }
 
   // Format suspect (webp) ou indéterminé : cherche le fichier brut via la
   // Médiathèque plutôt que de faire confiance à cet original.
   const { data: mediaRows } = await supabase.from("media").select("id").eq("product_id", productId);
   if (mediaRows && mediaRows.length === 1) {
-    return { imageId: ref.id, productId, title, status: "candidate_needs_media_lookup" };
+    return { imageId: ref.id, productId, title, status: "candidate_needs_media_lookup", dimensionsMatch };
   }
 
   return {
@@ -141,6 +148,7 @@ export async function checkImageForDoubleCompression(ref: RepairImageRef): Promi
     productId,
     title,
     status: "candidate_unrecoverable",
+    dimensionsMatch,
     message:
       mediaRows && mediaRows.length > 1
         ? "Plusieurs fichiers bruts possibles dans la Médiathèque — ambigu."
