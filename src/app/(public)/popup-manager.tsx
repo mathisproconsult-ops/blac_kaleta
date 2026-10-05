@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { ActivePopup } from "@/lib/popups";
 
 function matchesScope(popup: ActivePopup, pathname: string) {
@@ -48,6 +48,7 @@ function markSeen(popup: ActivePopup) {
 
 export function PopupManager({ popups }: { popups: ActivePopup[] }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [active, setActive] = useState<ActivePopup | null>(null);
 
   useEffect(() => {
@@ -59,6 +60,26 @@ export function PopupManager({ popups }: { popups: ActivePopup[] }) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setActive(match ?? null);
   }, [pathname, popups]);
+
+  // Les navigateurs mobiles (Safari iOS et Chrome Android, bien plus
+  // agressivement que les navigateurs desktop habituellement utilisés pour
+  // tester) restaurent très souvent une page depuis leur cache retour/avant
+  // (bfcache) — par exemple en revenant d'une autre app, ou via le bouton
+  // retour — sans repasser par le serveur. La liste `popups` reçue en prop
+  // reste alors celle qui était active AU CHARGEMENT initial de la page,
+  // même si une popup a été désactivée depuis dans le dashboard : c'est ce
+  // qui explique qu'une popup désactivée puisse réapparaître sur mobile
+  // alors qu'elle a bien disparu sur desktop (rarement restauré depuis le
+  // bfcache lors d'un test). router.refresh() en sortie de bfcache force une
+  // relecture serveur (getActivePopups, qui applique déjà is_active) pour
+  // que le statut Actif/Inactif soit respecté sur tous les appareils.
+  useEffect(() => {
+    function handlePageShow(event: PageTransitionEvent) {
+      if (event.persisted) router.refresh();
+    }
+    window.addEventListener("pageshow", handlePageShow);
+    return () => window.removeEventListener("pageshow", handlePageShow);
+  }, [router]);
 
   if (!active) return null;
 
