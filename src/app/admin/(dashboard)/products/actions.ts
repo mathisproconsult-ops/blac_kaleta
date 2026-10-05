@@ -78,9 +78,10 @@ function parseUploadedImages(formData: FormData): UploadedImage[] {
 // avec les entrées Photo d'Œuvres récentes.)
 
 // La colonne original_path peut ne pas encore exister si la migration 0029
-// n'a pas été appliquée, ni thumbnail_path/thumbnail_url (migration 0038) :
-// on retente sans elles plutôt que de perdre la photo (même filet de
-// sécurité que pour les autres colonnes ajoutées après coup).
+// n'a pas été appliquée, ni thumbnail_path/thumbnail_url (migration 0038)
+// ni high_quality_* (migration 0043) : on retente avec de moins en moins
+// de colonnes plutôt que de perdre la photo (même filet de sécurité que
+// pour les autres colonnes ajoutées après coup).
 async function insertProductImage(
   supabase: SupabaseClient,
   row: {
@@ -92,14 +93,33 @@ async function insertProductImage(
     thumbnail_url: string | null;
     width: number | null;
     height: number | null;
+    high_quality_path: string | null;
+    high_quality_url: string | null;
+    high_quality_width: number | null;
+    high_quality_height: number | null;
     position: number;
   },
 ) {
   const { error } = await supabase.from("product_images").insert(row);
   if (error) {
     console.error("insertProductImage", error);
-    const { product_id, path, url, position } = row;
-    await supabase.from("product_images").insert({ product_id, path, url, position });
+    const {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      high_quality_path: _hqp,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      high_quality_url: _hqu,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      high_quality_width: _hqw,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      high_quality_height: _hqh,
+      ...withoutHq
+    } = row;
+    const { error: retryError } = await supabase.from("product_images").insert(withoutHq);
+    if (retryError) {
+      console.error("insertProductImage retry", retryError);
+      const { product_id, path, url, position } = row;
+      await supabase.from("product_images").insert({ product_id, path, url, position });
+    }
   }
 }
 
@@ -127,6 +147,10 @@ async function attachUploadedImages(
       thumbnail_url: stored?.thumbnailUrl ?? null,
       width: stored?.width ?? null,
       height: stored?.height ?? null,
+      high_quality_path: stored?.highQualityPath ?? null,
+      high_quality_url: stored?.highQualityUrl ?? null,
+      high_quality_width: stored?.highQualityWidth ?? null,
+      high_quality_height: stored?.highQualityHeight ?? null,
       position,
     });
     position += 1;
@@ -178,6 +202,10 @@ async function attachLibraryMedia(
       thumbnail_url: stored?.thumbnailUrl ?? null,
       width: stored?.width ?? null,
       height: stored?.height ?? null,
+      high_quality_path: stored?.highQualityPath ?? null,
+      high_quality_url: stored?.highQualityUrl ?? null,
+      high_quality_width: stored?.highQualityWidth ?? null,
+      high_quality_height: stored?.highQualityHeight ?? null,
       position,
     });
     position += 1;

@@ -41,6 +41,12 @@ async function applyMediaExtras(
   ageRestricted: boolean,
   blurred: { path: string; url: string } | null,
   thumbnail?: { path: string | null; url: string | null },
+  highQuality?: {
+    path: string | null;
+    url: string | null;
+    width: number | null;
+    height: number | null;
+  },
 ) {
   const { error } = await supabase
     .from("recent_work_media")
@@ -50,6 +56,14 @@ async function applyMediaExtras(
       image_blurred_url: blurred?.url ?? null,
       ...(thumbnail
         ? { thumbnail_path: thumbnail.path, thumbnail_url: thumbnail.url }
+        : {}),
+      ...(highQuality
+        ? {
+            high_quality_path: highQuality.path,
+            high_quality_url: highQuality.url,
+            high_quality_width: highQuality.width,
+            high_quality_height: highQuality.height,
+          }
         : {}),
     })
     .eq("id", mediaId);
@@ -155,10 +169,19 @@ export async function createRecentWorkPhoto(
     return { success: false, error: "Erreur base de données : " + error?.message };
   }
 
-  await applyMediaExtras(supabase, inserted.id, fields.ageRestricted, blurred, {
-    path: stored?.thumbnailPath ?? null,
-    url: stored?.thumbnailUrl ?? null,
-  });
+  await applyMediaExtras(
+    supabase,
+    inserted.id,
+    fields.ageRestricted,
+    blurred,
+    { path: stored?.thumbnailPath ?? null, url: stored?.thumbnailUrl ?? null },
+    {
+      path: stored?.highQualityPath ?? null,
+      url: stored?.highQualityUrl ?? null,
+      width: stored?.highQualityWidth ?? null,
+      height: stored?.highQualityHeight ?? null,
+    },
+  );
 
   revalidatePath(`/admin/oeuvres-recentes/${categoryId}`);
   revalidatePath("/oeuvres-recentes");

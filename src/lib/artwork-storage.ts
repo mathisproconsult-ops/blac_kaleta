@@ -15,6 +15,14 @@ export type StoredArtworkImage = {
   // une largeur intrinsèque différente. Null pour les GIF (non retraités).
   width: number | null;
   height: number | null;
+  // Copie haute résolution (réglages Paramètres → Qualité des images),
+  // réservée à la fiche produit et à la lightbox. Null pour les GIF, ou si
+  // son upload a échoué (la photo reste utilisable avec la copie
+  // principale en repli, voir les pages publiques).
+  highQualityPath: string | null;
+  highQualityUrl: string | null;
+  highQualityWidth: number | null;
+  highQualityHeight: number | null;
 };
 
 // Télécharge le fichier tel qu'envoyé (bucket "media", où atterrissent tous
@@ -47,6 +55,10 @@ export async function protectAndStoreArtworkImage(
       thumbnailUrl: null,
       width: null,
       height: null,
+      highQualityPath: null,
+      highQualityUrl: null,
+      highQualityWidth: null,
+      highQualityHeight: null,
     };
   }
 
@@ -62,14 +74,18 @@ export async function protectAndStoreArtworkImage(
 
   let protectedImage;
   let thumbnailImage;
+  let hqImage;
   try {
     // Import différé : sharp ne doit être chargé que lors d'un ajout de
     // photo, jamais au simple affichage d'une page qui importe ce fichier
     // pour ses autres actions (liste des produits, etc.).
     const { protectArtworkImage, THUMBNAIL_MAX_DIMENSION } = await import("@/lib/image-protection");
-    [protectedImage, thumbnailImage] = await Promise.all([
+    const { getSettings } = await import("@/lib/settings");
+    const settings = await getSettings();
+    [protectedImage, thumbnailImage, hqImage] = await Promise.all([
       protectArtworkImage(originalBuffer),
       protectArtworkImage(originalBuffer, THUMBNAIL_MAX_DIMENSION),
+      protectArtworkImage(originalBuffer, settings.image_hq_max_dimension, settings.image_hq_quality),
     ]);
   } catch (err) {
     console.error("protectAndStoreArtworkImage process", sourcePath, err);
@@ -78,13 +94,14 @@ export async function protectAndStoreArtworkImage(
 
   const destPath = `${destFolder}/${crypto.randomUUID()}.${protectedImage.extension}`;
   const thumbnailDestPath = `${destFolder}/${crypto.randomUUID()}-thumb.${thumbnailImage.extension}`;
+  const hqDestPath = `${destFolder}/${crypto.randomUUID()}-hq.${hqImage.extension}`;
 
   // cacheControl long (1 an) : chaque fichier a un nom unique
   // (crypto.randomUUID()) et n'est jamais réécrit au même chemin — sans
   // risque de contenu périmé, ça permet au navigateur/CDN de ne plus
   // jamais re-télécharger un fichier déjà vu. Sans ce réglage, Supabase
   // Storage retombe sur 1h par défaut.
-  const [publicUpload, originalUpload, thumbnailUpload] = await Promise.all([
+  const [publicUpload, originalUpload, thumbnailUpload, hqUpload] = await Promise.all([
     supabase.storage
       .from("products")
       .upload(destPath, protectedImage.buffer, {
@@ -100,6 +117,12 @@ export async function protectAndStoreArtworkImage(
         contentType: thumbnailImage.contentType,
         cacheControl: "31536000",
       }),
+    supabase.storage
+      .from("products")
+      .upload(hqDestPath, hqImage.buffer, {
+        contentType: hqImage.contentType,
+        cacheControl: "31536000",
+      }),
   ]);
 
   if (publicUpload.error) {
@@ -112,9 +135,13 @@ export async function protectAndStoreArtworkImage(
   if (thumbnailUpload.error) {
     console.error("protectAndStoreArtworkImage thumbnailUpload", thumbnailDestPath, thumbnailUpload.error);
   }
+  if (hqUpload.error) {
+    console.error("protectAndStoreArtworkImage hqUpload", hqDestPath, hqUpload.error);
+  }
 
   const { data: publicUrlData } = supabase.storage.from("products").getPublicUrl(destPath);
   const { data: thumbnailUrlData } = supabase.storage.from("products").getPublicUrl(thumbnailDestPath);
+  const { data: hqUrlData } = supabase.storage.from("products").getPublicUrl(hqDestPath);
 
   return {
     path: destPath,
@@ -123,12 +150,17 @@ export async function protectAndStoreArtworkImage(
     // l'original a échoué, on continue sans original téléchargeable plutôt
     // que de perdre toute la photo.
     originalPath: originalUpload.error ? null : destPath,
-    // Idem pour la vignette : une grille peut toujours retomber sur
-    // l'image pleine résolution si elle manque (voir les pages publiques).
+    // Idem pour la vignette et la copie haute qualité : les pages
+    // publiques retombent sur l'image principale si l'une ou l'autre
+    // manque.
     thumbnailPath: thumbnailUpload.error ? null : thumbnailDestPath,
     thumbnailUrl: thumbnailUpload.error ? null : thumbnailUrlData.publicUrl,
     width: protectedImage.width,
     height: protectedImage.height,
+    highQualityPath: hqUpload.error ? null : hqDestPath,
+    highQualityUrl: hqUpload.error ? null : hqUrlData.publicUrl,
+    highQualityWidth: hqUpload.error ? null : hqImage.width,
+    highQualityHeight: hqUpload.error ? null : hqImage.height,
   };
 }
 

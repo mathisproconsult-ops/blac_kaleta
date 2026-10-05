@@ -213,12 +213,15 @@ async function regenerateProductWatermark(
     };
   }
 
-  let protectedImage, thumbnailImage;
+  let protectedImage, thumbnailImage, hqImage;
   try {
     const { protectArtworkImage, THUMBNAIL_MAX_DIMENSION } = await import("@/lib/image-protection");
-    [protectedImage, thumbnailImage] = await Promise.all([
+    const { getSettings } = await import("@/lib/settings");
+    const settings = await getSettings();
+    [protectedImage, thumbnailImage, hqImage] = await Promise.all([
       protectArtworkImage(sourceBuffer),
       protectArtworkImage(sourceBuffer, THUMBNAIL_MAX_DIMENSION),
+      protectArtworkImage(sourceBuffer, settings.image_hq_max_dimension, settings.image_hq_quality),
     ]);
   } catch (err) {
     return {
@@ -230,6 +233,7 @@ async function regenerateProductWatermark(
 
   const destPath = `${image.product_id}/${id}-${Date.now()}.${protectedImage.extension}`;
   const thumbDestPath = `${image.product_id}/${id}-${Date.now()}-thumb.${thumbnailImage.extension}`;
+  const hqDestPath = `${image.product_id}/${id}-${Date.now()}-hq.${hqImage.extension}`;
 
   // Réécrit aussi l'original propre (jamais filigrané) dans
   // artwork-originals, au même chemin que la copie publique — exactement le
@@ -238,7 +242,7 @@ async function regenerateProductWatermark(
   // fichier qui n'existe peut-être plus, ou simplement jamais mis à jour) :
   // la régénération SUIVANTE ne retrouvait plus de source propre et
   // retombait sur la copie déjà filigranée, empilant un second filigrane.
-  const [publicUpload, thumbnailUpload, originalUpload] = await Promise.all([
+  const [publicUpload, thumbnailUpload, originalUpload, hqUpload] = await Promise.all([
     supabase.storage.from("products").upload(destPath, protectedImage.buffer, {
       contentType: protectedImage.contentType,
       cacheControl: "31536000",
@@ -253,6 +257,10 @@ async function regenerateProductWatermark(
         contentType: await guessImageContentType(sourceBuffer),
         cacheControl: "31536000",
       }),
+    supabase.storage.from("products").upload(hqDestPath, hqImage.buffer, {
+      contentType: hqImage.contentType,
+      cacheControl: "31536000",
+    }),
   ]);
   if (publicUpload.error) {
     return {
@@ -277,6 +285,13 @@ async function regenerateProductWatermark(
   if (!originalUpload.error) {
     updates.original_path = destPath;
   }
+  if (!hqUpload.error) {
+    const { data: hqUrlData } = supabase.storage.from("products").getPublicUrl(hqDestPath);
+    updates.high_quality_path = hqDestPath;
+    updates.high_quality_url = hqUrlData.publicUrl;
+    updates.high_quality_width = hqImage.width;
+    updates.high_quality_height = hqImage.height;
+  }
 
   // .select() est indispensable ici : un update() bloqué (policy RLS,
   // trigger, ou toute autre raison côté base) ne renvoie PAS forcément
@@ -284,12 +299,36 @@ async function regenerateProductWatermark(
   // succès silencieux avec 0 ligne modifiée. Sans .select() pour vérifier
   // qu'une ligne est bien revenue, ce cas est indiscernable d'une vraie
   // réussite.
-  const { data: updatedRow, error: updateError } = await supabase
+  let { data: updatedRow, error: updateError } = await supabase
     .from("product_images")
     .update(updates)
     .eq("id", id)
     .select("id")
     .maybeSingle();
+  // Les colonnes high_quality_* peuvent ne pas encore exister si la
+  // migration 0043 n'a pas été appliquée : retente sans elles plutôt que
+  // de perdre la régénération du filigrane/vignette pour autant.
+  if (updateError && "high_quality_path" in updates) {
+    const {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      high_quality_path: _hqp,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      high_quality_url: _hqu,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      high_quality_width: _hqw,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      high_quality_height: _hqh,
+      ...updatesWithoutHq
+    } = updates;
+    const retry = await supabase
+      .from("product_images")
+      .update(updatesWithoutHq)
+      .eq("id", id)
+      .select("id")
+      .maybeSingle();
+    updatedRow = retry.data;
+    updateError = retry.error;
+  }
   if (updateError) {
     return {
       status: "error",
@@ -364,12 +403,15 @@ async function regenerateMediaWatermark(
     };
   }
 
-  let protectedImage, thumbnailImage;
+  let protectedImage, thumbnailImage, hqImage;
   try {
     const { protectArtworkImage, THUMBNAIL_MAX_DIMENSION } = await import("@/lib/image-protection");
-    [protectedImage, thumbnailImage] = await Promise.all([
+    const { getSettings } = await import("@/lib/settings");
+    const settings = await getSettings();
+    [protectedImage, thumbnailImage, hqImage] = await Promise.all([
       protectArtworkImage(sourceBuffer),
       protectArtworkImage(sourceBuffer, THUMBNAIL_MAX_DIMENSION),
+      protectArtworkImage(sourceBuffer, settings.image_hq_max_dimension, settings.image_hq_quality),
     ]);
   } catch (err) {
     return {
@@ -381,12 +423,13 @@ async function regenerateMediaWatermark(
 
   const destPath = `${destFolder}/${id}-${Date.now()}.${protectedImage.extension}`;
   const thumbDestPath = `${destFolder}/${id}-${Date.now()}-thumb.${thumbnailImage.extension}`;
+  const hqDestPath = `${destFolder}/${id}-${Date.now()}-hq.${hqImage.extension}`;
 
   // Réécrit l'original propre dans artwork-originals au même chemin que la
   // nouvelle copie publique : rétablit la convention "même chemin, bucket
   // différent" pour la PROCHAINE régénération, qui le retrouvera cette fois
   // par correspondance exacte au lieu de devoir chercher un orphelin.
-  const [publicUpload, thumbnailUpload] = await Promise.all([
+  const [publicUpload, thumbnailUpload, , hqUpload] = await Promise.all([
     supabase.storage.from("products").upload(destPath, protectedImage.buffer, {
       contentType: protectedImage.contentType,
       cacheControl: "31536000",
@@ -401,6 +444,10 @@ async function regenerateMediaWatermark(
         contentType: await guessImageContentType(sourceBuffer),
         cacheControl: "31536000",
       }),
+    supabase.storage.from("products").upload(hqDestPath, hqImage.buffer, {
+      contentType: hqImage.contentType,
+      cacheControl: "31536000",
+    }),
   ]);
   if (publicUpload.error) {
     return {
@@ -421,16 +468,45 @@ async function regenerateMediaWatermark(
     updates.thumbnail_path = thumbDestPath;
     updates.thumbnail_url = thumbUrlData.publicUrl;
   }
+  if (!hqUpload.error) {
+    const { data: hqUrlData } = supabase.storage.from("products").getPublicUrl(hqDestPath);
+    updates.high_quality_path = hqDestPath;
+    updates.high_quality_url = hqUrlData.publicUrl;
+    updates.high_quality_width = hqImage.width;
+    updates.high_quality_height = hqImage.height;
+  }
 
   // Voir le commentaire équivalent dans regenerateProductWatermark : un
   // update() bloqué ne renvoie pas forcément d'erreur sans .select() pour
-  // vérifier qu'une ligne est bien revenue.
-  const { data: updatedRow, error: updateError } = await supabase
+  // vérifier qu'une ligne est bien revenue. Et les colonnes high_quality_*
+  // peuvent elles aussi ne pas encore exister (migration 0043) : même repli.
+  let { data: updatedRow, error: updateError } = await supabase
     .from("recent_work_media")
     .update(updates)
     .eq("id", id)
     .select("id")
     .maybeSingle();
+  if (updateError && "high_quality_path" in updates) {
+    const {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      high_quality_path: _hqp,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      high_quality_url: _hqu,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      high_quality_width: _hqw,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      high_quality_height: _hqh,
+      ...updatesWithoutHq
+    } = updates;
+    const retry = await supabase
+      .from("recent_work_media")
+      .update(updatesWithoutHq)
+      .eq("id", id)
+      .select("id")
+      .maybeSingle();
+    updatedRow = retry.data;
+    updateError = retry.error;
+  }
   if (updateError) {
     return {
       status: "error",
