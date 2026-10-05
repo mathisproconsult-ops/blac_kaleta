@@ -3,10 +3,12 @@ import { createClient } from "@/lib/supabase/server";
 import { SubmitButton } from "@/components/submit-button";
 import { EUR_XOF_RATE } from "@/lib/currency";
 import { SOCIAL_PLATFORMS } from "@/lib/social-platforms";
+import { getSettings } from "@/lib/settings";
 import { updateSettings } from "./actions";
 import { deleteSocialLink, moveSocialLink, updateSocialLink } from "./social-actions";
 import { SocialLinkForm } from "./social-link-form";
 import { PrintifySection } from "./printify-section";
+import { WatermarkSection } from "./watermark-section";
 
 export const metadata: Metadata = {
   title: "Paramètres — Admin Blac_Kaleta",
@@ -36,7 +38,7 @@ type SocialLink = { id: number; platform: string; url: string };
 
 export default async function SettingsPage() {
   const supabase = await createClient();
-  const [{ data }, { data: socialLinksData, error: socialLinksError }, { data: printifyData }] =
+  const [{ data }, { data: socialLinksData, error: socialLinksError }, { data: printifyData }, extendedSettings] =
     await Promise.all([
       supabase
         .from("settings")
@@ -57,6 +59,11 @@ export default async function SettingsPage() {
         .select("printify_api_key, printify_shop_id")
         .eq("id", true)
         .maybeSingle(),
+      // Qualité des images + filigrane (migration 0043) : passe par
+      // getSettings() plutôt qu'une requête directe, qui porte déjà les
+      // valeurs par défaut et le repli best-effort si la migration n'est pas
+      // encore appliquée.
+      getSettings(),
     ]);
 
   const settings = (data as Settings | null) ?? defaultSettings;
@@ -247,6 +254,53 @@ export default async function SettingsPage() {
 
         <fieldset className="flex flex-col gap-3">
           <legend className="text-sm font-semibold uppercase tracking-wide">
+            Qualité des images
+          </legend>
+          <p className="text-xs text-zinc-500">
+            Une copie supplémentaire, en plus de la vignette de grille et de
+            la taille principale, réservée à l&apos;image agrandie sur la
+            fiche produit et à la lightbox d&apos;Œuvres récentes — jamais
+            utilisée dans les grilles, pour ne pas alourdir ces pages.
+          </p>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs uppercase tracking-wide text-zinc-500">
+              Résolution max (px, plus grand côté)
+            </label>
+            <input
+              name="image_hq_max_dimension"
+              type="number"
+              min={800}
+              max={4000}
+              step={50}
+              defaultValue={extendedSettings.image_hq_max_dimension}
+              required
+              className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs uppercase tracking-wide text-zinc-500">
+              Qualité de compression WebP (1-100)
+            </label>
+            <input
+              name="image_hq_quality"
+              type="number"
+              min={1}
+              max={100}
+              defaultValue={extendedSettings.image_hq_quality}
+              required
+              className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
+            />
+          </div>
+          <p className="text-xs text-zinc-500">
+            Un changement ne s&apos;applique aux images déjà publiées
+            qu&apos;après avoir relancé « Régénérer le filigrane sur toutes
+            les images » (page Médiathèque), qui repart toujours des
+            fichiers originaux.
+          </p>
+        </fieldset>
+
+        <fieldset className="flex flex-col gap-3">
+          <legend className="text-sm font-semibold uppercase tracking-wide">
             Notifications
           </legend>
           <label className="flex items-center gap-2 text-sm">
@@ -274,6 +328,16 @@ export default async function SettingsPage() {
           Enregistrer
         </SubmitButton>
       </form>
+
+      <WatermarkSection
+        enabled={extendedSettings.watermark_enabled}
+        text={extendedSettings.watermark_text}
+        position={extendedSettings.watermark_position}
+        font={extendedSettings.watermark_font}
+        sizePercent={extendedSettings.watermark_size_percent}
+        opacity={extendedSettings.watermark_opacity}
+        color={extendedSettings.watermark_color}
+      />
     </div>
   );
 }

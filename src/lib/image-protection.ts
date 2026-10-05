@@ -412,6 +412,28 @@ export async function previewWatermark(
   return { buffer, contentType: "image/webp", extension: "webp", width: actualWidth, height: actualHeight };
 }
 
+const SAMPLE_WIDTH = 900;
+const SAMPLE_HEIGHT = 600;
+
+// Image d'exemple pour l'aperçu en direct du filigrane (Paramètres →
+// Filigrane) : générée à la volée (dégradé sombre → clair en diagonale),
+// jamais une vraie œuvre, pour ne dépendre d'aucun fichier embarqué ni
+// d'une œuvre existante. Le dégradé couvre un fond sombre ET un fond clair
+// dans la même image, pour que l'aperçu illustre aussi le choix de couleur
+// "auto" quelle que soit la position choisie.
+export async function createSampleArtworkImage(): Promise<Buffer> {
+  const svg = `<svg width="${SAMPLE_WIDTH}" height="${SAMPLE_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#161616"/>
+        <stop offset="100%" stop-color="#f3f1ec"/>
+      </linearGradient>
+    </defs>
+    <rect width="100%" height="100%" fill="url(#g)"/>
+  </svg>`;
+  return sharp(Buffer.from(svg)).jpeg({ quality: 90 }).toBuffer();
+}
+
 const BLUR_TINY_DIMENSION = 24;
 const BLUR_OUTPUT_DIMENSION = 600;
 const BLUR_SIGMA = 12;
