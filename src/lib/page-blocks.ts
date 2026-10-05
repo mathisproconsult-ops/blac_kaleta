@@ -39,12 +39,23 @@ export function slugify(value: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-export type BlockType = "titre" | "texte" | "image";
+export type BlockType = "titre" | "texte" | "image" | "accordeon" | "liste";
+
+export type AccordionItem = { question: string; answer: string };
 
 export type PageBlock = {
   id: number;
   type: BlockType;
-  content: { text?: string; url?: string; path?: string; alt?: string };
+  content: {
+    text?: string;
+    url?: string;
+    path?: string;
+    alt?: string;
+    // "accordeon"
+    qa_items?: AccordionItem[];
+    // "liste"
+    list_items?: string[];
+  };
   position: number;
 };
 

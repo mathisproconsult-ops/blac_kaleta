@@ -23,6 +23,46 @@ function renderBlock(block: PageBlock) {
     );
   }
 
+  if (block.type === "accordeon") {
+    const items = block.content.qa_items ?? [];
+    if (items.length === 0) return null;
+    return (
+      <div key={block.id} className="w-full max-w-2xl divide-y divide-zinc-200 dark:divide-zinc-800">
+        {items.map((item, index) => (
+          // <details>/<summary> : navigable et activable au clavier
+          // (Tab + Entrée/Espace) et compatible avec les lecteurs d'écran
+          // sans aucun JavaScript — le contenu reste dans le DOM même
+          // replié (juste masqué par le navigateur), ce qui permet aussi à
+          // la traduction DeepL (qui parcourt le DOM, pas le rendu visuel)
+          // de traduire les réponses avant même qu'elles soient dépliées.
+          <details key={index} className="group py-3">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium marker:content-none [&::-webkit-details-marker]:hidden">
+              {item.question}
+              <span className="flex-none text-lg text-zinc-400 transition-transform group-open:rotate-45" aria-hidden>
+                +
+              </span>
+            </summary>
+            <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+              {item.answer}
+            </p>
+          </details>
+        ))}
+      </div>
+    );
+  }
+
+  if (block.type === "liste") {
+    const items = block.content.list_items ?? [];
+    if (items.length === 0) return null;
+    return (
+      <ul key={block.id} className="max-w-2xl list-disc space-y-1 pl-5 text-left text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
+        {items.map((item, index) => (
+          <li key={index}>{item}</li>
+        ))}
+      </ul>
+    );
+  }
+
   return (
     <div
       key={block.id}

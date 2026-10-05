@@ -7,15 +7,21 @@ import {
   addBlock,
   deleteBlock,
   moveBlock,
+  updateAccordionBlock,
+  updateListBlock,
   updateTextBlock,
   uploadImageBlock,
 } from "./actions";
 import { deletePage, updatePageMeta } from "../actions";
+import { AccordionBlockEditor } from "./accordion-block-editor";
+import { ListBlockEditor } from "./list-block-editor";
 
 const BLOCK_LABELS: Record<BlockType, string> = {
   titre: "Titre",
   texte: "Texte",
   image: "Image",
+  accordeon: "Accordéon / FAQ",
+  liste: "Liste à puces",
 };
 
 export async function generateMetadata({
@@ -35,11 +41,23 @@ export default async function PageEditorPage({
   const { slug } = await params;
   const supabase = await createClient();
 
-  const { data: page } = await supabase
+  let { data: page } = await supabase
     .from("pages")
-    .select("id, title, show_in_menu")
+    .select("id, title, menu_title, show_in_menu")
     .eq("slug", slug)
     .maybeSingle();
+
+  // La colonne menu_title peut ne pas encore exister si la migration 0042
+  // n'a pas été appliquée : retombe sur la sélection sans elle plutôt que
+  // de faire échouer toute la page.
+  if (!page) {
+    const fallback = await supabase
+      .from("pages")
+      .select("id, title, show_in_menu")
+      .eq("slug", slug)
+      .maybeSingle();
+    page = fallback.data ? { ...fallback.data, menu_title: null } : null;
+  }
 
   if (!page) notFound();
 
@@ -80,6 +98,17 @@ export default async function PageEditorPage({
             className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
           />
         </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs uppercase tracking-wide text-zinc-500">
+            Titre dans le menu
+          </label>
+          <input
+            name="menu_title"
+            defaultValue={page.menu_title ?? ""}
+            placeholder="Par défaut : même que le titre"
+            className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
+          />
+        </div>
         <label className="flex items-center gap-2 pb-2 text-sm">
           <input
             type="checkbox"
@@ -97,7 +126,7 @@ export default async function PageEditorPage({
       </form>
 
       <div className="mt-6 flex gap-2">
-        {(["titre", "texte", "image"] as BlockType[]).map((type) => (
+        {(["titre", "texte", "image", "accordeon", "liste"] as BlockType[]).map((type) => (
           <form key={type} action={addBlock.bind(null, slug, type)}>
             <SubmitButton
               pendingText="Ajout…"
@@ -186,6 +215,20 @@ export default async function PageEditorPage({
                   >
                     Enregistrer
                   </SubmitButton>
+                </form>
+              ) : block.type === "accordeon" ? (
+                <form
+                  action={updateAccordionBlock.bind(null, block.id, slug)}
+                  className="mt-3"
+                >
+                  <AccordionBlockEditor initialItems={block.content.qa_items ?? []} />
+                </form>
+              ) : block.type === "liste" ? (
+                <form
+                  action={updateListBlock.bind(null, block.id, slug)}
+                  className="mt-3"
+                >
+                  <ListBlockEditor initialItems={block.content.list_items ?? []} />
                 </form>
               ) : (
                 <form

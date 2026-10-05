@@ -63,6 +63,7 @@ export async function createPage(
 ): Promise<CreatePageState> {
   const title = formData.get("title");
   const slugInput = formData.get("slug");
+  const menuTitleInput = formData.get("menu_title");
   const showInMenu = formData.get("show_in_menu") === "on";
 
   if (typeof title !== "string" || !title.trim()) {
@@ -80,12 +81,28 @@ export async function createPage(
     return { error: "Cette URL est réservée, choisis-en une autre." };
   }
 
+  const menuTitle =
+    typeof menuTitleInput === "string" && menuTitleInput.trim() ? menuTitleInput.trim() : null;
+
   const supabase = await createClient();
-  const { data: page, error } = await supabase
+  let { data: page, error } = await supabase
     .from("pages")
-    .insert({ slug, title: title.trim(), show_in_menu: showInMenu })
+    .insert({ slug, title: title.trim(), menu_title: menuTitle, show_in_menu: showInMenu })
     .select("id")
     .single();
+
+  // La colonne menu_title peut ne pas encore exister si la migration 0042
+  // n'a pas été appliquée : on retente sans elle plutôt que de bloquer la
+  // création de page (même filet de sécurité qu'ailleurs dans ce projet).
+  if (error) {
+    const retry = await supabase
+      .from("pages")
+      .insert({ slug, title: title.trim(), show_in_menu: showInMenu })
+      .select("id")
+      .single();
+    page = retry.data;
+    error = retry.error;
+  }
 
   if (error || !page) {
     return {
@@ -97,7 +114,7 @@ export async function createPage(
   }
 
   if (showInMenu) {
-    await syncMenuItem(supabase, page.id, true, title.trim(), `/${slug}`);
+    await syncMenuItem(supabase, page.id, true, menuTitle || title.trim(), `/${slug}`);
   }
 
   revalidatePath("/admin/pages");
@@ -112,16 +129,29 @@ export async function updatePageMeta(
   formData: FormData,
 ) {
   const title = formData.get("title");
+  const menuTitleInput = formData.get("menu_title");
   const showInMenu = formData.get("show_in_menu") === "on";
   if (typeof title !== "string" || !title.trim()) return;
 
+  const menuTitle =
+    typeof menuTitleInput === "string" && menuTitleInput.trim() ? menuTitleInput.trim() : null;
+
   const supabase = await createClient();
-  await supabase
+  const { error } = await supabase
     .from("pages")
-    .update({ title: title.trim(), show_in_menu: showInMenu })
+    .update({ title: title.trim(), menu_title: menuTitle, show_in_menu: showInMenu })
     .eq("id", pageId);
 
-  await syncMenuItem(supabase, pageId, showInMenu, title.trim(), `/${slug}`);
+  // Même filet de sécurité qu'en création : la colonne menu_title peut ne
+  // pas encore exister si la migration 0042 n'a pas été appliquée.
+  if (error) {
+    await supabase
+      .from("pages")
+      .update({ title: title.trim(), show_in_menu: showInMenu })
+      .eq("id", pageId);
+  }
+
+  await syncMenuItem(supabase, pageId, showInMenu, menuTitle || title.trim(), `/${slug}`);
 
   revalidatePath("/admin/pages");
   revalidatePath(`/admin/pages/${slug}`);

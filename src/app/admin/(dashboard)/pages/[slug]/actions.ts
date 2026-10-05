@@ -3,17 +3,19 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { optimizeAndStoreDecorImage } from "@/lib/artwork-storage";
-import type { BlockType } from "@/lib/page-blocks";
+import type { AccordionItem, BlockType } from "@/lib/page-blocks";
 
 function revalidatePageSlug(slug: string) {
   revalidatePath(`/admin/pages/${slug}`);
   revalidatePath(`/${slug}`);
 }
 
-const DEFAULT_CONTENT: Record<BlockType, Record<string, string>> = {
+const DEFAULT_CONTENT: Record<BlockType, Record<string, unknown>> = {
   titre: { text: "Nouveau titre" },
   texte: { text: "Nouveau texte" },
   image: {},
+  accordeon: { qa_items: [{ question: "Nouvelle question", answer: "Réponse" }] },
+  liste: { list_items: ["Nouvel élément"] },
 };
 
 async function getPageId(pageSlug: string) {
@@ -61,6 +63,76 @@ export async function updateTextBlock(
   await supabase
     .from("page_blocks")
     .update({ content: { text } })
+    .eq("id", id);
+
+  revalidatePageSlug(pageSlug);
+}
+
+// Filtre les paires vides (question ET réponse toutes deux blanches) pour
+// ne pas publier d'entrée FAQ fantôme laissée par un clic sur "+ Ajouter"
+// jamais rempli.
+export async function updateAccordionBlock(
+  id: number,
+  pageSlug: string,
+  formData: FormData,
+) {
+  const raw = formData.get("items");
+  if (typeof raw !== "string") return;
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return;
+  }
+  if (!Array.isArray(parsed)) return;
+
+  const items: AccordionItem[] = parsed
+    .filter(
+      (item): item is AccordionItem =>
+        typeof item === "object" &&
+        item !== null &&
+        typeof (item as AccordionItem).question === "string" &&
+        typeof (item as AccordionItem).answer === "string",
+    )
+    .map((item) => ({ question: item.question.trim(), answer: item.answer.trim() }))
+    .filter((item) => item.question || item.answer);
+
+  const supabase = await createClient();
+  await supabase
+    .from("page_blocks")
+    .update({ content: { qa_items: items } })
+    .eq("id", id);
+
+  revalidatePageSlug(pageSlug);
+}
+
+// Filtre les lignes vides laissées par un clic sur "+ Ajouter" jamais rempli.
+export async function updateListBlock(
+  id: number,
+  pageSlug: string,
+  formData: FormData,
+) {
+  const raw = formData.get("items");
+  if (typeof raw !== "string") return;
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return;
+  }
+  if (!Array.isArray(parsed)) return;
+
+  const items: string[] = parsed
+    .filter((item): item is string => typeof item === "string")
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+
+  const supabase = await createClient();
+  await supabase
+    .from("page_blocks")
+    .update({ content: { list_items: items } })
     .eq("id", id);
 
   revalidatePageSlug(pageSlug);

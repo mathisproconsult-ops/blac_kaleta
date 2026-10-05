@@ -34,6 +34,16 @@ export function CreatePageForm() {
           className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
         />
       </div>
+      <div className="flex flex-col gap-1">
+        <label className="text-xs uppercase tracking-wide text-zinc-500">
+          Titre dans le menu (optionnel)
+        </label>
+        <input
+          name="menu_title"
+          placeholder="Par défaut : même que le titre"
+          className="border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:focus:border-zinc-100"
+        />
+      </div>
       <label className="flex items-center gap-2 pb-2 text-sm">
         <input type="checkbox" name="show_in_menu" />
         Ajouter au menu
