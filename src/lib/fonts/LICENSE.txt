@@ -1,10 +1,16 @@
-Caveat (poids Bold/700) — Caveat Project
+Three fonts bundled for the configurable watermark (Paramètres → Filigrane
+→ Police), all licensed under the SIL Open Font License, Version 1.1 (full
+text below, identical for all three — also available with a FAQ at
+http://scripts.sil.org/OFL):
 
-Copyright 2014 The Caveat Project Authors (https://github.com/googlefonts/caveat)
+- Caveat (Bold/700)
+  Copyright 2014 The Caveat Project Authors (https://github.com/googlefonts/caveat)
 
-This Font Software is licensed under the SIL Open Font License, Version 1.1.
-This license is copied below, and is also available with a FAQ at:
-http://scripts.sil.org/OFL
+- Playfair Display (Bold/700)
+  Copyright 2017 The Playfair Display Project Authors (https://github.com/clauseggers/Playfair-Display)
+
+- Montserrat (Bold/700)
+  Copyright 2011 The Montserrat Project Authors (https://github.com/JulietaUla/Montserrat)
 
 Bundled here so the watermark applied to artwork images renders identically
 regardless of which fonts (if any) are installed on the server at runtime —
