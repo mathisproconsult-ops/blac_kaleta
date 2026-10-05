@@ -8,27 +8,34 @@ export function ProductGallery({
   alt,
   protectImages = true,
 }: {
-  images: { url: string }[];
+  images: { url: string; highQualityUrl?: string; width?: number | null; height?: number | null }[];
   alt: string;
   protectImages?: boolean;
 }) {
   const [selected, setSelected] = useState(0);
   const main = images[selected];
+  // Image agrandie affichée en haute résolution (Paramètres → Qualité des
+  // images) — repli sur la taille principale si absente (photo pas encore
+  // retraitée depuis la migration 0043). La bande de vignettes ci-dessous
+  // continue d'utiliser la taille principale, bien suffisante à 64x64px.
+  const mainSrc = main?.highQualityUrl ?? main?.url;
 
   return (
     <div>
       <div className="flex w-full items-center justify-center bg-zinc-50 dark:bg-zinc-900">
-        {main ? (
+        {main && mainSrc ? (
           protectImages ? (
             <ProtectedImage
-              src={main.url}
+              src={mainSrc}
               alt={alt}
               className="max-h-[70vh] w-auto max-w-full object-contain"
               priority
+              width={main.width}
+              height={main.height}
             />
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={main.url} alt={alt} className="max-h-[70vh] w-auto max-w-full object-contain" />
+            <img src={mainSrc} alt={alt} className="max-h-[70vh] w-auto max-w-full object-contain" />
           )
         ) : (
           <div

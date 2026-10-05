@@ -24,15 +24,31 @@ export async function getRecentWorkFullMedia(workId: string): Promise<RevealedMe
     const productId = Number(workId.slice("product-".length));
     if (!Number.isInteger(productId)) return null;
 
-    const { data } = await supabase
+    let { data } = await supabase
       .from("products")
-      .select("product_images(url, position)")
+      .select("product_images(url, position, high_quality_url)")
       .eq("id", productId)
       .maybeSingle();
+    // high_quality_url peut ne pas encore exister (migration 0043) : retente
+    // sans elle plutôt que de ne plus rien afficher dans la lightbox.
+    if (!data) {
+      const fallback = await supabase
+        .from("products")
+        .select("product_images(url, position)")
+        .eq("id", productId)
+        .maybeSingle();
+      data = fallback.data as typeof data;
+    }
     if (!data) return null;
 
-    const images = (data as { product_images: { url: string; position: number }[] }).product_images;
-    const imageUrl = [...images].sort((a, b) => a.position - b.position)[0]?.url ?? null;
+    const images = (
+      data as { product_images: { url: string; position: number; high_quality_url?: string | null }[] }
+    ).product_images;
+    const first = [...images].sort((a, b) => a.position - b.position)[0];
+    // Haute résolution (Paramètres → Qualité des images) pour la lightbox,
+    // repli sur la taille principale si absente (photo pas encore
+    // retraitée depuis la migration 0043).
+    const imageUrl = first ? (first.high_quality_url ?? first.url ?? null) : null;
     return { imageUrl, videoUrl: null, videoEmbedUrl: null };
   }
 
@@ -40,11 +56,21 @@ export async function getRecentWorkFullMedia(workId: string): Promise<RevealedMe
     const mediaId = Number(workId.slice("media-".length));
     if (!Number.isInteger(mediaId)) return null;
 
-    const { data } = await supabase
+    let { data } = await supabase
       .from("recent_work_media")
-      .select("image_url, video_url, video_provider, video_external_url")
+      .select("image_url, high_quality_url, video_url, video_provider, video_external_url")
       .eq("id", mediaId)
       .maybeSingle();
+    // high_quality_url peut ne pas encore exister (migration 0043) : retente
+    // sans elle plutôt que de ne plus rien afficher dans la lightbox.
+    if (!data) {
+      const fallback = await supabase
+        .from("recent_work_media")
+        .select("image_url, video_url, video_provider, video_external_url")
+        .eq("id", mediaId)
+        .maybeSingle();
+      data = fallback.data as typeof data;
+    }
     if (!data) return null;
 
     let videoEmbedUrl: string | null = null;
@@ -53,7 +79,11 @@ export async function getRecentWorkFullMedia(workId: string): Promise<RevealedMe
       videoEmbedUrl = ref ? embedUrl(ref) : null;
     }
 
-    return { imageUrl: data.image_url, videoUrl: data.video_url, videoEmbedUrl };
+    return {
+      imageUrl: data.high_quality_url ?? data.image_url,
+      videoUrl: data.video_url,
+      videoEmbedUrl,
+    };
   }
 
   return null;

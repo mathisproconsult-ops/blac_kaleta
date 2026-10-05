@@ -28,7 +28,7 @@ type ProductDetail = {
   status: ProductStatus;
   stock: number;
   description: string | null;
-  product_images: { url: string; position: number }[];
+  product_images: { id: number; url: string; position: number }[];
   product_categories: { categories: { name: string } | null }[];
   product_option_groups: ProductOptionGroupJoin[];
   source: string;
@@ -39,7 +39,7 @@ async function getProduct(id: string) {
   const { data, error } = await supabase
     .from("products")
     .select(
-      "id, title, price, status, stock, description, product_images(url, position), product_categories(categories(name))",
+      "id, title, price, status, stock, description, product_images(id, url, position), product_categories(categories(name))",
     )
     .eq("id", id)
     .eq("is_visible", true)
@@ -97,7 +97,51 @@ export default async function ProductPage({
 
   if (!product) notFound();
 
-  const images = [...product.product_images].sort((a, b) => a.position - b.position);
+  const sortedImages = [...product.product_images].sort((a, b) => a.position - b.position);
+
+  // Requête séparée et best-effort : la colonne peut ne pas encore exister
+  // (migration 0043) — sans elle, la fiche produit retombe simplement sur
+  // l'image principale comme avant.
+  const hqById = new Map<number, { url: string | null; width: number | null; height: number | null }>();
+  if (sortedImages.length > 0) {
+    const supabase = await createClient();
+    const { data: hqRows } = await supabase
+      .from("product_images")
+      .select("id, high_quality_url, high_quality_width, high_quality_height")
+      .in(
+        "id",
+        sortedImages.map((image) => image.id),
+      );
+    if (hqRows) {
+      for (const row of hqRows as {
+        id: number;
+        high_quality_url: string | null;
+        high_quality_width: number | null;
+        high_quality_height: number | null;
+      }[]) {
+        hqById.set(row.id, {
+          url: row.high_quality_url,
+          width: row.high_quality_width,
+          height: row.high_quality_height,
+        });
+      }
+    }
+  }
+
+  const images = sortedImages.map((image) => {
+    const hq = hqById.get(image.id);
+    return {
+      // url : taille principale, utilisée pour la bande de vignettes
+      // sélectrices (pas besoin de haute résolution pour un sélecteur de
+      // 64x64px). highQualityUrl : résolution/qualité supérieures,
+      // réservée à l'image agrandie affichée — repli sur url si absente
+      // (photo pas encore retraitée depuis la migration 0043).
+      url: image.url,
+      highQualityUrl: hq?.url ?? image.url,
+      width: hq?.width ?? null,
+      height: hq?.height ?? null,
+    };
+  });
   const categoryNames = product.product_categories
     .map((pc) => pc.categories?.name)
     .filter((name): name is string => Boolean(name));

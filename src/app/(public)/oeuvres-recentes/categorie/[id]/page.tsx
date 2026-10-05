@@ -144,6 +144,35 @@ export default async function RecentWorksCategoryPage({
     }
   }
 
+  // Requêtes séparées et best-effort : ces colonnes peuvent ne pas encore
+  // exister (migration 0043) — sans elles, la lightbox retombe simplement
+  // sur l'image principale comme avant.
+  const mediaHqUrlById = new Map<number, string | null>();
+  if (mediaIds.length > 0) {
+    const { data: rows } = await supabase
+      .from("recent_work_media")
+      .select("id, high_quality_url")
+      .in("id", mediaIds);
+    if (rows) {
+      for (const row of rows as { id: number; high_quality_url: string | null }[]) {
+        mediaHqUrlById.set(row.id, row.high_quality_url);
+      }
+    }
+  }
+
+  const productImageHqUrlById = new Map<number, string | null>();
+  if (productImageIds.length > 0) {
+    const { data: rows } = await supabase
+      .from("product_images")
+      .select("id, high_quality_url")
+      .in("id", productImageIds);
+    if (rows) {
+      for (const row of rows as { id: number; high_quality_url: string | null }[]) {
+        productImageHqUrlById.set(row.id, row.high_quality_url);
+      }
+    }
+  }
+
   type UnifiedWork = {
     id: string;
     title: string;
@@ -165,7 +194,12 @@ export default async function RecentWorksCategoryPage({
     // elle-même marquée +18 : jamais l'URL réelle envoyée dans ces deux cas.
     const hide = locked || itemAgeRestricted;
     const firstImage = [...product.product_images].sort((a, b) => a.position - b.position)[0];
-    const fullUrl = hide ? product.image_blurred_url ?? null : firstImage?.url ?? null;
+    // Haute résolution (Paramètres → Qualité des images) pour la lightbox —
+    // jamais pour une œuvre cachée (+18 non vérifié), qui ne doit montrer
+    // que l'aperçu flouté quelle que soit sa résolution.
+    const fullUrl = hide
+      ? product.image_blurred_url ?? null
+      : (firstImage ? productImageHqUrlById.get(firstImage.id) : null) ?? firstImage?.url ?? null;
     const thumbnailUrl = hide
       ? fullUrl
       : (firstImage ? productImageThumbnailById.get(firstImage.id) : null) ?? fullUrl;
@@ -190,7 +224,9 @@ export default async function RecentWorksCategoryPage({
       const ref = parseVideoUrl(item.video_external_url);
       videoEmbedUrl = ref ? embedUrl(ref) : null;
     }
-    const fullUrl = hide ? item.image_blurred_url ?? null : item.image_url;
+    const fullUrl = hide
+      ? item.image_blurred_url ?? null
+      : mediaHqUrlById.get(item.id) ?? item.image_url;
     const thumbnailUrl = hide ? fullUrl : mediaThumbnailUrlById.get(item.id) ?? fullUrl;
     return {
       id: `media-${item.id}`,
