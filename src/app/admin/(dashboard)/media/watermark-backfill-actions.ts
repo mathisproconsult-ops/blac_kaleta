@@ -192,23 +192,31 @@ async function regenerateProductWatermark(
   }
 
   // Priorité à l'original jamais filigrané (bucket privé artwork-originals).
-  // S'il manque, on retombe sur la copie publique actuelle dans "products"
-  // (déjà filigranée — le pipeline avait tourné mais l'original a été perdu
-  // depuis). Et si celle-ci manque aussi, on tente enfin "media" : le
-  // fichier brut tel qu'uploadé, jamais copié nulle part ailleurs parce que
-  // le pipeline de protection avait échoué silencieusement à l'ajout (voir
-  // protectAndStoreArtworkImage) — ce cas précis n'avait aucun filigrane du
-  // tout (pas même cassé), et provoquait l'erreur "Object not found" tant
-  // qu'on ne cherchait que dans "products".
+  // S'il manque, on tente "media" : le fichier brut tel qu'uploadé, jamais
+  // copié nulle part ailleurs parce que le pipeline de protection avait
+  // échoué silencieusement à l'ajout (voir protectAndStoreArtworkImage) —
+  // ce cas précis n'avait aucun filigrane du tout (pas même cassé).
+  //
+  // Jamais de repli sur "products" (la copie publique déjà filigranée) :
+  // repartir de cette copie pour appliquer un NOUVEAU filigrane peinturlure
+  // le nouveau par-dessus l'ancien, encore visible dans les pixels, et ajoute
+  // un second passage de compression WebP par-dessus un premier déjà
+  // disparu — exactement le bug constaté sur "À l'aurore" et le risque
+  // signalé pour les images repérées par l'outil de vérification qualité
+  // (admin/media, "suspecte mais non réparable automatiquement") : sans
+  // original fiable, mieux vaut ignorer l'image que la dégrader en silence.
   const candidates: { bucket: string; path: string }[] = [];
   if (image.original_path) candidates.push({ bucket: "artwork-originals", path: image.original_path });
-  candidates.push({ bucket: "products", path: image.path }, { bucket: "media", path: image.path });
+  candidates.push({ bucket: "media", path: image.path });
 
-  const { buffer: sourceBuffer, error: downloadError } = await downloadFirstAvailable(supabase, candidates);
+  const { buffer: sourceBuffer } = await downloadFirstAvailable(supabase, candidates);
   if (!sourceBuffer) {
     return {
       status: "error",
-      message: `Téléchargement : ${describeError(downloadError, "fichier manquant dans le Storage.")}`,
+      message:
+        "Original introuvable : régénération ignorée pour ne pas doubler le filigrane et la compression. " +
+        "Réuploade l'original depuis la fiche produit (ou via l'outil de vérification qualité, Médiathèque), " +
+        "puis relance la régénération.",
       ...context,
     };
   }
@@ -369,16 +377,17 @@ async function regenerateMediaWatermark(
   // Les entrées Photo/Vidéo d'Œuvres récentes ne conservent pas de référence
   // explicite à leur original (contrairement aux produits) — on tente donc
   // "artwork-originals" au même chemin que image_path. Si l'original n'y
-  // est pas À CE chemin précis, avant de abandonner et retomber sur la
-  // copie déjà filigranée, on cherche un original orphelin dans le dossier
-  // (voir findOrphanedOriginal) : une régénération précédente peut avoir
-  // changé image_path sans jamais réécrire artwork-originals, laissant
+  // est pas à ce chemin précis, on cherche un original orphelin dans le
+  // dossier (voir findOrphanedOriginal) : une régénération précédente peut
+  // avoir changé image_path sans jamais réécrire artwork-originals, laissant
   // l'original propre à son chemin d'origine, introuvable autrement — c'est
   // exactement ce qui causait le filigrane doublé sur "À l'aurore". Ce
   // correctif réécrit désormais artwork-originals à chaque régénération
   // (voir plus bas), donc ce repli ne devrait plus être nécessaire après ce
-  // premier passage. En dernier recours : "products" (déjà filigranée) puis
-  // "media" (vignette jamais traitée, ex. vidéo auto-hébergée).
+  // premier passage. Dernier recours : "media", la vignette jamais traitée
+  // (ex. vidéo auto-hébergée) — jamais "products" (la copie déjà filigranée) :
+  // voir le commentaire équivalent dans regenerateProductWatermark, même
+  // risque de filigrane et compression doublés.
   let sourceBuffer: Buffer | null = null;
   let downloadError: unknown = null;
   const exactOriginal = await supabase.storage.from("artwork-originals").download(media.image_path);
@@ -387,10 +396,7 @@ async function regenerateMediaWatermark(
   } else {
     sourceBuffer = await findOrphanedOriginal(supabase, destFolder);
     if (!sourceBuffer) {
-      const fallback = await downloadFirstAvailable(supabase, [
-        { bucket: "products", path: media.image_path },
-        { bucket: "media", path: media.image_path },
-      ]);
+      const fallback = await downloadFirstAvailable(supabase, [{ bucket: "media", path: media.image_path }]);
       sourceBuffer = fallback.buffer;
       downloadError = fallback.error;
     }
@@ -398,7 +404,9 @@ async function regenerateMediaWatermark(
   if (!sourceBuffer) {
     return {
       status: "error",
-      message: `Téléchargement : ${describeError(downloadError, "fichier manquant dans le Storage.")}`,
+      message:
+        "Original introuvable : régénération ignorée pour ne pas doubler le filigrane et la compression. " +
+        `Réuploade l'original depuis Œuvres récentes, puis relance la régénération. (${describeError(downloadError, "fichier manquant dans le Storage.")})`,
       ...context,
     };
   }
