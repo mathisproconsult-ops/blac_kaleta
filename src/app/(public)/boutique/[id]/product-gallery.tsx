@@ -22,7 +22,13 @@ export function ProductGallery({
 
   return (
     <div>
-      <div className="flex w-full items-center justify-center bg-zinc-50 dark:bg-zinc-900">
+      {/* Pas de fond coloré ni de largeur imposée au-delà de la mise en
+          page : le cadre épouse exactement le ratio réel de l'image
+          affichée (portrait, paysage, carré, panoramique...). Avec un fond
+          plein sur un conteneur w-full, une image plus étroite que la
+          colonne (portrait) se retrouvait centrée dans une boîte visible
+          plus large qu'elle — des bandes grises sur les côtés. */}
+      <div className="flex w-full items-center justify-center">
         {main && mainSrc ? (
           protectImages ? (
             <ProtectedImage
