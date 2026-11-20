@@ -11,6 +11,7 @@ import { ReprocessImagesButton } from "./reprocess-images-button";
 import { DecorBackfillButton } from "./decor-backfill-button";
 import { WatermarkBackfillButton } from "./watermark-backfill-button";
 import { QualityRepairButton } from "./quality-repair-button";
+import { StorageCleanupButton } from "./storage-cleanup-button";
 import {
   attachUploadedMedia,
   bulkMediaAction,
@@ -161,6 +162,7 @@ export default async function MediaPage({
         <DecorBackfillButton />
         <WatermarkBackfillButton />
         <QualityRepairButton />
+        <StorageCleanupButton />
       </div>
 
       <div className="mt-6 flex flex-wrap items-center gap-4 text-sm">
